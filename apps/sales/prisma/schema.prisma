@@ -9,4 +9,6 @@ generator client {
   provider     = "prisma-client"
   output       = "../src/generated/prisma"
   moduleFormat = "cjs"
+  // `nest build` không viết lại đường dẫn import: để mặc định sẽ sinh `.ts` và dist không chạy được.
+  importFileExtension = "js"
 }

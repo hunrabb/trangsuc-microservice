@@ -1,21 +1,25 @@
+import {
+  AppConfigModule,
+  AppLoggerModule,
+  CorrelationModule,
+  HealthModule,
+  postgresCheck,
+} from '@jewelry/common';
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import { LoggerModule } from 'nestjs-pino';
-import { SERVICE_NAME, validateEnv } from './config/env';
-import { HealthController } from './health/health.controller';
+import { envSchema, SERVICE_NAME } from './config/env';
+import { PrismaModule } from './prisma/prisma.module';
+import { PrismaService } from './prisma/prisma.service';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env', validate: validateEnv }),
-    LoggerModule.forRoot({
-      pinoHttp: {
-        base: { service: SERVICE_NAME },
-        formatters: { level: (label) => ({ level: label }) },
-        redact: ['req.headers.authorization', 'req.headers.cookie', 'res.headers["set-cookie"]'],
-        autoLogging: { ignore: (req) => req.url?.startsWith('/health') ?? false },
-      },
+    AppConfigModule.forRoot({ service: SERVICE_NAME, schema: envSchema }),
+    CorrelationModule,
+    AppLoggerModule.forRoot(SERVICE_NAME),
+    PrismaModule,
+    HealthModule.forRoot({
+      inject: [PrismaService],
+      readinessChecks: (prisma: PrismaService) => [postgresCheck(prisma)],
     }),
   ],
-  controllers: [HealthController],
 })
 export class AppModule {}

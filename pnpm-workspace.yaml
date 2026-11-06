@@ -1,6 +1,7 @@
 packages:
   - apps/*
   - libs/*
+  - tests/*
 
 # pnpm chặn script cài đặt của thư viện con (strictDepBuilds). Chỉ cho phép những gói cần:
 # - prisma, @prisma/engines: tải sẵn schema-engine để chạy `prisma migrate`.

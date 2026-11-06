@@ -41,6 +41,8 @@ infra/
   postgres/init/   script tạo schema + user (chỉ chạy khi volume trống)
   rabbitmq/        definitions.json (topology, không có mật khẩu), setup.mjs (nạp qua management API)
   migrate/         wait-for-postgres.mjs (nhúng vào image *-migrate: chờ Postgres nhận kết nối trước prisma migrate deploy)
+tests/
+  integration/     test đa app: chạy dist của nhiều app rồi đọc log/HTTP (app không được import lẫn nhau)
 secrets/           (gitignore) jwt_private.pem, jwt_public.pem
 docs/
 docker-compose.yml, docker-compose.override.yml (chỉ dev), .env.example
@@ -59,7 +61,7 @@ docker compose up -d postgres rabbitmq rabbitmq-setup   # hạ tầng cho dev (o
 pnpm dev                                        # chạy mọi app ở chế độ watch
 pnpm --filter @jewelry/<app> exec prisma migrate dev --name <ten>   # CHỈ máy dev; cần database shadow
 pnpm --filter @jewelry/<app> db:generate        # sinh Prisma client (turbo tự chạy trước build/typecheck/dev)
-pnpm test                                       # hiện mới có test cấu hình/chốt chặn; chưa có integration
+pnpm test                                       # unit + tests/integration (chạy bản build thật của gateway, inventory; chưa cần Postgres)
 pnpm lint && pnpm typecheck
 pnpm build
 pnpm format:check                               # Prettier (pnpm format để tự sửa)

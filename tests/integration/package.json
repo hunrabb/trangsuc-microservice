@@ -1,0 +1,15 @@
+{
+  "name": "@jewelry/integration-tests",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "eslint .",
+    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test \"src/**/*.test.ts\""
+  },
+  "devDependencies": {
+    "@jewelry/gateway": "workspace:*",
+    "@jewelry/inventory": "workspace:*"
+  }
+}

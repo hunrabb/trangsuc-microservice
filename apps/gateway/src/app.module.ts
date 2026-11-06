@@ -1,22 +1,15 @@
+import { AppConfigModule, AppLoggerModule, CorrelationModule, HealthModule } from '@jewelry/common';
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import { LoggerModule } from 'nestjs-pino';
-import { SERVICE_NAME, validateEnv } from './config/env';
-import { HealthController } from './health/health.controller';
+import { envSchema, SERVICE_NAME } from './config/env';
 import { PingController } from './ping/ping.controller';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env', validate: validateEnv }),
-    LoggerModule.forRoot({
-      pinoHttp: {
-        base: { service: SERVICE_NAME },
-        formatters: { level: (label) => ({ level: label }) },
-        redact: ['req.headers.authorization', 'req.headers.cookie', 'res.headers["set-cookie"]'],
-        autoLogging: { ignore: (req) => req.url?.startsWith('/health') ?? false },
-      },
-    }),
+    AppConfigModule.forRoot({ service: SERVICE_NAME, schema: envSchema }),
+    CorrelationModule,
+    AppLoggerModule.forRoot(SERVICE_NAME),
+    HealthModule.forRoot(),
   ],
-  controllers: [HealthController, PingController],
+  controllers: [PingController],
 })
 export class AppModule {}

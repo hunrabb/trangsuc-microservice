@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { parseEnv } from './env.ts';
+import { parseEnv as parse } from '@jewelry/common';
+import { envSchema } from './env.ts';
+
+const parseEnv = (raw: Record<string, unknown>) => parse(envSchema, raw);
 
 const valid = {
   PORT: '3000',

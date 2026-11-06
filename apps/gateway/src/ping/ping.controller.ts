@@ -1,3 +1,4 @@
+import { ConfigService, correlationHeaders } from '@jewelry/common';
 import {
   BadGatewayException,
   Controller,
@@ -5,7 +6,6 @@ import {
   Get,
   Logger,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import type { Env } from '../config/env';
 
 /** Thời gian chờ tối đa khi gọi service phía sau (CLAUDE.md mục 8: gọi trực tiếp timeout 3 s). */
@@ -25,7 +25,10 @@ export class PingController {
   async ping(): Promise<unknown> {
     const url = new URL('/internal/ping', this.config.get('INVENTORY_URL', { infer: true }));
     try {
-      const response = await fetch(url, { signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS) });
+      const response = await fetch(url, {
+        headers: correlationHeaders(),
+        signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+      });
       if (!response.ok) {
         this.logger.error(`inventory trả về HTTP ${response.status} cho ${url.pathname}`);
         throw new BadGatewayException({
