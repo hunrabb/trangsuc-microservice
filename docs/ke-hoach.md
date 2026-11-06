@@ -49,10 +49,10 @@ Mục tiêu: `docker compose up` là cả hệ thống lên, một request đi x
 
 ### Giai đoạn 2. Auth và khung admin (1 tuần)
 
-- [ ] auth-service: chi nhánh, nhân viên, `UserBranch`, đăng nhập (bcrypt, rate limit bằng @nestjs/throttler trong bộ nhớ gateway), access token RS256, refresh token (hạn trượt + hạn tuyệt đối, xoay vòng, phát hiện dùng lại), đăng xuất, khoá tài khoản.
+- [ ] auth-service: chi nhánh, nhân viên, `UserBranch`, đăng nhập Google (mọi nhân viên) và mật khẩu (chỉ ADMIN; bcrypt, rate limit bằng @nestjs/throttler trong bộ nhớ gateway), access token RS256, refresh token (hạn trượt + hạn tuyệt đối, xoay vòng, phát hiện dùng lại), đăng xuất, khoá tài khoản.
 - [ ] Gateway: kiểm tra JWT, xoá header `x-user-*`, chuyển tiếp `Authorization` + correlationId.
 - [ ] React: màn đăng nhập, interceptor refresh ngầm (một lần refresh tại một thời điểm), khung admin theo vai trò, quản lý chi nhánh và nhân viên.
-- [ ] Phát `branch.created` (inventory tạo kho ở giai đoạn 3).
+- [ ] Phát `branch.created`, `branch.updated` (inventory tạo kho ở giai đoạn 3).
 
 **Xong khi:** test e2e: đăng nhập → gọi API → token hết hạn → tự refresh → dùng lại refresh token cũ thì bị đá ra; STAFF gọi API của MANAGER bị 403; gọi thẳng port service từ ngoài không được.
 
@@ -92,7 +92,8 @@ Mục tiêu: `docker compose up` là cả hệ thống lên, một request đi x
 
 ### Giai đoạn 6. Bán online (2–3 tuần)
 
-- [ ] Website: `GET /api/shop/stock/availability` (cần chốt cách lấy dữ liệu từ inventory, xem câu hỏi còn mở cuối mục 7 của `docs/thiet-ke.md`; tổng còn bán được trên các kho nhận đơn online, giá tạm tính theo giá vàng hiện tại).
+- [ ] Website: bản sao chỉ đọc trong sales (`CatalogProduct`, `CatalogVariant`, `CatalogAvailability`), cập nhật qua `product.snapshot` và `stock.availability_changed`; inventory phát lại snapshot khi giá kim loại đổi, có lệnh phát lại toàn bộ (`docs/thiet-ke.md` mục 7.6).
+- [ ] Tài khoản khách: `CustomerAccount`, `/api/shop/auth/*`, `Customer.accountId`, cookie `rt_shop`.
 - [ ] Saga đơn online: `order.created` → chọn kho nhiều hàng nhất có đủ cả đơn → giữ hàng (hàng có tem: chọn chiếc cụ thể và chốt giá; hàng số lượng: tăng `reserved`) → `stock.reserved` / `stock.reserve_failed` → `AWAITING_PAYMENT` / `CANCELLED`.
 - [ ] Job hết hạn giữ hàng mỗi phút; sales tự theo dõi đơn `PENDING` quá 10 / 30 phút; dấu `RELEASED` cho huỷ đến sớm.
 - [ ] Webhook ngân hàng: xác minh chữ ký, `BankTransaction` unique `bankTxnRef`, ghép theo nội dung, đủ / thiếu / không ghép được; `order.paid` → gia hạn giữ hàng.

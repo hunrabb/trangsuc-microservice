@@ -91,20 +91,23 @@ docker compose up -d --wait
 
 Bảng định tuyến nằm ở [apps/gateway/src/proxy/routes.ts](apps/gateway/src/proxy/routes.ts). Khớp theo đoạn đường dẫn (`/api/pos` không khớp `/api/posx`) và phân biệt hoa thường. Không có trong bảng → `404 NOT_FOUND`.
 
-| Đường ở gateway          | Service     | Đường ở service    | Cần đăng nhập |
-| ------------------------ | ----------- | ------------------ | ------------- |
-| `/api/auth/x`            | `auth`      | `/auth/x`          | Không         |
-| `/api/pos/x`             | `sales`     | `/pos/x`           | Có            |
-| `/api/online-orders/x`   | `sales`     | `/online-orders/x` | Có            |
-| `/api/shop/x`            | `sales`     | `/shop/x`          | Không         |
-| `/api/admin/auth/x`      | `auth`      | `/admin/x`         | Có            |
-| `/api/admin/inventory/x` | `inventory` | `/admin/x`         | Có            |
-| `/api/admin/sales/x`     | `sales`     | `/admin/x`         | Có            |
-| `/api/admin/reports/x`   | `report`    | `/admin/x`         | Có            |
-| `/webhooks/bank`         | `sales`     | `/webhooks/bank`   | Không         |
+| Đường ở gateway          | Service     | Đường ở service    | Gateway kiểm token, `aud` |
+| ------------------------ | ----------- | ------------------ | ------------------------- |
+| `/api/auth/x`            | `auth`      | `/auth/x`          | Không                     |
+| `/api/pos/x`             | `sales`     | `/pos/x`           | Có, nhân viên             |
+| `/api/online-orders/x`   | `sales`     | `/online-orders/x` | Có, nhân viên             |
+| `/api/shop/auth/x`       | `auth`      | `/shop/auth/x`     | Không                     |
+| `/api/shop/x`            | `sales`     | `/shop/x`          | Không                     |
+| `/api/admin/auth/x`      | `auth`      | `/admin/x`         | Có, nhân viên             |
+| `/api/admin/inventory/x` | `inventory` | `/admin/x`         | Có, nhân viên             |
+| `/api/admin/sales/x`     | `sales`     | `/admin/x`         | Có, nhân viên             |
+| `/api/admin/reports/x`   | `report`    | `/admin/x`         | Có, nhân viên             |
+| `/webhooks/bank`         | `sales`     | `/webhooks/bank`   | Không                     |
+
+Đường công khai ở gateway vẫn có thể có endpoint cần đăng nhập: service tự kiểm tra (`/api/auth/me`, endpoint `@Audience('shop')`).
 
 - Query giữ nguyên. Phần sau tiền tố hoặc đường đã viết lại bắt đầu bằng `/internal`, `/health`, hoặc đường có `..`, `%2f`, `\`, `//` → `404`.
-- Đường cần đăng nhập: gateway kiểm tra token trước khi chuyển tiếp, sai thì trả `401` luôn; `Authorization` vẫn đi xuống và service kiểm tra lại.
+- Đường cần đăng nhập: gateway kiểm tra token và `aud` trước khi chuyển tiếp, sai thì trả `401` luôn; `Authorization` vẫn đi xuống và service kiểm tra lại.
 - Xoá header `x-user-*` và hop-by-hop; giữ các header khác (`Authorization`, `Content-Type`, `Cookie`...); gắn `x-correlation-id`.
 - Body đi nguyên byte, tối đa 1 MB (vượt → `413 PAYLOAD_TOO_LARGE`). Timeout 10 giây. Gateway không tự retry. Service không trả lời → `503 SERVICE_UNAVAILABLE`.
 

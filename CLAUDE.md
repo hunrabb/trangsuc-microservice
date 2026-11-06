@@ -17,9 +17,9 @@ Thiết kế không nói tới một chuyện → **không tự đoán**: chọn
 | Service | Schema | Sở hữu |
 |---|---|---|
 | `gateway` | — | Cửa vào duy nhất: kiểm tra JWT, rate limit, định tuyến |
-| `auth` | `auth` | Chi nhánh, nhân viên, vai trò, đăng nhập, token |
+| `auth` | `auth` | Chi nhánh, nhân viên, tài khoản khách, vai trò, đăng nhập, token |
 | `inventory` | `inventory` | Kim loại, giá kim loại, sản phẩm, biến thể, hàng có tem, kho, tồn kho, nhập hàng, kiểm kê, giữ hàng, chọn chi nhánh cho đơn online |
-| `sales` | `sales` | Hoá đơn POS, đơn online, khách hàng, thanh toán chuyển khoản, hoàn tiền, thu mua, đổi hàng, trả hàng |
+| `sales` | `sales` | Hoá đơn POS, đơn online, khách hàng, bản sao danh mục chỉ đọc cho website, thanh toán chuyển khoản, hoàn tiền, thu mua, đổi hàng, trả hàng |
 | `report` | `report` | Bảng tổng hợp doanh thu, lợi nhuận, tồn kho |
 
 - Một PostgreSQL, một database, 4 schema; mỗi service kết nối bằng user DB riêng, chỉ có quyền trên schema của mình.
@@ -48,6 +48,7 @@ tests/
 scripts/           run-tests.mjs (chạy test, đỏ khi 0 test), generate-jwt-keys.mjs, outbox-requeue.mjs
 secrets/jwt/       (gitignore) private/<kid>.private.pem (chỉ auth), public/<kid>.public.pem (mọi service, read-only)
 docs/
+  api/             OpenAPI của từng service, đường viết theo đường ở gateway
 docker-compose.yml, docker-compose.override.yml (chỉ dev), .env.example
 ```
 
@@ -71,6 +72,7 @@ pnpm outbox:requeue -- --service <app> [--event-type <x>] [--id <uuid>] [--dry-r
 pnpm lint && pnpm typecheck
 pnpm build
 pnpm format:check                               # Prettier (pnpm format để tự sửa)
+pnpm openapi:validate                           # kiểm tra các file docs/api/*.openapi.yaml
 docker compose up --build                       # chạy cả hệ thống (kèm override dev)
 docker compose -f docker-compose.yml up --build # chạy như production (không mở cổng dev)
 docker compose run --rm rabbitmq-setup          # nạp lại topology RabbitMQ sau khi sửa definitions.json
@@ -141,17 +143,18 @@ Chưa có (làm ở giai đoạn sau): `prisma db seed` (chưa có seed), `pnpm 
 - Client chỉ gọi qua gateway. Chỉ gateway, backoffice và storefront mở port ra ngoài.
 - Bảng định tuyến của gateway (`apps/gateway/src/proxy/routes.ts`):
 
-  | Đường ở gateway | Service | Đường ở service | Cần đăng nhập |
-  |---|---|---|---|
-  | `/api/auth/*` | auth | `/auth/*` | Không (login, refresh, logout) |
-  | `/api/pos/*` | sales | `/pos/*` | Có |
-  | `/api/online-orders/*` | sales | `/online-orders/*` | Có |
-  | `/api/shop/*` | sales | `/shop/*` | Không (website khách) |
-  | `/api/admin/auth/*` | auth | `/admin/*` | Có |
-  | `/api/admin/inventory/*` | inventory | `/admin/*` | Có |
-  | `/api/admin/sales/*` | sales | `/admin/*` | Có |
-  | `/api/admin/reports/*` | report | `/admin/*` | Có |
-  | `/webhooks/bank` | sales | `/webhooks/bank` | Không (kiểm chữ ký ở giai đoạn 6) |
+  | Đường ở gateway | Service | Đường ở service | Gateway kiểm token | `aud` yêu cầu |
+  |---|---|---|---|---|
+  | `/api/auth/*` | auth | `/auth/*` | Không (login, google, refresh, logout) | Công khai ở gateway; endpoint cần đăng nhập do auth kiểm, `aud` nhân viên |
+  | `/api/pos/*` | sales | `/pos/*` | Có | nhân viên |
+  | `/api/online-orders/*` | sales | `/online-orders/*` | Có | nhân viên |
+  | `/api/shop/auth/*` | auth | `/shop/auth/*` | Không (giai đoạn 6) | Công khai ở gateway; endpoint cần đăng nhập do auth kiểm, `aud` khách |
+  | `/api/shop/*` | sales | `/shop/*` | Không (website khách) | Công khai ở gateway; endpoint của khách do sales kiểm, `aud` khách |
+  | `/api/admin/auth/*` | auth | `/admin/*` | Có | nhân viên |
+  | `/api/admin/inventory/*` | inventory | `/admin/*` | Có | nhân viên |
+  | `/api/admin/sales/*` | sales | `/admin/*` | Có | nhân viên |
+  | `/api/admin/reports/*` | report | `/admin/*` | Có | nhân viên |
+  | `/webhooks/bank` | sales | `/webhooks/bank` | Không (kiểm chữ ký ở giai đoạn 6) | — |
 
 - Đường không có trong bảng → `404 NOT_FOUND`. `/internal/*` và `/health/*` của service **không bao giờ** được gateway chuyển tiếp.
 - `channel` của đơn (`POS` / `WEBSITE`) do server tự đặt theo đường dẫn được gọi, không lấy từ body.
@@ -162,15 +165,17 @@ Chưa có (làm ở giai đoạn sau): `prisma db seed` (chưa có seed), `pnpm 
   { "code": "OUT_OF_STOCK", "message": "...", "details": {}, "correlationId": "..." }
   ```
   Mã lỗi lấy từ `libs/contracts`. Lỗi không lường trước → `500 INTERNAL_ERROR`, stack trace chỉ ghi log, không trả ra ngoài.
-- Endpoint mới phải có trong OpenAPI.
+- Endpoint mới phải có trong OpenAPI (`docs/api/<service>.openapi.yaml`, đường viết theo đường ở gateway; kiểm bằng `pnpm openapi:validate`).
 
 ## 11. Xác thực
 
 - Access token: JWT **RS256**, 15 phút; chỉ `auth` giữ private key, các service khác chỉ có public key. Kiểm tra luôn ép `algorithms: ['RS256']`, `issuer`, `audience`, chọn key theo `kid`.
-- Refresh token: chuỗi ngẫu nhiên, lưu **bản băm** SHA-256; hạn trượt 7 ngày, hạn tuyệt đối 30 ngày (`sessionStartedAt`); xoay vòng mỗi lần dùng; token đã thu hồi bị dùng lại → thu hồi mọi phiên của user. Cookie `httpOnly; Secure; SameSite=Strict; Path=/api/auth/refresh`.
+- Hai loại token, cùng `iss`: `aud = store-backoffice` (nhân viên) và `store-shop` (khách). `JwtGuard` mặc định yêu cầu `aud` nhân viên; endpoint của khách đánh dấu `@Audience('shop')`.
+- Refresh token: chuỗi ngẫu nhiên, lưu **bản băm** SHA-256; hạn trượt 7 ngày, hạn tuyệt đối 30 ngày (`sessionStartedAt`); xoay vòng mỗi lần dùng; token đã thu hồi bị dùng lại → thu hồi mọi phiên của user. Cookie `httpOnly; Secure; SameSite=Strict`: nhân viên `rt_bo`, `Path=/api/auth`; khách `rt_shop`, `Path=/api/shop/auth`.
 - Vai trò: `ADMIN` (toàn hệ thống, `branchId = null`), `MANAGER`, `STAFF` theo chi nhánh. Dùng `JwtGuard` + `RolesGuard` + `@Roles(...)` trong `libs/common`; mọi endpoint mặc định cần đăng nhập, ngoại lệ đánh dấu `@Public()`.
 - Gateway xoá mọi header `x-user-*` từ client.
-- Mật khẩu: bcrypt; thông báo lỗi đăng nhập chung "Sai email hoặc mật khẩu"; rate limit bằng `@nestjs/throttler`.
+- Đăng nhập nhân viên: MANAGER, STAFF **chỉ Google**; ADMIN Google hoặc mật khẩu. Ghép Google theo `sub` qua `AuthIdentity`, chỉ với email admin đã thêm trước.
+- Mật khẩu: bcrypt, tối thiểu 12 ký tự, `passwordHash` chỉ ADMIN có. Đăng nhập mật khẩu thất bại vì bất kỳ lý do gì → cùng `401 INVALID_CREDENTIALS`; rate limit bằng `@nestjs/throttler`.
 
 ## 12. Cấu hình, log, health
 

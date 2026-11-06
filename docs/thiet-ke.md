@@ -25,9 +25,9 @@ Hệ thống chia thành 4 service NestJS, mỗi service sở hữu một schema
 
 | Service | Trách nhiệm | Phát sự kiện | Nghe sự kiện |
 | --- | --- | --- | --- |
-| auth-service | Chi nhánh, nhân viên, vai trò, đăng nhập, cấp token | `branch.created` | — |
-| inventory-service | Sản phẩm, biến thể, giá, kho, tồn kho, nhập hàng, kiểm kê, giữ hàng cho đơn online, chọn chi nhánh xuất đơn online | `stock.reserved`, `stock.reserve_failed`, `stock.reservation_expired`, `stock.changed`, `order.processing_failed` | `branch.created`, `order.created`, `order.cancelled`, `order.paid`, `order.shipping` |
-| sales-service | Hoá đơn POS, đơn online, khách hàng, thanh toán chuyển khoản, hoàn tiền, trả hàng | `order.created`, `order.cancelled`, `order.paid`, `order.shipping`, `order.completed`, `order.returned` | `stock.*`, `order.processing_failed` |
+| auth-service | Chi nhánh, nhân viên, vai trò, tài khoản khách, đăng nhập, cấp token | `branch.created`, `branch.updated` | — |
+| inventory-service | Sản phẩm, biến thể, giá, kho, tồn kho, nhập hàng, kiểm kê, giữ hàng cho đơn online, chọn chi nhánh xuất đơn online | `stock.reserved`, `stock.reserve_failed`, `stock.reservation_expired`, `stock.changed`, `order.processing_failed`, `product.snapshot`, `stock.availability_changed` | `branch.created`, `branch.updated`, `order.created`, `order.cancelled`, `order.paid`, `order.shipping` |
+| sales-service | Hoá đơn POS, đơn online, khách hàng, bản sao danh mục cho website, thanh toán chuyển khoản, hoàn tiền, trả hàng | `order.created`, `order.cancelled`, `order.paid`, `order.shipping`, `order.completed`, `order.returned` | `stock.*`, `product.snapshot`, `order.processing_failed` |
 | report-service | Tổng hợp doanh thu, lợi nhuận gộp, top sản phẩm, giá trị tồn kho | — | `order.completed`, `order.returned`, `stock.changed` |
 
 Sản phẩm và tồn kho chung một service vì gần như mọi thao tác kho đều cần thông tin sản phẩm; nhờ vậy dùng được khoá ngoại thật và transaction chung. Các service khác chỉ lưu `branchId`, `variantId`… dạng ID và tin vào claim trong JWT.
@@ -59,39 +59,58 @@ Chỉ có 3 vai trò cố định (enum), gán theo chi nhánh; không có bản
 |  | Access token | Refresh token |
 | --- | --- | --- |
 | Dạng | JWT ký RS256 | Chuỗi ngẫu nhiên 64 byte, không phải JWT |
-| Nội dung | `sub` (userId), `branches[{branchId, role}]`, `iss`, `aud`, `iat`, `exp`; header có `kid` | Không chứa gì |
+| Nội dung | `sub` (userId hoặc id tài khoản khách), `branches[{branchId, role}]` (rỗng với khách), `iss`, `aud`, `iat`, `exp`; header có `kid` | Không chứa gì |
 | Hạn | 15 phút | Hạn trượt 7 ngày (gia hạn mỗi lần refresh), hạn tuyệt đối 30 ngày tính từ `sessionStartedAt` |
-| Client lưu | Biến trong bộ nhớ React | Cookie `httpOnly; Secure; SameSite=Strict; Path=/api/auth/refresh` |
+| Client lưu | Biến trong bộ nhớ React | Cookie `httpOnly; Secure; SameSite=Strict`: nhân viên `rt_bo`, `Path=/api/auth`; khách `rt_shop`, `Path=/api/shop/auth` (giai đoạn 6) |
 | Server lưu | Không lưu | Bản băm SHA-256 trong `auth.RefreshToken` |
 | Ai kiểm tra | Gateway và mọi service, bằng public key, không gọi DB | Chỉ auth-service, tra DB |
 
 **Khoá:** mỗi cặp khoá RSA 2048 có một `kid`, sinh bằng `pnpm keys:generate [kid]`. Private key ở `secrets/jwt/private/<kid>.private.pem`: chỉ auth-service được mount, và chỉ đúng file của `JWT_ACTIVE_KID` (đường dẫn trong `JWT_PRIVATE_KEY_PATH`). Public key ở `secrets/jwt/public/<kid>.public.pem`: gateway và mọi service mount cả thư mục, read-only, qua `JWT_PUBLIC_KEYS_DIR`. Hai thư mục tách riêng để mount thư mục public không thể kéo theo private key. Mỗi service nạp mọi `*.public.pem` lúc khởi động, `kid` là tên file; thiếu khoá, gặp private key trong thư mục public hoặc RSA dưới 2048 bit → service không bật. Đổi khoá bằng `kid`: thêm khoá mới → restart các service → đổi `JWT_ACTIVE_KID` để ký bằng khoá mới → sau 15 phút gỡ khoá cũ.
 
-**Kiểm tra access token (gateway + mọi service):** dùng thư viện `jose`, ép `algorithms: ['RS256']`, chọn public key theo `kid` (`kid` thiếu hoặc lạ → từ chối), kiểm tra chữ ký trước, rồi `exp` (bắt buộc, lệch tối đa 30 giây), `nbf`, `iss`, `aud` (`JWT_ISSUER = auth-service`, `JWT_AUDIENCE = store-system`), rồi claims `sub`, `branches` bằng zod (`accessTokenClaimsSchema`). Hết hạn → `401 TOKEN_EXPIRED`; sai → `401 INVALID_TOKEN`. Gateway xoá mọi header `x-user-*` từ client và chuyển nguyên `Authorization` xuống service; service kiểm tra lại token (lớp bảo vệ thứ hai). Mọi endpoint mặc định cần đăng nhập, ngoại lệ đánh dấu `@Public()`.
+**Kiểm tra access token (gateway + mọi service):** dùng thư viện `jose`, ép `algorithms: ['RS256']`, chọn public key theo `kid` (`kid` thiếu hoặc lạ → từ chối), kiểm tra chữ ký trước, rồi `exp` (bắt buộc, lệch tối đa 30 giây), `nbf`, `iss`, `aud` (`JWT_ISSUER = auth-service`; `aud` theo loại token, xem dưới), rồi claims `sub`, `branches` bằng zod (`accessTokenClaimsSchema`). Hết hạn → `401 TOKEN_EXPIRED`; sai → `401 INVALID_TOKEN`. Gateway xoá mọi header `x-user-*` từ client và chuyển nguyên `Authorization` xuống service; service kiểm tra lại token (lớp bảo vệ thứ hai). Mọi endpoint mặc định cần đăng nhập, ngoại lệ đánh dấu `@Public()`.
+
+**Hai loại token:** cùng `iss`, khác `aud`: `store-backoffice` (`JWT_AUDIENCE_BACKOFFICE`, nhân viên) và `store-shop` (`JWT_AUDIENCE_SHOP`, khách). Gateway và service kiểm `aud` theo đường dẫn, nên token của khách không dùng được ở đường của nhân viên và ngược lại. `JwtGuard` mặc định yêu cầu `aud` nhân viên; endpoint của khách đánh dấu `@Audience('shop')`. Sai `aud` → `401 INVALID_TOKEN`.
 
 **Định tuyến ở gateway** (`apps/gateway/src/proxy/routes.ts`):
 
-| Đường ở gateway | Service | Đường ở service | Cần đăng nhập |
-| --- | --- | --- | --- |
-| `/api/auth/*` | auth | `/auth/*` | Không (login, refresh, logout) |
-| `/api/pos/*` | sales | `/pos/*` | Có |
-| `/api/online-orders/*` | sales | `/online-orders/*` | Có |
-| `/api/shop/*` | sales | `/shop/*` | Không (website khách) |
-| `/api/admin/auth/*` | auth | `/admin/*` | Có |
-| `/api/admin/inventory/*` | inventory | `/admin/*` | Có |
-| `/api/admin/sales/*` | sales | `/admin/*` | Có |
-| `/api/admin/reports/*` | report | `/admin/*` | Có |
-| `/webhooks/bank` | sales | `/webhooks/bank` | Không (kiểm chữ ký ở giai đoạn 6) |
+| Đường ở gateway | Service | Đường ở service | Gateway kiểm token | `aud` yêu cầu |
+| --- | --- | --- | --- | --- |
+| `/api/auth/*` | auth | `/auth/*` | Không (login, google, refresh, logout) | Công khai ở gateway; `me`, `change-password`, `logout-all` do auth kiểm, `aud` nhân viên |
+| `/api/pos/*` | sales | `/pos/*` | Có | nhân viên |
+| `/api/online-orders/*` | sales | `/online-orders/*` | Có | nhân viên |
+| `/api/shop/auth/*` | auth | `/shop/auth/*` | Không (giai đoạn 6) | Công khai ở gateway; endpoint cần đăng nhập do auth kiểm, `aud` khách |
+| `/api/shop/*` | sales | `/shop/*` | Không (website khách) | Công khai ở gateway; endpoint của khách do sales kiểm, `aud` khách |
+| `/api/admin/auth/*` | auth | `/admin/*` | Có | nhân viên |
+| `/api/admin/inventory/*` | inventory | `/admin/*` | Có | nhân viên |
+| `/api/admin/sales/*` | sales | `/admin/*` | Có | nhân viên |
+| `/api/admin/reports/*` | report | `/admin/*` | Có | nhân viên |
+| `/webhooks/bank` | sales | `/webhooks/bank` | Không (kiểm chữ ký ở giai đoạn 6) | — |
 
 Đường không có trong bảng → `404 NOT_FOUND`. `/internal/*` và `/health/*` của service không bao giờ được gateway chuyển tiếp. Đường cần đăng nhập: gateway kiểm tra token trước, sai thì trả lỗi luôn, không chuyển tiếp.
 
-Các đường API nêu trong tài liệu này là đường ở gateway, chỉ để minh hoạ luồng. Danh sách endpoint đầy đủ sẽ nằm trong OpenAPI (đang soạn).
+Các đường API nêu trong tài liệu này là đường ở gateway, chỉ để minh hoạ luồng. Danh sách endpoint đầy đủ nằm trong OpenAPI ở `docs/api/`: đã có `auth.openapi.yaml`, các service khác đang soạn.
 
 **Refresh:** băm cookie → tìm trong `RefreshToken` → kiểm tra tồn tại, chưa thu hồi, còn hạn trượt và hạn tuyệt đối, user `ACTIVE` → đọc lại vai trò mới nhất → thu hồi token cũ và phát token mới (xoay vòng) trong một transaction. Token đã thu hồi mà bị dùng lại → thu hồi mọi phiên của user đó.
 
 **Frontend:** interceptor axios bắt `TOKEN_EXPIRED`, chỉ chạy một lần refresh tại một thời điểm (các request khác chờ chung), rồi gửi lại request; refresh hỏng → về màn đăng nhập, lưu tạm giỏ hàng POS. Refresh chủ động khoảng 1 phút trước `exp`.
 
-**Đăng nhập:** bcrypt, thông báo lỗi chung "Sai email hoặc mật khẩu", tối đa 5 lần thử mỗi phút mỗi IP (thư viện @nestjs/throttler, đếm trong bộ nhớ gateway; chỉ chạy 1 instance gateway, khi nào chạy từ 2 instance mới thêm Redis). Khoá tài khoản → `status = LOCKED` + thu hồi mọi refresh token; access token đang dùng hết hiệu lực trong tối đa 15 phút.
+**Tài khoản:** auth giữ `User` (nhân viên) và `CustomerAccount` (khách, giai đoạn 6). Sales có `Customer.accountId`. Không gộp đơn cũ theo số điện thoại.
+
+**Cách đăng nhập của nhân viên:**
+
+- **MANAGER, STAFF: chỉ Google.** Không có mật khẩu.
+- **ADMIN: Google hoặc mật khẩu.** Mật khẩu là đường vào dự phòng khi Google lỗi; tối thiểu 12 ký tự, bcrypt.
+- Đăng nhập bằng mật khẩu chỉ thành công với user đang có vai trò ADMIN. Mọi trường hợp khác (sai email, sai mật khẩu, không phải ADMIN, bị khoá) trả **cùng** `401 INVALID_CREDENTIALS`.
+- Tối đa 5 lần thử mỗi phút mỗi IP (thư viện @nestjs/throttler, đếm trong bộ nhớ gateway; chỉ chạy 1 instance gateway, khi nào chạy từ 2 instance mới thêm Redis).
+- ADMIN đầu tiên tạo bằng lệnh CLI chạy trên server: email và mật khẩu lấy từ biến môi trường hoặc stdin, không qua tham số dòng lệnh. ADMIN mới do ADMIN khác tạo, bắt buộc đặt mật khẩu.
+- Hạ vai trò khỏi ADMIN → xoá `passwordHash`, thu hồi mọi phiên. Nâng lên ADMIN → bắt buộc đặt mật khẩu trong cùng thao tác.
+- Rủi ro chấp nhận: Google lỗi thì chỉ ADMIN đăng nhập được.
+
+**Đăng nhập Google (cách A):** Google Identity Services trả ID token cho trình duyệt; trình duyệt gửi `credential` cho auth; auth kiểm bằng `jose` + JWKS của Google: `iss` ∈ {`https://accounts.google.com`, `accounts.google.com`}, `aud = GOOGLE_CLIENT_ID`, `exp`, `email_verified = true`. Ghép theo `sub` qua bảng `AuthIdentity(provider, subject)`. Nhân viên chỉ ghép được với email admin đã thêm trước, không tự đăng ký. Lần đầu ghép → ghi `AuditLog`.
+
+**Rủi ro Gmail cá nhân:** hệ thống không ép được xác minh 2 bước trên tài khoản Gmail cá nhân. Khuyến nghị mọi nhân viên bật xác minh 2 bước. Khi có dấu hiệu lạ: quản lý khoá tài khoản (`lock`) hoặc gỡ liên kết (`unlink-google`), cả hai đều thu hồi mọi phiên; nhân viên kiểm tra lại tài khoản Google rồi mới mở khoá và liên kết lại.
+
+**Khoá tài khoản:** `status = LOCKED` + thu hồi mọi refresh token; access token đang dùng hết hiệu lực trong tối đa 15 phút.
 
 ## 3. Chức năng chi tiết theo module
 
@@ -105,8 +124,8 @@ Tổng cộng 8 module; mỗi module dưới đây liệt kê chức năng cho p
 
 ### 3.2 Nhân viên & phân quyền (auth-service)
 
-- Đăng nhập email/mật khẩu, JWT access 15 phút + refresh token 7 ngày, đăng xuất thu hồi refresh token.
-- CRUD nhân viên, khoá/mở tài khoản, đổi mật khẩu.
+- Đăng nhập Google (mọi nhân viên) hoặc mật khẩu (chỉ ADMIN), JWT access 15 phút + refresh token 7 ngày, đăng xuất thu hồi refresh token.
+- CRUD nhân viên, khoá/mở tài khoản, gỡ liên kết Google, đổi mật khẩu (chỉ ADMIN).
 - Gán nhân viên vào chi nhánh với vai trò ADMIN / MANAGER / STAFF.
 
 ### 3.3 Sản phẩm (inventory-service)
@@ -139,7 +158,7 @@ Tổng cộng 8 module; mỗi module dưới đây liệt kê chức năng cho p
 
 ### 3.7 Bán hàng online qua website (sales-service + inventory-service)
 
-- Website hiển thị số còn bán được = tổng `onHand − reserved − onlineBuffer` của mọi chi nhánh nhận đơn online.
+- Website hiển thị danh mục, giá tạm tính và số còn bán được từ bản sao chỉ đọc trong sales (mục 7.6). Số còn bán được = tổng `onHand − reserved − onlineBuffer` của mọi chi nhánh nhận đơn online, chỉ để tham khảo.
 - Khách đặt hàng, nhập thông tin giao hàng; đơn chưa gắn kho cho tới khi giữ được hàng.
 - Hệ thống tự chọn **một** chi nhánh có đủ cả đơn, ưu tiên chi nhánh còn nhiều hàng nhất; không tách đơn. Không chi nhánh nào đủ → huỷ đơn, báo hết hàng.
 - Thanh toán chuyển khoản qua VietQR, ghi nhận tự động qua webhook biến động số dư (hoặc nhân viên bấm xác nhận); giữ hàng tối đa 30 phút chờ thanh toán.
@@ -223,14 +242,19 @@ Mọi lần chuyển trạng thái là `UPDATE … WHERE id = ? AND status IN (<
 
 ```
 Branch 1 ──< UserBranch >── 1 User 1 ──< RefreshToken
+                             User 1 ──< AuthIdentity
+AuditLog (→ User)
+CustomerAccount (giai đoạn 6)
 ```
 
 | Bảng | Cột chính | Ghi chú |
 | --- | --- | --- |
-| Branch | code (unique), name, address, phone, isActive | Chi nhánh |
-| User | email (unique), passwordHash, fullName, phone, status (`ACTIVE`, `LOCKED`) | Nhân viên |
+| Branch | code (unique), name, address, phone, isActive, version | Chi nhánh |
+| User | email (unique), passwordHash (null trừ ADMIN), fullName, phone, status (`ACTIVE`, `LOCKED`), version | Nhân viên |
 | UserBranch | userId, branchId (null = toàn hệ thống), role (`ADMIN`, `MANAGER`, `STAFF`) | Unique (userId, branchId) |
 | RefreshToken | userId, tokenHash (unique), expiresAt (hạn trượt), sessionStartedAt (hạn tuyệt đối), revokedAt | Phiên đăng nhập |
+| AuthIdentity | userId, provider (`GOOGLE`), subject (`sub` của nhà cung cấp) | Unique (provider, subject); một user tối đa một liên kết mỗi provider |
+| AuditLog | actorId, action, entityType, entityId, data (JSONB), correlationId | Chỉ ghi thêm. Ghi khi ghép Google lần đầu, gỡ liên kết, khoá/mở, đổi vai trò, đặt lại mật khẩu |
 
 ### 5.2 Schema `inventory` (sản phẩm + kho)
 
@@ -277,7 +301,10 @@ Customer 1 ──< Order (→ auth.Branch, → inventory.Warehouse)
 
 | Bảng | Cột chính | Ghi chú |
 | --- | --- | --- |
-| Customer | phone (unique), name, email, address, totalSpent |  |
+| Customer | phone (unique), name, email, address, totalSpent, accountId (null, → auth.CustomerAccount) | Không gộp đơn cũ theo số điện thoại |
+| CatalogProduct | productId (PK, → inventory.Product), name, slug, description, imageUrl, isActive, version | Bản sao chỉ đọc, chỉ dữ liệu công khai (mục 7.6) |
+| CatalogVariant | variantId (PK, → inventory.ProductVariant), productId, sku, size, estimatedPrice, version | Giá tạm tính do inventory tính, chép lại |
+| CatalogAvailability | variantId (PK), available, version | Số còn bán được online, chỉ để tham khảo |
 | Order | code (unique, = nội dung chuyển khoản), channel (`POS`, `WEBSITE`), status, branchId, warehouseId (null khi online `PENDING`), fulfillingBranchId, customerId, subtotal, discount, shippingFee, total, idempotencyKey (unique), requestHash, recipientName, recipientPhone, shippingAddress, createdBy, version | Hoá đơn POS và đơn online chung bảng |
 | OrderItem | orderId, variantId, sku, productName, unitPrice, quantity, discount, unitCost | Chép tên/giá lúc bán; CHECK quantity > 0 |
 | OrderStatusHistory | orderId, fromStatus, toStatus, changedBy, note | Chỉ ghi thêm |
@@ -311,6 +338,7 @@ Schema đầy đủ cho auth, inventory và sales; report viết theo bảng ở
 ```prisma
 enum UserStatus { ACTIVE LOCKED }
 enum Role { ADMIN MANAGER STAFF }
+enum AuthProvider { GOOGLE }
 
 model Branch {
   id        String       @id @default(uuid()) @db.Uuid
@@ -319,6 +347,7 @@ model Branch {
   address   String?
   phone     String?
   isActive  Boolean      @default(true)
+  version   Int          @default(1)
   members   UserBranch[]
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
@@ -327,12 +356,14 @@ model Branch {
 model User {
   id           String         @id @default(uuid()) @db.Uuid
   email        String         @unique
-  passwordHash String
+  passwordHash String?        // chỉ ADMIN có giá trị
   fullName     String
   phone        String?
   status       UserStatus     @default(ACTIVE)
+  version      Int            @default(1)
   branches     UserBranch[]
   tokens       RefreshToken[]
+  identities   AuthIdentity[]
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 }
@@ -357,6 +388,30 @@ model RefreshToken {
   user             User      @relation(fields: [userId], references: [id])
   createdAt        DateTime  @default(now())
   @@index([userId])
+}
+
+model AuthIdentity {
+  id        String       @id @default(uuid()) @db.Uuid
+  userId    String       @db.Uuid
+  provider  AuthProvider
+  subject   String       // `sub` của nhà cung cấp, không dùng email để ghép
+  user      User         @relation(fields: [userId], references: [id])
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  @@unique([provider, subject])
+  @@unique([userId, provider])
+}
+
+model AuditLog { // chỉ ghi thêm
+  id            String   @id @default(uuid()) @db.Uuid
+  actorId       String?  @db.Uuid // null = lệnh CLI trên server
+  action        String
+  entityType    String
+  entityId      String   @db.Uuid
+  data          Json
+  correlationId String
+  createdAt     DateTime @default(now())
+  @@index([entityType, entityId])
 }
 ```
 
@@ -780,7 +835,12 @@ domain.events ─► <queue> ─► consumer ──ok──► commit, ack
 
 ### 7.6 Hiển thị tồn trên website
 
-- Website gọi `GET /api/shop/stock/availability?variantIds=…`, trả tổng `onHand − reserved − onlineBuffer` trên các kho `acceptsOnlineOrders`. Con số được phép lệch vài giây; số chính xác được kiểm tra lại bằng UPDATE có điều kiện lúc giữ hàng.
+- Website lấy danh mục, giá và số tồn từ **bản sao chỉ đọc trong sales**: `CatalogProduct`, `CatalogVariant`, `CatalogAvailability`, chỉ chứa dữ liệu công khai, đọc qua `/api/shop/*`. Website không gọi inventory, và không thêm HTTP nội bộ ngoài luồng POS. Làm ở giai đoạn 6.
+- Inventory phát `product.snapshot` (toàn bộ dữ liệu công khai của một mẫu, kèm giá tạm tính và `version` tăng dần) và `stock.availability_changed` (`variantId`, tổng còn bán được online = `onHand − reserved − onlineBuffer` trên các kho `acceptsOnlineOrders`, `version`).
+- Sales chỉ ghi đè khi `version` mới hơn bản đang có, nên thư trùng hay lệch thứ tự vẫn đúng.
+- Khi giá kim loại đổi, inventory tự tính lại và phát snapshot cho các mẫu bị ảnh hưởng. Công thức giá **chỉ** ở inventory; sales chỉ chép lại kết quả.
+- Có lệnh phát lại toàn bộ snapshot, dùng khi dựng lại bản sao.
+- Số tồn trên web chỉ để tham khảo: lúc giữ hàng inventory vẫn kiểm tra lại bằng UPDATE có điều kiện và chốt giá theo chiếc.
 - `onlineBuffer` theo từng kho và biến thể giữ lại hàng cho khách tại quầy.
 
 ### 7.7 Báo cáo
@@ -796,7 +856,6 @@ report-service upsert `OrderRevenue` / `OrderLineSales` theo `orderId` khi nhậ
 **Câu hỏi còn mở**
 
 - Có cần quản lý lô / hạn sử dụng (batch, expiry) không?
-- Tồn kho hiển thị cho website: `/api/shop/*` đi tới sales nhưng dữ liệu tồn thuộc inventory, và HTTP nội bộ chỉ dành cho luồng POS. Cần chốt trước giai đoạn website: thêm tuyến công khai tới inventory, hay sales giữ bản đọc cập nhật qua sự kiện.
 - Có tích hợp hoá đơn điện tử ngay từ đầu không?
 - Chọn dịch vụ webhook biến động số dư ngân hàng nào?
 

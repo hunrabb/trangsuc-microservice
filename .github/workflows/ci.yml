@@ -34,6 +34,9 @@ jobs:
       - name: Định dạng (Prettier)
         run: pnpm format:check
 
+      - name: OpenAPI
+        run: pnpm openapi:validate
+
       - name: Lint
         run: pnpm lint
 

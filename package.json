@@ -16,12 +16,14 @@
     "test:messaging": "turbo run test:messaging --concurrency=1",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "openapi:validate": "validate-api docs/api/auth.openapi.yaml",
     "keys:generate": "node scripts/generate-jwt-keys.mjs",
     "outbox:requeue": "node scripts/outbox-requeue.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@nestjs/cli": "^12.0.11",
+    "@seriousme/openapi-schema-validator": "2.11.0",
     "@types/node": "^24.19.2",
     "eslint": "^10.14.0",
     "eslint-config-prettier": "^10.1.8",
