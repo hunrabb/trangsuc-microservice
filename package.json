@@ -13,6 +13,7 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
+    "test:messaging": "turbo run test:messaging --concurrency=1",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "keys:generate": "node scripts/generate-jwt-keys.mjs"

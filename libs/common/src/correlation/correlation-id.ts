@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { ClsServiceManager } from 'nestjs-cls';
+import { CLS_ID, ClsServiceManager } from 'nestjs-cls';
 
 export const CORRELATION_ID_HEADER = 'x-correlation-id';
 
@@ -14,6 +14,15 @@ export function resolveCorrelationId(header: string | string[] | undefined): str
 export function getCorrelationId(): string | undefined {
   const cls = ClsServiceManager.getClsService();
   return cls.isActive() ? cls.getId() : undefined;
+}
+
+/** Chạy một việc ngoài request (worker, consumer) trong ngữ cảnh có correlationId, để log có mã đó. */
+export function runWithCorrelationId<T>(correlationId: string, work: () => Promise<T>): Promise<T> {
+  const cls = ClsServiceManager.getClsService();
+  return cls.run(() => {
+    cls.set(CLS_ID, correlationId);
+    return work();
+  });
 }
 
 /** Header cần gửi kèm khi gọi HTTP sang service khác. */

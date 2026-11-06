@@ -43,6 +43,7 @@ infra/
   migrate/         wait-for-postgres.mjs (nhúng vào image *-migrate: chờ Postgres nhận kết nối trước prisma migrate deploy)
 tests/
   integration/     test đa app: chạy dist của nhiều app rồi đọc log/HTTP (app không được import lẫn nhau)
+  messaging/       test outbox, consumer, retry, DLQ trên Postgres + RabbitMQ thật của Compose (`pnpm test:messaging`)
   test-utils/      chỉ cho test (signTestToken...); nằm ở devDependencies, ESLint cấm import từ code chạy thật
 scripts/           run-tests.mjs (chạy test, đỏ khi 0 test), generate-jwt-keys.mjs
 secrets/jwt/       (gitignore) private/<kid>.private.pem (chỉ auth), public/<kid>.public.pem (mọi service, read-only)
@@ -65,6 +66,7 @@ pnpm dev                                        # chạy mọi app ở chế đ�
 pnpm --filter @jewelry/<app> exec prisma migrate dev --name <ten>   # CHỈ máy dev; cần database shadow
 pnpm --filter @jewelry/<app> db:generate        # sinh Prisma client (turbo tự chạy trước build/typecheck/dev)
 pnpm test                                       # unit + tests/integration (chạy bản build thật của gateway, inventory; chưa cần Postgres)
+pnpm test:messaging                             # cần postgres, rabbitmq, rabbitmq-setup; dừng và bật RabbitMQ thật; không chạy trong `pnpm test`
 pnpm lint && pnpm typecheck
 pnpm build
 pnpm format:check                               # Prettier (pnpm format để tự sửa)
@@ -111,12 +113,12 @@ Chưa có (làm ở giai đoạn sau): `prisma db seed` (chưa có seed), `pnpm 
 
 ## 8. Nhất quán giữa các service
 
-- **Không bao giờ** gửi thẳng lên RabbitMQ từ code nghiệp vụ. Ghi `OutboxEvent` trong **cùng transaction** với thay đổi dữ liệu; worker trong `libs/common` gửi đi (`FOR UPDATE SKIP LOCKED`, publisher confirm, `mandatory: true`).
+- **Không bao giờ** gửi thẳng lên RabbitMQ từ code nghiệp vụ. Ghi `OutboxEvent` trong **cùng transaction** với thay đổi dữ liệu bằng `outbox.add(tx, ...)`; worker trong `libs/common` nhận lô bằng transaction ngắn (`FOR UPDATE SKIP LOCKED`, `PROCESSING` + `lockedUntil`), rồi gửi ngoài transaction (publisher confirm, `mandatory: true`). Mất kết nối không tính vào `attempts`.
 - Mỗi thư có `eventId` (= id dòng outbox) và `correlationId`.
-- Consumer: ghi `ProcessedEvent(eventId)` trong **cùng transaction** với việc nghiệp vụ; `P2002` trên `eventId` → bỏ qua, vẫn ack. Dùng consumer cơ sở trong `libs/common`, không tự viết lại.
+- Consumer: ghi `ProcessedEvent(eventId, consumer)` trước, trong **cùng transaction** với việc nghiệp vụ; `P2002` trên đúng khoá `ProcessedEvent` → bỏ qua, vẫn ack. Dùng consumer cơ sở trong `libs/common`, không tự viết lại.
 - Phân loại lỗi trong consumer:
-  - tạm thời (DB bận, timeout, `40P01`) → ném lỗi để retry (5 s → 30 s → 5 phút → DLQ);
-  - vĩnh viễn (sai format, không tìm thấy dữ liệu) → đưa thẳng DLQ;
+  - tạm thời (DB bận, timeout, `40P01`, `TransientError`) → retry 5 s → 30 s → 5 phút → DLQ: consumer gửi bản sao vào queue chờ có TTL với header đếm lần thử, chờ confirm, **rồi** mới ack thư gốc;
+  - vĩnh viễn (sai format, không tìm thấy dữ liệu, `PermanentError`, mọi lỗi không nhận ra) → DLQ ngay, bản sao giữ nguyên nội dung kèm header lý do lỗi và correlationId;
   - **nghiệp vụ** (hết hàng) → **không phải lỗi**: ack và phát sự kiện kết quả (ví dụ `stock.reserve_failed`).
 - Payload nhận vào phải được kiểm tra bằng zod schema trong `libs/contracts`.
 - Mọi xử lý phải đúng **dù thư đến trùng, đến lệch thứ tự, hay chạy song song nhiều instance**. Huỷ đến trước khi giữ hàng → ghi `StockReservation(RELEASED, quantity 0)` làm dấu.
@@ -179,7 +181,8 @@ Chưa có (làm ở giai đoạn sau): `prisma db seed` (chưa có seed), `pnpm 
 ## 13. Test
 
 - Unit: tính giá, chuyển trạng thái, phân loại lỗi.
-- Integration: Postgres thật (Testcontainers), không mock Prisma cho logic ghi dữ liệu.
+- Integration: Postgres thật (Testcontainers), không mock Prisma cho logic ghi dữ liệu. **Ngoại lệ:** outbox, consumer, retry, DLQ test bằng `pnpm test:messaging` trên Postgres và RabbitMQ của Docker Compose, vì cần đúng `definitions.json` và phải dừng, bật được broker.
+- Test chạy trên hạ tầng dùng chung không được `deleteMany` cả bảng hay purge queue: chỉ xoá đúng dữ liệu của mình, thấy dữ liệu lạ mà test có thể đụng tới thì dừng và báo lỗi, chạy xong trạng thái phải y như trước.
 - **Đồng thời** — bắt buộc cho mọi chỗ ghi dữ liệu dùng chung. Bắn song song bằng `Promise.all`, kiểm tra kết quả cuối trong DB. Ví dụ: N request tranh một tem → đúng 1 thành công; trùng `Idempotency-Key` → 1 hoá đơn; thư trùng `eventId` → xử lý 1 lần.
 - Contract: payload sự kiện khớp zod schema trong `libs/contracts`.
 

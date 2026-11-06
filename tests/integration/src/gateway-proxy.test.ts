@@ -260,7 +260,7 @@ describe('gateway chuyển tiếp request', () => {
   });
 });
 
-describe('/health/ready khi không có Postgres', () => {
+describe('/health/ready khi không có Postgres và RabbitMQ', () => {
   it('503 với body {status, checks}', async () => {
     const port = await freePort();
     const inventory = startService('inventory', {
@@ -271,7 +271,10 @@ describe('/health/ready khi không có Postgres', () => {
       await waitUntilLive(port);
       const response = await fetch(`http://127.0.0.1:${port}/health/ready`);
       assert.equal(response.status, 503);
-      assert.deepEqual(await response.json(), { status: 'error', checks: { postgres: 'down' } });
+      assert.deepEqual(await response.json(), {
+        status: 'error',
+        checks: { postgres: 'down', rabbitmq: 'down' },
+      });
     } finally {
       inventory.child.kill();
     }

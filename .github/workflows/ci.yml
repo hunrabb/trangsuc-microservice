@@ -16,6 +16,7 @@ jobs:
   verify:
     name: Lint, typecheck, test, build
     runs-on: ubuntu-24.04
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
 
@@ -47,6 +48,22 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+      # Test outbox/consumer cần Postgres và RabbitMQ thật, đúng topology trong definitions.json.
+      # Mật khẩu ngẫu nhiên cho từng lần chạy; override mở cổng 127.0.0.1 cho test trên máy runner.
+      - name: Hạ tầng cho test messaging
+        run: |
+          cp .env.example .env
+          for name in $(grep -E '^[A-Z_]*PASSWORD=$' .env.example | cut -d= -f1); do
+            password=$(openssl rand -hex 24)
+            echo "::add-mask::${password}"
+            sed -i -E "s/^${name}=$/${name}=${password}/" .env
+          done
+          docker compose up -d --wait postgres rabbitmq
+          docker compose run --rm rabbitmq-setup
+
+      - name: Test messaging (outbox, consumer, retry, DLQ)
+        run: pnpm test:messaging
 
   docker:
     name: docker compose build

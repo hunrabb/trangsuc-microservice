@@ -1,4 +1,4 @@
-// Schema Prisma của inventory-service. Chưa có model (giai đoạn 1.1 chỉ dựng khung).
+// Schema Prisma của inventory-service.
 // Prisma 7: URL kết nối KHÔNG nằm ở đây mà ở prisma.config.ts (DATABASE_URL, ?schema=inventory).
 
 datasource db {
@@ -11,4 +11,38 @@ generator client {
   moduleFormat = "cjs"
   // `nest build` không viết lại đường dẫn import: để mặc định sẽ sinh `.ts` và dist không chạy được.
   importFileExtension = "js"
+}
+
+enum OutboxStatus {
+  PENDING
+  PROCESSING
+  PUBLISHED
+  FAILED
+}
+
+// Sự kiện chờ gửi, ghi cùng transaction với dữ liệu nghiệp vụ. Worker trong libs/common gửi đi. id = eventId.
+model OutboxEvent {
+  id            String       @id @db.Uuid
+  eventType     String
+  aggregateType String
+  aggregateId   String       @db.Uuid
+  payload       Json
+  correlationId String
+  status        OutboxStatus @default(PENDING)
+  attempts      Int          @default(0)
+  lockedUntil   DateTime?    @db.Timestamptz(3)
+  createdAt     DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime     @default(now()) @updatedAt @db.Timestamptz(3)
+  publishedAt   DateTime?    @db.Timestamptz(3)
+
+  @@index([status, createdAt])
+}
+
+// Chống xử lý trùng: ghi cùng transaction với việc nghiệp vụ. Một thư có thể tới nhiều consumer nên khoá gồm cả consumer.
+model ProcessedEvent {
+  eventId     String   @db.Uuid
+  consumer    String
+  processedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@id([eventId, consumer])
 }

@@ -6,7 +6,11 @@ import { globSync } from 'node:fs';
 import { run } from 'node:test';
 import { spec } from 'node:test/reporters';
 
-const patterns = process.argv.slice(2);
+// --sequential: chạy từng file một. Dùng khi mỗi file dựng nhiều service thật: 8 service khởi động cùng lúc mất
+// hơn 20 giây trên máy 4 CPU (1 service mất khoảng 2 giây), vượt thời gian chờ và tốn RAM.
+const args = process.argv.slice(2);
+const sequential = args.includes('--sequential');
+const patterns = args.filter((arg) => arg !== '--sequential');
 const files = patterns.flatMap((pattern) => globSync(pattern)).sort();
 
 if (files.length === 0) {
@@ -19,7 +23,7 @@ let failed = 0;
 
 const stream = run({
   files,
-  concurrency: true,
+  concurrency: sequential ? 1 : true,
   execArgv: ['--disable-warning=MODULE_TYPELESS_PACKAGE_JSON'],
 });
 

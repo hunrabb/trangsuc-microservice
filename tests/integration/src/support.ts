@@ -23,6 +23,8 @@ export const JWT_ENV = {
   JWT_PUBLIC_KEYS_DIR: testKeys.publicKeysDir,
   JWT_ISSUER: TEST_ISSUER,
   JWT_AUDIENCE: TEST_AUDIENCE,
+  // Cổng đóng: các test này không cần RabbitMQ, service vẫn chạy và tự thử kết nối lại.
+  RABBITMQ_URL: 'amqp://test:test@127.0.0.1:1',
 };
 
 export function freePort(): Promise<number> {
@@ -37,13 +39,17 @@ export function freePort(): Promise<number> {
   });
 }
 
+/** Dữ liệu chẩn đoán theo cổng: service không lên thì thông báo lỗi phải nói được vì sao. */
+const started = new Map<string, { app: string; service: RunningService; stderr: string[] }>();
+
 export function startService(app: string, env: Record<string, string>): RunningService {
   const child = spawn(process.execPath, [resolve(REPO_ROOT, `apps/${app}/dist/main.js`)], {
     cwd: import.meta.dirname,
     env: { PATH: process.env.PATH, NODE_ENV: 'test', ...JWT_ENV, ...env },
-    stdio: ['ignore', 'pipe', 'inherit'],
+    stdio: ['ignore', 'pipe', 'pipe'],
   });
   const logs: LogLine[] = [];
+  const stderr: string[] = [];
   let buffer = '';
   child.stdout?.on('data', (chunk: Buffer) => {
     buffer += chunk.toString();
@@ -55,26 +61,44 @@ export function startService(app: string, env: Record<string, string>): RunningS
       }
     }
   });
-  return { child, logs };
+  child.stderr?.on('data', (chunk: Buffer) => stderr.push(chunk.toString()));
+  const service = { child, logs };
+  if (env.PORT !== undefined) {
+    started.set(env.PORT, { app, service, stderr });
+  }
+  return service;
+}
+
+function describeFailure(port: number): string {
+  const entry = started.get(String(port));
+  if (entry === undefined) {
+    return '';
+  }
+  const { app, service, stderr } = entry;
+  const lastLogs = service.logs.slice(-3).map((line) => line.msg);
+  return ` (${app}, exitCode=${service.child.exitCode}, stderr=${stderr.join('').slice(-400)}, log cuối=${JSON.stringify(lastLogs)})`;
 }
 
 export async function waitUntilLive(port: number): Promise<void> {
   const deadline = Date.now() + STARTUP_TIMEOUT_MS;
+  let lastError: unknown;
   while (Date.now() < deadline) {
     try {
       const response = await fetch(`http://127.0.0.1:${port}/health/live`);
       if (response.ok) {
         return;
       }
-    } catch {
-      // chưa mở cổng
+      lastError = `HTTP ${response.status}`;
+    } catch (error) {
+      lastError = error instanceof Error ? (error.cause ?? error) : error;
     }
     await new Promise((done) => setTimeout(done, 100));
   }
-  throw new Error(`Service ở cổng ${port} không lên trong ${STARTUP_TIMEOUT_MS} ms`);
+  throw new Error(
+    `Service ở cổng ${port} không lên trong ${STARTUP_TIMEOUT_MS} ms: ${String(lastError)}${describeFailure(port)}`,
+  );
 }
 
-/** Dòng "request completed" được ghi sau khi phản hồi đã đi, nên phải chờ. */
 export async function waitForLogs(
   service: RunningService,
   correlationId: string,

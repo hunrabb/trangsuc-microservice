@@ -26,6 +26,11 @@ export const postgresUrlField = (dbSchema: string) =>
       `URL phải có ?schema=${dbSchema}`,
     );
 
+/** Không có mặc định: thiếu là không được chạy. Dùng user ứng dụng, không dùng tài khoản quản trị. */
+export const rabbitUrlField = requiredEnv('URL')
+  .pipe(z.url({ protocol: /^amqps?$/, error: 'phải là URL dạng amqp://user:pass@host:5672' }))
+  .refine((value) => new URL(value).password !== '', 'URL thiếu mật khẩu');
+
 const nonEmptyEnv = (kind: string) => requiredEnv(kind).min(1, 'không được để trống');
 
 /** Có file và tiến trình đọc được: mount sai hoặc sai quyền thì dịch vụ không bật. */

@@ -20,6 +20,10 @@
       "dependsOn": ["^build", "db:generate"],
       "cache": false,
       "persistent": true
+    },
+    "test:messaging": {
+      "dependsOn": ["^build", "db:generate"],
+      "cache": false
     }
   }
 }

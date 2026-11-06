@@ -4,10 +4,13 @@ import {
   CorrelationModule,
   HealthModule,
   JwtAuthModule,
+  MessagingModule,
   postgresCheck,
+  rabbitCheck,
+  RabbitConnection,
 } from '@jewelry/common';
 import { Module } from '@nestjs/common';
-import { envSchema, SERVICE_NAME } from './config/env';
+import { DB_SCHEMA, envSchema, SERVICE_NAME } from './config/env';
 import { InternalPingController } from './internal/ping.controller';
 import { PrismaModule } from './prisma/prisma.module';
 import { PrismaService } from './prisma/prisma.service';
@@ -19,9 +22,18 @@ import { PrismaService } from './prisma/prisma.service';
     AppLoggerModule.forRoot(SERVICE_NAME),
     JwtAuthModule,
     PrismaModule,
-    HealthModule.forRoot({
+    MessagingModule.forRoot({
+      service: SERVICE_NAME,
+      dbSchema: DB_SCHEMA,
       inject: [PrismaService],
-      readinessChecks: (prisma: PrismaService) => [postgresCheck(prisma)],
+      database: (prisma: PrismaService) => prisma,
+    }),
+    HealthModule.forRoot({
+      inject: [PrismaService, RabbitConnection],
+      readinessChecks: (prisma: PrismaService, rabbit: RabbitConnection) => [
+        postgresCheck(prisma),
+        rabbitCheck(rabbit),
+      ],
     }),
   ],
   controllers: [InternalPingController],

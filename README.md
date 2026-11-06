@@ -137,6 +137,20 @@ pnpm keys:generate k2     # đổi khoá: thêm kid mới
   4. Sau 15 phút (hạn của access token) gỡ khoá cũ khỏi `public/` và `private/`, rồi restart các service.
 - Bỏ qua bước 2 thì token ký bằng khoá mới sẽ bị từ chối cho tới khi các service restart.
 
+### Outbox và consumer
+
+- Ghi sự kiện: `await outbox.add(tx, { eventType, aggregateType, aggregateId, payload })` trong `prisma.$transaction`. Worker gửi đi, chi tiết ở `docs/thiet-ke.md` mục 7.2.
+- Nhận sự kiện: khai báo `consumer: { queue, handlers }` trong `MessagingModule.forRoot`. Handler nhận `(payload, { tx, envelope })`; ném `TransientError` để thử lại, `PermanentError` để vào DLQ; kết quả nghiệp vụ thì ghi outbox, không ném lỗi.
+- `system.test` (bind vào `report.events`) là sự kiện kỹ thuật, chỉ để kiểm thử đường đi outbox → consumer, không có ý nghĩa nghiệp vụ. Mục đích này cũng ghi trong `_comment` của `definitions.json`.
+- Queue `*.retry.*` không có consumer: thư nằm đó tới hết TTL rồi tự quay lại queue chính.
+
+```bash
+docker compose up -d postgres rabbitmq rabbitmq-setup
+pnpm test:messaging    # khoảng 3 phút, có dừng và bật RabbitMQ thật
+```
+
+`pnpm test:messaging` chạy được trên hạ tầng đang có dữ liệu: chỉ xoá đúng dữ liệu của mình. Nếu `report.events`, queue chờ hoặc DLQ của nó có thư không phải của test, có consumer đang chạy (tắt `pnpm dev` trước), hoặc bảng outbox có dòng thật mà worker hay job dọn sẽ đụng tới, test dừng và báo lỗi. Chạy xong, trạng thái phải y như trước.
+
 ### Kiểm tra nhanh sau khi lên
 
 ```bash
@@ -153,7 +167,7 @@ docker compose exec postgres sh -c \
 
 ### RabbitMQ
 
-Topology (exchange `domain.events` kiểu topic, `dlx` kiểu direct, 3 queue `*.events` + 3 `*.events.dlq`, các binding) nằm trong [infra/rabbitmq/definitions.json](infra/rabbitmq/definitions.json) — không chứa mật khẩu. Container `rabbitmq-setup` chạy [infra/rabbitmq/setup.mjs](infra/rabbitmq/setup.mjs) sau khi RabbitMQ healthy: tạo/cập nhật user ứng dụng (mật khẩu từ `.env`), rồi nạp definitions qua management API. Chạy lại bao nhiêu lần cũng không lỗi:
+Topology (exchange `domain.events` kiểu topic, `dlx` kiểu direct, 3 queue `*.events`, 3 `*.events.dlq`, 9 queue chờ `*.events.retry.{5s,30s,5m}`, các binding) nằm trong [infra/rabbitmq/definitions.json](infra/rabbitmq/definitions.json) — không chứa mật khẩu. Container `rabbitmq-setup` chạy [infra/rabbitmq/setup.mjs](infra/rabbitmq/setup.mjs) sau khi RabbitMQ healthy: tạo/cập nhật user ứng dụng (mật khẩu từ `.env`), rồi nạp definitions qua management API. Chạy lại bao nhiêu lần cũng không lỗi:
 
 ```bash
 docker compose run --rm rabbitmq-setup

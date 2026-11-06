@@ -8,6 +8,7 @@ const parseEnv = (raw: Record<string, unknown>) => parse(envSchema, raw);
 const valid = {
   PORT: '3000',
   DATABASE_URL: 'postgresql://report_user:s3cret@postgres:5432/jewelry?schema=report',
+  RABBITMQ_URL: 'amqp://jewelry_app:s3cret@rabbitmq:5672',
   JWT_PUBLIC_KEYS_DIR: '/run/secrets/jwt-public',
   JWT_ISSUER: 'auth-service',
   JWT_AUDIENCE: 'store-system',
@@ -33,6 +34,7 @@ describe('parseEnv (report)', () => {
         'JWT_ISSUER',
         'JWT_PUBLIC_KEYS_DIR',
         'PORT',
+        'RABBITMQ_URL',
       ]);
     }
   });

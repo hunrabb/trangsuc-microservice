@@ -433,6 +433,9 @@ importers:
       '@nestjs/platform-express':
         specifier: ^12.3.3
         version: 12.3.3(@nestjs/common@12.3.3(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@12.3.3)
+      amqplib:
+        specifier: 2.2.1
+        version: 2.2.1
       jose:
         specifier: 6.2.15
         version: 6.2.15
@@ -482,6 +485,30 @@ importers:
       '@jewelry/test-utils':
         specifier: workspace:*
         version: link:../test-utils
+
+  tests/messaging:
+    devDependencies:
+      '@jewelry/common':
+        specifier: workspace:*
+        version: link:../../libs/common
+      '@jewelry/contracts':
+        specifier: workspace:*
+        version: link:../../libs/contracts
+      '@jewelry/inventory':
+        specifier: workspace:*
+        version: link:../../apps/inventory
+      '@jewelry/report':
+        specifier: workspace:*
+        version: link:../../apps/report
+      '@jewelry/test-utils':
+        specifier: workspace:*
+        version: link:../test-utils
+      '@nestjs/common':
+        specifier: ^12.3.3
+        version: 12.3.3(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      amqplib:
+        specifier: 2.2.1
+        version: 2.2.1
 
   tests/test-utils:
     dependencies:
@@ -1336,6 +1363,10 @@ packages:
 
   ajv@8.20.0:
     resolution: {integrity: sha512-Thbli+OlOj+iMPYFBVBfJ3OmCAnaSyNn4M1vz9T6Gka5Jt9ba/HIR56joy65tY6kx/FCF5VXNB819Y7/GUrBGA==}
+
+  amqplib@2.2.1:
+    resolution: {integrity: sha512-J3JjAydC2vJ/AgkgVAE0kVH5M4RNfm51zUaspHpwSai3W35lD3hKryvYY/xqMnYcNfR66NYL06Eik+Adn293dQ==}
+    engines: {node: '>=18'}
 
   ansi-regex@5.0.1:
     resolution: {integrity: sha512-quJQXlTSUGL2LH9SUXo8VwsY4soanhgo6LNSm84E1LBcE8s3O0wpdiRzyR9z/ZZJMlMWv37qOOb9pdJlMUEKFQ==}
@@ -3558,6 +3589,8 @@ snapshots:
       fast-uri: 3.1.9
       json-schema-traverse: 1.0.0
       require-from-string: 2.0.2
+
+  amqplib@2.2.1: {}
 
   ansi-regex@5.0.1: {}
 

@@ -24,7 +24,7 @@ x-nest-healthcheck: &nest-healthcheck
   retries: 5
   start_period: 20s
 
-# 4 service có DB: chỉ healthy khi /health/ready trả 200 (đã thông tới Postgres).
+# 4 service có DB: chỉ healthy khi /health/ready trả 200 (đã thông tới Postgres và RabbitMQ).
 x-ready-healthcheck: &ready-healthcheck
   <<: *nest-healthcheck
   test:
@@ -191,6 +191,7 @@ services:
       JWT_PRIVATE_KEY_PATH: /run/secrets/jwt-private.pem
       JWT_ACTIVE_KID: ${JWT_ACTIVE_KID:?JWT_ACTIVE_KID chưa đặt trong .env}
       DATABASE_URL: postgresql://auth_user:${AUTH_DB_PASSWORD:?AUTH_DB_PASSWORD chưa đặt trong .env}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB chưa đặt trong .env}?schema=auth
+      RABBITMQ_URL: amqp://${RABBITMQ_APP_USER:?RABBITMQ_APP_USER chưa đặt trong .env}:${RABBITMQ_APP_PASSWORD:?RABBITMQ_APP_PASSWORD chưa đặt trong .env}@rabbitmq:5672
     volumes:
       - *jwt-public-volume
       # Chỉ auth có private key, và chỉ đúng file đang dùng.
@@ -218,6 +219,7 @@ services:
       NODE_ENV: production
       PORT: '3000'
       DATABASE_URL: postgresql://inventory_user:${INVENTORY_DB_PASSWORD:?INVENTORY_DB_PASSWORD chưa đặt trong .env}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB chưa đặt trong .env}?schema=inventory
+      RABBITMQ_URL: amqp://${RABBITMQ_APP_USER:?RABBITMQ_APP_USER chưa đặt trong .env}:${RABBITMQ_APP_PASSWORD:?RABBITMQ_APP_PASSWORD chưa đặt trong .env}@rabbitmq:5672
     volumes:
       - *jwt-public-volume
     depends_on:
@@ -243,6 +245,7 @@ services:
       NODE_ENV: production
       PORT: '3000'
       DATABASE_URL: postgresql://sales_user:${SALES_DB_PASSWORD:?SALES_DB_PASSWORD chưa đặt trong .env}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB chưa đặt trong .env}?schema=sales
+      RABBITMQ_URL: amqp://${RABBITMQ_APP_USER:?RABBITMQ_APP_USER chưa đặt trong .env}:${RABBITMQ_APP_PASSWORD:?RABBITMQ_APP_PASSWORD chưa đặt trong .env}@rabbitmq:5672
     volumes:
       - *jwt-public-volume
     depends_on:
@@ -268,6 +271,7 @@ services:
       NODE_ENV: production
       PORT: '3000'
       DATABASE_URL: postgresql://report_user:${REPORT_DB_PASSWORD:?REPORT_DB_PASSWORD chưa đặt trong .env}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB chưa đặt trong .env}?schema=report
+      RABBITMQ_URL: amqp://${RABBITMQ_APP_USER:?RABBITMQ_APP_USER chưa đặt trong .env}:${RABBITMQ_APP_PASSWORD:?RABBITMQ_APP_PASSWORD chưa đặt trong .env}@rabbitmq:5672
     volumes:
       - *jwt-public-volume
     depends_on:

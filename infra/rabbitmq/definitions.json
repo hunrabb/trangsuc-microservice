@@ -1,9 +1,14 @@
 {
+  "_comment": "Chỉ chứa topology. \"system.test\" là sự kiện kỹ thuật chỉ để kiểm thử đường đi outbox → consumer, bind vào report.events, không có ý nghĩa nghiệp vụ. Queue *.retry.* là queue chờ của retry: không có consumer, hết TTL thì thư quay lại queue chính.",
   "rabbit_version": "4.4.0",
   "rabbitmq_version": "4.4.0",
   "product_name": "RabbitMQ",
   "product_version": "4.4.0",
-  "vhosts": [{ "name": "/" }],
+  "vhosts": [
+    {
+      "name": "/"
+    }
+  ],
   "exchanges": [
     {
       "name": "domain.events",
@@ -63,21 +68,135 @@
       "vhost": "/",
       "durable": true,
       "auto_delete": false,
-      "arguments": { "x-queue-type": "classic" }
+      "arguments": {
+        "x-queue-type": "classic"
+      }
     },
     {
       "name": "sales.events.dlq",
       "vhost": "/",
       "durable": true,
       "auto_delete": false,
-      "arguments": { "x-queue-type": "classic" }
+      "arguments": {
+        "x-queue-type": "classic"
+      }
     },
     {
       "name": "report.events.dlq",
       "vhost": "/",
       "durable": true,
       "auto_delete": false,
-      "arguments": { "x-queue-type": "classic" }
+      "arguments": {
+        "x-queue-type": "classic"
+      }
+    },
+    {
+      "name": "inventory.events.retry.5s",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "classic",
+        "x-message-ttl": 5000,
+        "x-dead-letter-exchange": "",
+        "x-dead-letter-routing-key": "inventory.events"
+      }
+    },
+    {
+      "name": "inventory.events.retry.30s",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "classic",
+        "x-message-ttl": 30000,
+        "x-dead-letter-exchange": "",
+        "x-dead-letter-routing-key": "inventory.events"
+      }
+    },
+    {
+      "name": "inventory.events.retry.5m",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "classic",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "",
+        "x-dead-letter-routing-key": "inventory.events"
+      }
+    },
+    {
+      "name": "sales.events.retry.5s",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "classic",
+        "x-message-ttl": 5000,
+        "x-dead-letter-exchange": "",
+        "x-dead-letter-routing-key": "sales.events"
+      }
+    },
+    {
+      "name": "sales.events.retry.30s",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "classic",
+        "x-message-ttl": 30000,
+        "x-dead-letter-exchange": "",
+        "x-dead-letter-routing-key": "sales.events"
+      }
+    },
+    {
+      "name": "sales.events.retry.5m",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "classic",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "",
+        "x-dead-letter-routing-key": "sales.events"
+      }
+    },
+    {
+      "name": "report.events.retry.5s",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "classic",
+        "x-message-ttl": 5000,
+        "x-dead-letter-exchange": "",
+        "x-dead-letter-routing-key": "report.events"
+      }
+    },
+    {
+      "name": "report.events.retry.30s",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "classic",
+        "x-message-ttl": 30000,
+        "x-dead-letter-exchange": "",
+        "x-dead-letter-routing-key": "report.events"
+      }
+    },
+    {
+      "name": "report.events.retry.5m",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "classic",
+        "x-message-ttl": 300000,
+        "x-dead-letter-exchange": "",
+        "x-dead-letter-routing-key": "report.events"
+      }
     }
   ],
   "bindings": [
@@ -121,7 +240,6 @@
       "routing_key": "branch.created",
       "arguments": {}
     },
-
     {
       "source": "domain.events",
       "vhost": "/",
@@ -154,7 +272,6 @@
       "routing_key": "order.processing_failed",
       "arguments": {}
     },
-
     {
       "source": "domain.events",
       "vhost": "/",
@@ -179,7 +296,6 @@
       "routing_key": "stock.changed",
       "arguments": {}
     },
-
     {
       "source": "dlx",
       "vhost": "/",
@@ -202,6 +318,14 @@
       "destination": "report.events.dlq",
       "destination_type": "queue",
       "routing_key": "report.events.dlq",
+      "arguments": {}
+    },
+    {
+      "source": "domain.events",
+      "vhost": "/",
+      "destination": "report.events",
+      "destination_type": "queue",
+      "routing_key": "system.test",
       "arguments": {}
     }
   ]

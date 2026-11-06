@@ -6,7 +6,7 @@
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
     "lint": "eslint .",
-    "test": "node ../../scripts/run-tests.mjs \"src/**/*.test.ts\""
+    "test": "node ../../scripts/run-tests.mjs --sequential \"src/**/*.test.ts\""
   },
   "devDependencies": {
     "@jewelry/gateway": "workspace:*",

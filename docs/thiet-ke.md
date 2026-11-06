@@ -297,8 +297,8 @@ Doanh thu, lợi nhuận gộp theo ngày / chi nhánh / kênh = `SUM` trên `Or
 
 | Bảng | Cột chính | Ghi chú |
 | --- | --- | --- |
-| OutboxEvent | aggregateType, aggregateId, eventType, payload (JSONB), status, attempts, publishedAt | Ghi cùng transaction nghiệp vụ |
-| ProcessedEvent | eventId (PK), consumer, processedAt | Chống xử lý trùng |
+| OutboxEvent | aggregateType, aggregateId, eventType, payload (JSONB), correlationId, status, attempts, lockedUntil, publishedAt | Ghi cùng transaction nghiệp vụ |
+| ProcessedEvent | eventId + consumer (khoá chính), processedAt | Chống xử lý trùng |
 
 ## 6. Prisma schema (service lõi)
 
@@ -375,7 +375,7 @@ enum MovementType  { IMPORT SALE SALE_CANCEL RETURN ADJUSTMENT }
 enum ReceiptStatus { DRAFT PENDING COMPLETED CANCELLED }
 enum ReservationStatus { ACTIVE CONSUMED RELEASED EXPIRED }
 enum CountStatus { DRAFT COMPLETED }
-enum OutboxStatus { PENDING PUBLISHED FAILED }
+enum OutboxStatus { PENDING PROCESSING PUBLISHED FAILED }
 
 // ---------- Sản phẩm ----------
 model Category {
@@ -575,22 +575,26 @@ model StockCountItem {
 
 // ---------- Nhất quán dữ liệu ----------
 model OutboxEvent {
-  id            String       @id @default(uuid()) @db.Uuid // = eventId
+  id            String       @id @db.Uuid // = eventId, do outbox.add sinh
+  eventType     String
   aggregateType String
   aggregateId   String       @db.Uuid
-  eventType     String
   payload       Json
+  correlationId String
   status        OutboxStatus @default(PENDING)
   attempts      Int          @default(0)
-  createdAt     DateTime     @default(now())
-  publishedAt   DateTime?
+  lockedUntil   DateTime?    @db.Timestamptz(3)
+  createdAt     DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime     @default(now()) @updatedAt @db.Timestamptz(3)
+  publishedAt   DateTime?    @db.Timestamptz(3)
   @@index([status, createdAt])
 }
 
 model ProcessedEvent {
-  eventId     String   @id @db.Uuid
+  eventId     String   @db.Uuid
   consumer    String
-  processedAt DateTime @default(now())
+  processedAt DateTime @default(now()) @db.Timestamptz(3)
+  @@id([eventId, consumer]) // một thư có thể tới nhiều consumer
 }
 ```
 
@@ -717,19 +721,46 @@ WHERE "warehouseId" = $wh AND "variantId" = $variant
 
 ### 7.2 Transactional Outbox
 
-1. Service ghi dữ liệu nghiệp vụ và `OutboxEvent(PENDING)` trong cùng một transaction.
-2. Worker relay mỗi 500 ms lấy lô sự kiện bằng `SELECT … FOR UPDATE SKIP LOCKED LIMIT 100`, publish lên RabbitMQ với publisher confirm, rồi đặt `PUBLISHED`.
-3. Lỗi publish → tăng `attempts`, quá 10 lần → `FAILED` và cảnh báo.
+1. Service ghi dữ liệu nghiệp vụ và `OutboxEvent(PENDING)` trong cùng một transaction, bằng `outbox.add(tx, ...)` (kiểm tra payload theo schema trong `libs/contracts`, kèm correlationId hiện tại).
+2. Worker chạy mỗi 500 ms. **Nhận lô:** một transaction ngắn chọn tối đa 100 dòng `PENDING` hoặc `PROCESSING` đã quá `lockedUntil` bằng `FOR UPDATE SKIP LOCKED`, đặt `PROCESSING`, `lockedUntil = now + 30 s`, rồi commit.
+3. **Gửi** từng thư lên exchange `domain.events`, ngoài transaction: `persistent`, `mandatory`, `messageId = eventId`, header `x-correlation-id`, chờ publisher confirm. Thành công → `PUBLISHED`.
+4. Lỗi của thư (bị trả lại vì không queue nào nhận, nack) → về `PENDING`, `attempts + 1`; đủ 10 lần → `FAILED`, log lỗi. Thư bị trả lại vẫn được broker ack, nên phải bắt sự kiện `return`, không chỉ chờ confirm.
+5. Mất kết nối không phải lỗi của thư, không tăng `attempts`: đang mất kết nối thì không nhận lô; đứt giữa lô thì trả phần còn lại về `PENDING`. Nếu không, chỉ 5 giây mất RabbitMQ là mọi dòng thành `FAILED`.
+6. Worker chỉ gửi trong 25 giây đầu của thời gian giữ dòng; phần chưa gửi về `PENDING`. 5 giây còn lại dành cho thư cuối chờ confirm, để dòng không hết hạn khi thư đang gửi.
+7. Job dọn xoá dòng `PUBLISHED` cũ hơn 7 ngày.
 
-Nhờ vậy không có trường hợp DB đã commit mà sự kiện bị mất, hoặc sự kiện đã gửi mà DB rollback.
+```
+                 nhận lô                 confirm ok
+    PENDING ───────────────► PROCESSING ───────────► PUBLISHED ──(7 ngày)──► xoá
+       ▲                        │  │  │
+       │  lỗi thư, attempts + 1 │  │  │ đủ 10 lần
+       ├────────────────────────┘  │  └───────────► FAILED
+       │  mất kết nối / gần hết giờ│
+       └───────────────────────────┘
+    PROCESSING quá lockedUntil (worker chết) → được nhận lại như PENDING
+```
+
+Đảm bảo là **at-least-once**: không có trường hợp DB đã commit mà sự kiện bị mất, hoặc sự kiện đã gửi mà DB rollback; worker chết sau khi gửi mà trước khi ghi `PUBLISHED` thì thư được gửi lại, và consumer chống trùng ở 7.3.
 
 ### 7.3 Consumer idempotent, retry và DLQ
 
-- Mỗi thư mang `eventId` (= id dòng outbox). Consumer ghi `ProcessedEvent(eventId)` trong **cùng transaction** với việc nghiệp vụ; trùng khoá (`P2002` trên `eventId`) → bỏ qua và vẫn ack. Lớp thứ hai chống trùng *việc*: unique theo `orderId` (`StockReservation`, `StockMovement`, `OrderRevenue`).
-- Manual ack sau khi commit; `prefetch = 10`, nhỏ hơn `connection_limit` của Prisma.
-- Lỗi tạm thời (DB bận, timeout, `40P01`) → nack sang queue chờ có TTL 5 s → 30 s → 5 phút (đếm bằng header `x-death`); quá 3 lần → DLQ. Lỗi vĩnh viễn (sai format, không tìm thấy dữ liệu) → DLQ ngay. Lỗi nghiệp vụ (hết hàng) **không phải lỗi**: ack và phát sự kiện kết quả (`stock.reserve_failed`).
-- Thư vào DLQ → log mức `error` kèm `correlationId`, phát `order.processing_failed` để sales đánh dấu đơn "cần xem xét" (chưa huỷ). Admin xem và đẩy lại thư từ DLQ sau khi sửa lỗi.
-- Topology (exchange `domain.events` kiểu topic, queue `inventory.events` / `sales.events` / `report.events`, DLX, DLQ) nạp sẵn bằng `definitions.json`; queue `durable`, thư `persistent`; worker gửi với `mandatory: true`.
+- Mỗi thư có phong bì `{ eventId, eventType, occurredAt, correlationId, payload }`; `eventId` = id dòng outbox. Consumer kiểm tra phong bì và payload bằng zod, đặt correlationId vào CLS.
+- Trong **một transaction**: ghi `ProcessedEvent(eventId, consumer)` trước, rồi gọi handler với `tx`. Trùng đúng khoá chính `ProcessedEvent` (`P2002` với `constraint.index = ProcessedEvent_pkey`; Prisma 7 không còn `meta.target`) → đã xử lý, ack. `P2002` ở bảng khác là lỗi thật. Lớp thứ hai chống trùng *việc*: unique theo `orderId` (`StockReservation`, `StockMovement`, `OrderRevenue`).
+- Manual ack sau khi commit; `prefetch = 10`, nhỏ hơn `connection_limit` của Prisma. Consumer chỉ subscribe queue có sẵn, không khai báo topology; user ứng dụng không có quyền `configure`.
+- Lỗi tạm thời (mất kết nối DB, timeout, `40P01`, `40001`, `TransientError`) → consumer gửi **bản sao** vào queue chờ `<queue>.retry.5s` / `.retry.30s` / `.retry.5m` kèm header đếm `x-retry-count`, chờ confirm, **rồi** mới ack thư gốc. Queue chờ có TTL, không có consumer, hết hạn thì thư quay lại queue chính. Quá 3 lần → DLQ. Gửi bản sao lỗi → trả thư gốc về queue, không mất thư.
+- Lỗi vĩnh viễn (sai schema, không có handler, `PermanentError`, mọi lỗi không nhận ra) → DLQ ngay. Lỗi nghiệp vụ (hết hàng) **không phải lỗi**: handler không ném, tự ghi outbox sự kiện kết quả (`stock.reserve_failed`), rồi ack.
+- Thư vào DLQ bằng bản sao: giữ nguyên nội dung, thêm header `x-error-kind`, `x-error-reason`, `x-failed-queue`, `x-correlation-id`. Dùng bản sao thay cho nack vì nack không mang được lý do lỗi. Log mức `error` kèm `correlationId`, phát `order.processing_failed` để sales đánh dấu đơn "cần xem xét" (chưa huỷ). Admin xem và đẩy lại thư từ DLQ sau khi sửa lỗi.
+- Luồng retry:
+
+```
+domain.events ─► <queue> ─► consumer ──ok──► commit, ack
+                    ▲          │
+                    │          ├─ tạm thời, chưa quá 3 lần ─► <queue>.retry.{5s,30s,5m} ─(hết TTL)─┐
+                    └──────────┼────────────────────────────────────────────────────────────────┘
+                               └─ vĩnh viễn, hoặc đã thử 3 lần ─► <queue>.dlq
+```
+
+- Topology (exchange `domain.events` kiểu topic, queue `inventory.events` / `sales.events` / `report.events`, queue chờ, DLX, DLQ) nạp sẵn bằng `definitions.json`; queue `durable`, thư `persistent`; worker gửi với `mandatory: true`. Sự kiện `system.test` bind vào `report.events` chỉ để kiểm thử đường đi outbox → consumer.
 
 ### 7.4 Saga cho đơn online
 
