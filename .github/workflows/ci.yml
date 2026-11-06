@@ -61,3 +61,55 @@ jobs:
 
       - name: Build toàn bộ image
         run: docker compose -f docker-compose.yml build
+
+  # Chạy thật cả hệ thống: mọi container phải healthy, các *-migrate và rabbitmq-setup phải thoát mã 0,
+  # rồi gọi gateway → inventory qua /api/ping. Job `docker` ở trên chỉ chứng minh image build được.
+  smoke:
+    name: Smoke test (docker compose up)
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+
+      # Mật khẩu ngẫu nhiên cho từng lần chạy, che khỏi log (::add-mask::), không bao giờ in ra.
+      - name: Tạo .env với mật khẩu ngẫu nhiên
+        run: |
+          cp .env.example .env
+          for name in $(grep -E '^[A-Z_]*PASSWORD=$' .env.example | cut -d= -f1); do
+            password=$(openssl rand -hex 24)
+            echo "::add-mask::${password}"
+            sed -i -E "s/^${name}=$/${name}=${password}/" .env
+          done
+          if grep -qE '^[A-Z_]+=$' .env; then
+            echo "::error::.env còn biến trống: $(grep -E '^[A-Z_]+=$' .env | cut -d= -f1 | tr '\n' ' ')"
+            exit 1
+          fi
+
+      # --wait: chờ mọi service chạy lâu `healthy`; lỗi nếu có container thoát khác 0 (kể cả *-migrate, rabbitmq-setup).
+      - name: Khởi động hệ thống
+        run: docker compose up -d --build --wait
+
+      - name: Trạng thái container
+        run: docker compose ps -a
+
+      - name: Gateway → inventory qua /api/ping
+        run: |
+          port=$(grep -E '^GATEWAY_PORT=' .env | cut -d= -f2)
+          body=$(curl --silent --show-error --fail --retry 5 --retry-delay 2 --retry-connrefused "http://localhost:${port}/api/ping")
+          echo "Phản hồi: ${body}"
+          expected='{"service":"inventory","ok":true}'
+          if [ "${body}" != "${expected}" ]; then
+            echo "::error::Phản hồi /api/ping sai. Mong đợi ${expected}"
+            exit 1
+          fi
+
+      - name: Log của mọi container (khi thất bại)
+        if: failure()
+        run: |
+          docker compose ps -a
+          docker compose logs --no-color --timestamps
+
+      - name: Dọn dẹp
+        if: always()
+        run: docker compose down -v
