@@ -17,7 +17,10 @@ import { RolesGuard } from './roles.guard';
       useFactory: (config: ConfigService): JwtVerification => ({
         keys: loadPublicKeys(config.getOrThrow<string>('JWT_PUBLIC_KEYS_DIR')),
         issuer: config.getOrThrow<string>('JWT_ISSUER'),
-        audience: config.getOrThrow<string>('JWT_AUDIENCE'),
+        audiences: {
+          backoffice: config.getOrThrow<string>('JWT_AUDIENCE_BACKOFFICE'),
+          shop: config.getOrThrow<string>('JWT_AUDIENCE_SHOP'),
+        },
       }),
     },
     JwtGuard,

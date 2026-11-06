@@ -5,7 +5,12 @@ import { createRequire } from 'node:module';
 import { createServer } from 'node:net';
 import { resolve } from 'node:path';
 import { deadLetterQueueName, QUEUES, retryQueueName } from '@jewelry/contracts';
-import { createTestKeys, TEST_AUDIENCE, TEST_ISSUER } from '@jewelry/test-utils';
+import {
+  createTestKeys,
+  TEST_AUDIENCE_BACKOFFICE,
+  TEST_AUDIENCE_SHOP,
+  TEST_ISSUER,
+} from '@jewelry/test-utils';
 import amqplib from 'amqplib';
 
 export const REPO_ROOT = resolve(import.meta.dirname, '../../..');
@@ -305,7 +310,8 @@ export async function startService(service: 'inventory' | 'report'): Promise<Run
       DATABASE_POOL_MAX: '20',
       JWT_PUBLIC_KEYS_DIR: keys.publicKeysDir,
       JWT_ISSUER: TEST_ISSUER,
-      JWT_AUDIENCE: TEST_AUDIENCE,
+      JWT_AUDIENCE_BACKOFFICE: TEST_AUDIENCE_BACKOFFICE,
+      JWT_AUDIENCE_SHOP: TEST_AUDIENCE_SHOP,
     },
     stdio: ['ignore', 'pipe', 'inherit'],
   });

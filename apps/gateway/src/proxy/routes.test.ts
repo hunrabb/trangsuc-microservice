@@ -1,24 +1,29 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, it } from 'node:test';
 import { resolveRoute } from './routes.ts';
 
 describe('resolveRoute', () => {
-  const cases: [string, string, string, boolean][] = [
-    ['/api/auth/login', 'auth', '/auth/login', false],
-    ['/api/pos/orders', 'sales', '/pos/orders', true],
-    ['/api/online-orders/1', 'sales', '/online-orders/1', true],
-    ['/api/shop/products?page=2&q=a%20b', 'sales', '/shop/products?page=2&q=a%20b', false],
-    ['/api/admin/auth/users', 'auth', '/admin/users', true],
-    ['/api/admin/inventory/products/1', 'inventory', '/admin/products/1', true],
-    ['/api/admin/sales/pos/x', 'sales', '/admin/pos/x', true],
-    ['/api/admin/reports/daily', 'report', '/admin/daily', true],
-    ['/webhooks/bank', 'sales', '/webhooks/bank', false],
-    ['/api/admin/reports', 'report', '/admin', true],
-    ['/api/pos/orders/', 'sales', '/pos/orders/', true],
+  const cases: [string, string, string, 'backoffice' | null][] = [
+    ['/api/auth/login', 'auth', '/auth/login', null],
+    ['/api/pos/orders', 'sales', '/pos/orders', 'backoffice'],
+    ['/api/online-orders/1', 'sales', '/online-orders/1', 'backoffice'],
+    ['/api/shop/auth/login', 'auth', '/shop/auth/login', null],
+    ['/api/shop/auth', 'auth', '/shop/auth', null],
+    ['/api/shop/authx', 'sales', '/shop/authx', null],
+    ['/api/shop/products?page=2&q=a%20b', 'sales', '/shop/products?page=2&q=a%20b', null],
+    ['/api/admin/auth/users', 'auth', '/admin/users', 'backoffice'],
+    ['/api/admin/inventory/products/1', 'inventory', '/admin/products/1', 'backoffice'],
+    ['/api/admin/sales/pos/x', 'sales', '/admin/pos/x', 'backoffice'],
+    ['/api/admin/reports/daily', 'report', '/admin/daily', 'backoffice'],
+    ['/webhooks/bank', 'sales', '/webhooks/bank', null],
+    ['/api/admin/reports', 'report', '/admin', 'backoffice'],
+    ['/api/pos/orders/', 'sales', '/pos/orders/', 'backoffice'],
   ];
-  for (const [url, service, path, requiresAuth] of cases) {
+  for (const [url, service, path, audience] of cases) {
     it(`${url} → ${service} ${path}`, () => {
-      assert.deepEqual(resolveRoute(url), { service, path, requiresAuth });
+      assert.deepEqual(resolveRoute(url), { service, path, audience });
     });
   }
 
@@ -80,6 +85,16 @@ describe('resolveRoute', () => {
       '/api/pos/%zz',
     ]) {
       assert.equal(resolveRoute(url), undefined, url);
+    }
+  });
+
+  it('mọi đường trong auth.openapi.yaml đều đi qua bảng định tuyến tới auth', () => {
+    const spec = readFileSync(resolve('../../docs/api/auth.openapi.yaml'), 'utf8');
+    const paths = [...spec.matchAll(/^ {2}(\/api\/[^:]+):$/gm)].map((match) => match[1] ?? '');
+    assert.ok(paths.length >= 17, `chỉ thấy ${paths.length} đường`);
+    for (const path of paths) {
+      const url = path.replace(/\{[^}]+\}/g, '00000000-0000-4000-8000-000000000000');
+      assert.equal(resolveRoute(url)?.service, 'auth', path);
     }
   });
 });

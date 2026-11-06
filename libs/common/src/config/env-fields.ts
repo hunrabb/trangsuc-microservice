@@ -58,7 +58,8 @@ export const readableFileField = nonEmptyEnv('đường dẫn').refine(
 export const jwtEnvFields = {
   JWT_PUBLIC_KEYS_DIR: nonEmptyEnv('đường dẫn'),
   JWT_ISSUER: nonEmptyEnv('chuỗi'),
-  JWT_AUDIENCE: nonEmptyEnv('chuỗi'),
+  JWT_AUDIENCE_BACKOFFICE: nonEmptyEnv('chuỗi'),
+  JWT_AUDIENCE_SHOP: nonEmptyEnv('chuỗi'),
 };
 
 /** Ký token: chỉ auth. */

@@ -7,7 +7,8 @@ import { join } from 'node:path';
 import { SignJWT } from 'jose';
 
 export const TEST_ISSUER = 'test-issuer';
-export const TEST_AUDIENCE = 'test-audience';
+export const TEST_AUDIENCE_BACKOFFICE = 'test-backoffice';
+export const TEST_AUDIENCE_SHOP = 'test-shop';
 export const TEST_KID = 'test-kid';
 
 export interface TestKeys {
@@ -45,7 +46,7 @@ const defaultClaims = (): Required<Omit<TestClaims, 'nbf'>> => {
     sub: randomUUID(),
     branches: [{ branchId: null, role: 'ADMIN' }],
     iss: TEST_ISSUER,
-    aud: TEST_AUDIENCE,
+    aud: TEST_AUDIENCE_BACKOFFICE,
     iat: now,
     exp: now + 900,
   };
@@ -55,6 +56,8 @@ export interface SignOptions {
   /** `null` = không đặt `kid` trong header. */
   kid?: string | null;
   claims?: TestClaims;
+  /** Giá trị `aud`; mặc định token nhân viên. */
+  audience?: string;
   /** Mặc định RS256. Đổi để thử token ký đúng khoá nhưng sai thuật toán. */
   alg?: 'RS256' | 'RS384' | 'RS512' | 'PS256';
   /** Thêm phần mở rộng `crit` mà bên kiểm tra không hiểu. */
@@ -70,7 +73,8 @@ export function signTestToken(privateKey: KeyObject, options: SignOptions = {}):
     ...(kid === null ? {} : { kid }),
     ...(options.unknownCrit ? { crit: ['x-la'], 'x-la': true } : {}),
   };
-  return new SignJWT({ ...defaultClaims(), ...options.claims })
+  const audience = options.audience === undefined ? {} : { aud: options.audience };
+  return new SignJWT({ ...defaultClaims(), ...audience, ...options.claims })
     .setProtectedHeader(header)
     .sign(privateKey, options.unknownCrit ? { crit: { 'x-la': true } } : undefined);
 }

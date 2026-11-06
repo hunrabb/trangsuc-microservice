@@ -44,8 +44,8 @@ export class ProxyController {
     if (route === undefined) {
       throw new BusinessError('NOT_FOUND', `Cannot ${req.method} ${req.originalUrl}`, 404);
     }
-    if (route.requiresAuth) {
-      await this.jwtGuard.authenticate(req);
+    if (route.audience !== null) {
+      await this.jwtGuard.authenticate(req, route.audience);
     }
     const body = await this.readRequestBody(req, res);
 

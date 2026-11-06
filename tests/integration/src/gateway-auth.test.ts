@@ -7,6 +7,7 @@ import {
   signHs256WithPublicKey,
   signNoneToken,
   signTestToken,
+  TEST_AUDIENCE_SHOP,
 } from '@jewelry/test-utils';
 import {
   freePort,
@@ -111,6 +112,23 @@ describe('gateway kiểm tra token trước khi chuyển tiếp', () => {
     ];
     for (const value of forged) {
       await expectRejected(`Bearer ${value}`, 401, 'INVALID_TOKEN');
+    }
+  });
+
+  it('token aud = shop gọi đường của nhân viên: 401 ở gateway, không chuyển tiếp', async () => {
+    const shopToken = await signTestToken(testKeys.privateKey, {
+      kid: testKeys.kid,
+      audience: TEST_AUDIENCE_SHOP,
+      claims: { branches: [] },
+    });
+    await expectRejected(`Bearer ${shopToken}`, 401, 'INVALID_TOKEN');
+
+    for (const path of ['/api/admin/sales/x', '/api/pos/x', '/api/online-orders/x']) {
+      const id = randomUUID();
+      const response = await call(path, id, `Bearer ${shopToken}`);
+      assert.equal(response.status, 401, path);
+      await new Promise((done) => setTimeout(done, NO_REQUEST_GRACE_MS));
+      assert.equal(sales.logs.filter((line) => line.correlationId === id).length, 0, path);
     }
   });
 

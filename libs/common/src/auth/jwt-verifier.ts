@@ -1,7 +1,7 @@
 import { createPublicKey, type KeyObject } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { accessTokenClaimsSchema, type BranchRole } from '@jewelry/contracts';
+import { accessTokenClaimsSchema, type BranchRole, type TokenAudience } from '@jewelry/contracts';
 import { errors, type JWTPayload, jwtVerify } from 'jose';
 import { BusinessError } from '../errors/business-error';
 
@@ -20,7 +20,8 @@ export interface JwtVerification {
   /** `kid` → public key. Dùng Map để `kid` như `__proto__` không trúng thuộc tính có sẵn. */
   keys: ReadonlyMap<string, KeyObject>;
   issuer: string;
-  audience: string;
+  /** Loại token → giá trị `aud`. */
+  audiences: Readonly<Record<TokenAudience, string>>;
 }
 
 /** Đọc mọi `<kid>.public.pem` trong thư mục. Không có khoá hợp lệ → ném lỗi, service không bật. */
@@ -52,7 +53,11 @@ const invalid = () => new BusinessError('INVALID_TOKEN', 'Token không hợp l�
  * vì `jwtVerify` mặc định coi nó là tuỳ chọn. Chữ ký được kiểm trước mọi claim, nên chỉ token thật do
  * auth ký mới có thể nhận `TOKEN_EXPIRED`.
  */
-async function verifySignedPayload(token: string, options: JwtVerification): Promise<JWTPayload> {
+async function verifySignedPayload(
+  token: string,
+  options: JwtVerification,
+  audience: TokenAudience,
+): Promise<JWTPayload> {
   try {
     const { payload } = await jwtVerify(
       token,
@@ -66,7 +71,7 @@ async function verifySignedPayload(token: string, options: JwtVerification): Pro
       {
         algorithms: ['RS256'],
         issuer: options.issuer,
-        audience: options.audience,
+        audience: options.audiences[audience],
         clockTolerance: CLOCK_SKEW_SECONDS,
         requiredClaims: ['exp'],
       },
@@ -80,15 +85,19 @@ async function verifySignedPayload(token: string, options: JwtVerification): Pro
   }
 }
 
-/** Kiểm tra access token, trả về user; sai → `401`. Claims nghiệp vụ được kiểm sau chữ ký. */
+/**
+ * Kiểm tra access token, trả về user; sai → `401`. Claims nghiệp vụ được kiểm sau chữ ký.
+ * `aud` phải đúng loại token mà đường dẫn yêu cầu: token của khách không dùng được ở đường của nhân viên.
+ */
 export async function verifyAccessToken(
   token: string,
   options: JwtVerification,
+  audience: TokenAudience,
 ): Promise<AuthUser> {
   if (token.length > MAX_TOKEN_LENGTH) {
     throw invalid();
   }
-  const payload = await verifySignedPayload(token, options);
+  const payload = await verifySignedPayload(token, options, audience);
   const claims = accessTokenClaimsSchema.safeParse(payload);
   if (!claims.success) {
     throw invalid();

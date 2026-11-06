@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+/** Loại token. Giá trị `aud` thật nằm trong cấu hình: `JWT_AUDIENCE_BACKOFFICE`, `JWT_AUDIENCE_SHOP`. */
+export type TokenAudience = 'backoffice' | 'shop';
+
 export const ROLES = ['ADMIN', 'MANAGER', 'STAFF'] as const;
 
 export const roleSchema = z.enum(ROLES);
@@ -15,7 +18,10 @@ export const branchRoleSchema = z
 
 export type BranchRole = z.infer<typeof branchRoleSchema>;
 
-/** Phần nghiệp vụ trong access token. `iss`, `aud`, `exp`... do bước kiểm tra token xử lý. */
+/**
+ * Phần nghiệp vụ trong access token. `iss`, `aud`, `exp`... do bước kiểm tra token xử lý.
+ * Token của khách dùng cùng schema, `sub` là id tài khoản khách và `branches` rỗng.
+ */
 export const accessTokenClaimsSchema = z.object({
   sub: z.uuid(),
   branches: z.array(branchRoleSchema),

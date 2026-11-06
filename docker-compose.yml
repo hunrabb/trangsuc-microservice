@@ -37,7 +37,8 @@ x-ready-healthcheck: &ready-healthcheck
 x-jwt-env: &jwt-env
   JWT_PUBLIC_KEYS_DIR: /run/secrets/jwt-public
   JWT_ISSUER: ${JWT_ISSUER:?JWT_ISSUER chưa đặt trong .env}
-  JWT_AUDIENCE: ${JWT_AUDIENCE:?JWT_AUDIENCE chưa đặt trong .env}
+  JWT_AUDIENCE_BACKOFFICE: ${JWT_AUDIENCE_BACKOFFICE:?JWT_AUDIENCE_BACKOFFICE chưa đặt trong .env}
+  JWT_AUDIENCE_SHOP: ${JWT_AUDIENCE_SHOP:?JWT_AUDIENCE_SHOP chưa đặt trong .env}
 
 x-jwt-public-volume: &jwt-public-volume ./secrets/jwt/public:/run/secrets/jwt-public:ro
 

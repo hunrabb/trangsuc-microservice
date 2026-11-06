@@ -12,12 +12,13 @@ import {
   signHs256WithPublicKey,
   signNoneToken,
   signTestToken,
-  TEST_AUDIENCE,
+  TEST_AUDIENCE_BACKOFFICE,
+  TEST_AUDIENCE_SHOP,
   TEST_ISSUER,
   type TestKeys,
 } from '@jewelry/test-utils';
 import { BusinessError } from '../errors/business-error.ts';
-import { IS_PUBLIC_KEY, ROLES_KEY } from './decorators.ts';
+import { AUDIENCE_KEY, IS_PUBLIC_KEY, ROLES_KEY } from './decorators.ts';
 import { type AuthUser, type JwtVerification, loadPublicKeys } from './jwt-verifier.ts';
 import { JwtGuard } from './jwt.guard.ts';
 import { resolveBranchId, RolesGuard } from './roles.guard.ts';
@@ -56,7 +57,7 @@ describe('JwtGuard', () => {
     const verification: JwtVerification = {
       keys: loadPublicKeys(keys.publicKeysDir),
       issuer: TEST_ISSUER,
-      audience: TEST_AUDIENCE,
+      audiences: { backoffice: TEST_AUDIENCE_BACKOFFICE, shop: TEST_AUDIENCE_SHOP },
     };
     guard = new JwtGuard(new Reflector(), verification);
   });
@@ -95,7 +96,7 @@ describe('JwtGuard', () => {
         sub: randomUUID(),
         branches: [{ branchId: null, role: 'ADMIN' }],
         iss: TEST_ISSUER,
-        aud: TEST_AUDIENCE,
+        aud: TEST_AUDIENCE_BACKOFFICE,
         exp: now() + 900,
       }),
     ).toString('base64url');
@@ -155,7 +156,7 @@ describe('JwtGuard', () => {
   });
 
   it('aud dạng mảng có chứa audience thì nhận', async () => {
-    const claims = { aud: ['khac', TEST_AUDIENCE] };
+    const claims = { aud: ['khac', TEST_AUDIENCE_BACKOFFICE] };
     assert.ok(await check(await signTestToken(keys.privateKey, { claims })));
   });
 
@@ -183,6 +184,33 @@ describe('JwtGuard', () => {
     for (const token of ['a.b', 'a.b.c', 'a.b.c.d', '!!.!!.!!', 'x'.repeat(9000)]) {
       await assert.rejects(check(token), isInvalid);
     }
+  });
+
+  it('token aud shop ở endpoint mặc định: INVALID_TOKEN', async () => {
+    const token = await signTestToken(keys.privateKey, { audience: TEST_AUDIENCE_SHOP });
+    await assert.rejects(check(token), isInvalid);
+  });
+
+  const checkShop = async (token: string) => {
+    const request = { headers: { authorization: `Bearer ${token}` } };
+    await guard.canActivate(contextFor(request, { [AUDIENCE_KEY]: 'shop' }));
+    return (request as { user?: AuthUser }).user;
+  };
+
+  it('@Audience("shop"): nhận token khách, từ chối token nhân viên', async () => {
+    const sub = randomUUID();
+    const shopToken = await signTestToken(keys.privateKey, {
+      audience: TEST_AUDIENCE_SHOP,
+      claims: { sub, branches: [] },
+    });
+    assert.deepEqual(await checkShop(shopToken), { id: sub, branches: [] });
+    await assert.rejects(checkShop(await signTestToken(keys.privateKey)), isInvalid);
+  });
+
+  it('aud lạ bị từ chối ở cả hai loại', async () => {
+    const token = await signTestToken(keys.privateKey, { audience: 'khac' });
+    await assert.rejects(check(token), isInvalid);
+    await assert.rejects(checkShop(token), isInvalid);
   });
 
   it('@Public() bỏ qua kiểm tra', async () => {

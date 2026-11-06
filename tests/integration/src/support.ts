@@ -1,7 +1,13 @@
 import { type ChildProcess, spawn } from 'node:child_process';
 import { createServer } from 'node:net';
 import { resolve } from 'node:path';
-import { createTestKeys, TEST_AUDIENCE, TEST_ISSUER, type TestKeys } from '@jewelry/test-utils';
+import {
+  createTestKeys,
+  TEST_AUDIENCE_BACKOFFICE,
+  TEST_AUDIENCE_SHOP,
+  TEST_ISSUER,
+  type TestKeys,
+} from '@jewelry/test-utils';
 
 const REPO_ROOT = resolve(import.meta.dirname, '../../..');
 const STARTUP_TIMEOUT_MS = 15_000;
@@ -22,7 +28,8 @@ export const testKeys: TestKeys = createTestKeys();
 export const JWT_ENV = {
   JWT_PUBLIC_KEYS_DIR: testKeys.publicKeysDir,
   JWT_ISSUER: TEST_ISSUER,
-  JWT_AUDIENCE: TEST_AUDIENCE,
+  JWT_AUDIENCE_BACKOFFICE: TEST_AUDIENCE_BACKOFFICE,
+  JWT_AUDIENCE_SHOP: TEST_AUDIENCE_SHOP,
   // Cổng đóng: các test này không cần RabbitMQ, service vẫn chạy và tự thử kết nối lại.
   RABBITMQ_URL: 'amqp://test:test@127.0.0.1:1',
   DATABASE_POOL_MAX: '20',

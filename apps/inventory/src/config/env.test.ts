@@ -12,7 +12,8 @@ const valid = {
   RABBITMQ_URL: 'amqp://jewelry_app:s3cret@rabbitmq:5672',
   JWT_PUBLIC_KEYS_DIR: '/run/secrets/jwt-public',
   JWT_ISSUER: 'auth-service',
-  JWT_AUDIENCE: 'store-system',
+  JWT_AUDIENCE_BACKOFFICE: 'store-backoffice',
+  JWT_AUDIENCE_SHOP: 'store-shop',
 };
 
 describe('parseEnv (inventory)', () => {
@@ -32,7 +33,8 @@ describe('parseEnv (inventory)', () => {
       assert.deepEqual(result.problems.map((p) => p.variable).sort(), [
         'DATABASE_POOL_MAX',
         'DATABASE_URL',
-        'JWT_AUDIENCE',
+        'JWT_AUDIENCE_BACKOFFICE',
+        'JWT_AUDIENCE_SHOP',
         'JWT_ISSUER',
         'JWT_PUBLIC_KEYS_DIR',
         'PORT',

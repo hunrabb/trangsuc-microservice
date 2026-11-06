@@ -5,9 +5,15 @@ import { after, before, describe, it } from 'node:test';
 import { Controller, Get, type INestApplication, Module, Param } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
-import { createTestKeys, signTestToken, TEST_AUDIENCE, TEST_ISSUER } from '@jewelry/test-utils';
+import {
+  createTestKeys,
+  signTestToken,
+  TEST_AUDIENCE_BACKOFFICE,
+  TEST_AUDIENCE_SHOP,
+  TEST_ISSUER,
+} from '@jewelry/test-utils';
 import { GlobalExceptionFilter } from '../errors/global-exception.filter.ts';
-import { CurrentUser, Public, Roles } from './decorators.ts';
+import { Audience, CurrentUser, Public, Roles } from './decorators.ts';
 import { JwtAuthModule } from './jwt-auth.module.ts';
 import type { AuthUser } from './jwt-verifier.ts';
 
@@ -29,6 +35,12 @@ class ProbeController {
     return { id: user.id };
   }
 
+  @Audience('shop')
+  @Get('khach')
+  customerRoute(@CurrentUser() user: AuthUser): { id: string } {
+    return { id: user.id };
+  }
+
   @Roles('MANAGER')
   @Get('chi-nhanh/:branchId')
   branchRoute(@Param('branchId') branchId: string): { branchId: string } {
@@ -45,7 +57,8 @@ class ProbeController {
         () => ({
           JWT_PUBLIC_KEYS_DIR: keys.publicKeysDir,
           JWT_ISSUER: TEST_ISSUER,
-          JWT_AUDIENCE: TEST_AUDIENCE,
+          JWT_AUDIENCE_BACKOFFICE: TEST_AUDIENCE_BACKOFFICE,
+          JWT_AUDIENCE_SHOP: TEST_AUDIENCE_SHOP,
         }),
       ],
     }),
@@ -103,6 +116,27 @@ describe('JwtAuthModule qua HTTP thật', () => {
 
   it('@Roles không có token: 401 chứ không phải 403 (JwtGuard chạy trước RolesGuard)', async () => {
     assert.equal((await get(`/chi-nhanh/${BRANCH_A}`)).status, 401);
+  });
+
+  it('@Audience("shop"): token nhân viên 401, token khách qua', async () => {
+    const denied = await get('/khach', await tokenFor(manager));
+    assert.equal(denied.status, 401);
+    assert.equal(((await denied.json()) as { code: string }).code, 'INVALID_TOKEN');
+
+    const sub = randomUUID();
+    const shopToken = await signTestToken(keys.privateKey, {
+      audience: TEST_AUDIENCE_SHOP,
+      claims: { sub, branches: [] },
+    });
+    assert.deepEqual(await (await get('/khach', shopToken)).json(), { id: sub });
+  });
+
+  it('endpoint mặc định từ chối token khách', async () => {
+    const shopToken = await signTestToken(keys.privateKey, {
+      audience: TEST_AUDIENCE_SHOP,
+      claims: { branches: [] },
+    });
+    assert.equal((await get('/can-dang-nhap', shopToken)).status, 401);
   });
 
   it('ADMIN qua mọi chi nhánh', async () => {

@@ -1,3 +1,5 @@
+import type { TokenAudience } from '@jewelry/contracts';
+
 /** Bảng định tuyến của gateway (CLAUDE.md mục 10). Quy tắc viết lại đường dẫn: xem README. */
 export type UpstreamService = 'auth' | 'inventory' | 'sales' | 'report';
 
@@ -7,30 +9,38 @@ export interface ProxyRoute {
   service: UpstreamService;
   /** Thay `prefix` bằng chuỗi này khi chuyển tiếp. */
   rewriteTo: string;
-  requiresAuth: boolean;
+  /** Loại token gateway yêu cầu; `null` = công khai ở gateway (service vẫn có thể tự kiểm). */
+  audience: TokenAudience | null;
   /** Chỉ khớp đúng `prefix`, không nhận đường con. */
   exact?: boolean;
 }
 
+/** Khớp theo thứ tự: tiền tố dài phải đứng trước tiền tố ngắn của nó (`/api/shop/auth` trước `/api/shop`). */
 export const PROXY_ROUTES: readonly ProxyRoute[] = [
-  { prefix: '/api/auth', service: 'auth', rewriteTo: '/auth', requiresAuth: false },
-  { prefix: '/api/pos', service: 'sales', rewriteTo: '/pos', requiresAuth: true },
+  { prefix: '/api/auth', service: 'auth', rewriteTo: '/auth', audience: null },
+  { prefix: '/api/pos', service: 'sales', rewriteTo: '/pos', audience: 'backoffice' },
   {
     prefix: '/api/online-orders',
     service: 'sales',
     rewriteTo: '/online-orders',
-    requiresAuth: true,
+    audience: 'backoffice',
   },
-  { prefix: '/api/shop', service: 'sales', rewriteTo: '/shop', requiresAuth: false },
-  { prefix: '/api/admin/auth', service: 'auth', rewriteTo: '/admin', requiresAuth: true },
-  { prefix: '/api/admin/inventory', service: 'inventory', rewriteTo: '/admin', requiresAuth: true },
-  { prefix: '/api/admin/sales', service: 'sales', rewriteTo: '/admin', requiresAuth: true },
-  { prefix: '/api/admin/reports', service: 'report', rewriteTo: '/admin', requiresAuth: true },
+  { prefix: '/api/shop/auth', service: 'auth', rewriteTo: '/shop/auth', audience: null },
+  { prefix: '/api/shop', service: 'sales', rewriteTo: '/shop', audience: null },
+  { prefix: '/api/admin/auth', service: 'auth', rewriteTo: '/admin', audience: 'backoffice' },
+  {
+    prefix: '/api/admin/inventory',
+    service: 'inventory',
+    rewriteTo: '/admin',
+    audience: 'backoffice',
+  },
+  { prefix: '/api/admin/sales', service: 'sales', rewriteTo: '/admin', audience: 'backoffice' },
+  { prefix: '/api/admin/reports', service: 'report', rewriteTo: '/admin', audience: 'backoffice' },
   {
     prefix: '/webhooks/bank',
     service: 'sales',
     rewriteTo: '/webhooks/bank',
-    requiresAuth: false,
+    audience: null,
     exact: true,
   },
 ];
@@ -70,7 +80,7 @@ export interface ResolvedRoute {
   service: UpstreamService;
   /** Đường dẫn + query gửi tới service, luôn bắt đầu bằng một dấu `/`. */
   path: string;
-  requiresAuth: boolean;
+  audience: TokenAudience | null;
 }
 
 function matches(route: ProxyRoute, path: string): boolean {
@@ -102,6 +112,6 @@ export function resolveRoute(
   return {
     service: route.service,
     path: `${rewritten}${query}`,
-    requiresAuth: route.requiresAuth,
+    audience: route.audience,
   };
 }

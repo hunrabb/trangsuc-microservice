@@ -243,6 +243,14 @@
     {
       "source": "domain.events",
       "vhost": "/",
+      "destination": "inventory.events",
+      "destination_type": "queue",
+      "routing_key": "branch.updated",
+      "arguments": {}
+    },
+    {
+      "source": "domain.events",
+      "vhost": "/",
       "destination": "sales.events",
       "destination_type": "queue",
       "routing_key": "stock.reserved",
