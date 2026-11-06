@@ -47,7 +47,7 @@ docker-compose.yml, docker-compose.override.yml (chỉ dev), .env.example
 
 ## 4. Lệnh
 
-> Cập nhật mục này khi lệnh thay đổi. Cần Node 26.13.0 (`.nvmrc`) và pnpm 12.16.1 (`packageManager`).
+> Cập nhật mục này khi lệnh thay đổi. Cần Node 24.22.2 (`.nvmrc`, dòng LTS 24) và pnpm 12.16.1 (`packageManager`).
 > `<app>` là một trong `auth`, `inventory`, `sales`, `report`; tên package là `@jewelry/<app>`.
 
 ```bash

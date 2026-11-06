@@ -7,3 +7,7 @@ packages:
 allowBuilds:
   '@prisma/engines': true
   prisma: true
+
+# Ép `engines` trong package.json (Node >=24.22.2 <25): sai phiên bản Node thì `pnpm install` dừng với ERR_PNPM_UNSUPPORTED_ENGINE.
+# Phải đặt ở đây vì pnpm 12 không đọc `engine-strict` từ .npmrc.
+engineStrict: true

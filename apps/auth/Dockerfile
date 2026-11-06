@@ -5,7 +5,7 @@
 #   runtime  → chạy dịch vụ (đích mặc định, là tầng cuối cùng)
 #
 # Phiên bản Node phải khớp .nvmrc và `engines` trong package.json; phiên bản pnpm khớp `packageManager`.
-ARG NODE_VERSION=26.13.0
+ARG NODE_VERSION=24.22.2
 ARG PNPM_VERSION=12.16.1
 
 # ---------------------------------------------------------------- Nền: Node LTS bản slim + openssl
@@ -18,7 +18,7 @@ RUN apt-get update \
 # ---------------------------------------------------------------- Tầng build
 FROM runtime-base AS build
 ARG PNPM_VERSION
-# Node 26 không còn kèm corepack nên cài pnpm trực tiếp.
+# Cài đúng phiên bản pnpm bằng npm (không phụ thuộc corepack).
 RUN npm install -g pnpm@${PNPM_VERSION}
 WORKDIR /app
 

@@ -2,7 +2,7 @@
 # Build từ THƯ MỤC GỐC repo:   docker build -f apps/backoffice/Dockerfile .
 # Frontend: build tĩnh bằng Vite rồi phục vụ bằng nginx (bản không cần quyền root, nghe cổng 8080).
 # Phiên bản Node phải khớp .nvmrc và `engines` trong package.json; phiên bản pnpm khớp `packageManager`.
-ARG NODE_VERSION=26.13.0
+ARG NODE_VERSION=24.22.2
 ARG PNPM_VERSION=12.16.1
 ARG NGINX_VERSION=1.30.6
 

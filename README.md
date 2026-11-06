@@ -15,7 +15,7 @@ Giai đoạn hiện tại: **khung chạy được, chưa có nghiệp vụ** (x
 
 ## Yêu cầu
 
-- **Node 26.13.0** (LTS hiện hành, ghi ở `.nvmrc`; có thể dùng `nvm use`). Node 26 không còn kèm corepack.
+- **Node 24.22.2** (dòng LTS 24, ghi ở `.nvmrc`; có thể dùng `nvm use`). Ràng buộc `engines` được ép bằng `engineStrict: true` trong `pnpm-workspace.yaml` (và `engine-strict=true` trong `.npmrc` cho npm): sai phiên bản Node thì `pnpm install` dừng. Không dùng Node 26 vì Prisma 7.10 chưa hỗ trợ.
 - **pnpm 12.16.1**: `npm install -g pnpm@12.16.1` (đúng với `packageManager` trong `package.json`).
 - **Docker** + Docker Compose v2.
 

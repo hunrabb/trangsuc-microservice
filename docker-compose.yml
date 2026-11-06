@@ -86,7 +86,7 @@ services:
 
   # Chạy một lần sau khi RabbitMQ healthy: tạo user ứng dụng + nạp infra/rabbitmq/definitions.json.
   rabbitmq-setup:
-    image: node:26.13.0-slim
+    image: node:24.22.2-slim
     user: node
     restart: 'no'
     working_dir: /infra
