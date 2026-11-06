@@ -4,14 +4,14 @@ Monorepo (pnpm workspaces + Turborepo). Luật làm việc và kiến trúc nằ
 
 Giai đoạn hiện tại: **khung chạy được, chưa có nghiệp vụ** (xem `docs/` mục kế hoạch, giai đoạn 1).
 
-| Thành phần                                  | Công nghệ                     | Cổng khi `pnpm dev`          | Cổng khi chạy Docker     |
-| ------------------------------------------- | ----------------------------- | ---------------------------- | ------------------------ |
-| `apps/gateway`                              | NestJS 12                     | 3000                         | `GATEWAY_PORT` (3000)    |
-| `apps/auth`, `inventory`, `sales`, `report` | NestJS 12 + Prisma 7          | 3001 / 3002 / 3003 / 3004    | không mở ra ngoài        |
-| `apps/backoffice` (admin + POS)             | React 19 + Vite 8             | 5173                         | `BACKOFFICE_PORT` (8080) |
-| `apps/storefront` (website cho khách)       | React 19 + Vite 8             | 5174                         | `STOREFRONT_PORT` (8081) |
-| `libs/contracts`, `libs/common`             | TypeScript (build bằng `tsc`) | —                            | —                        |
-| PostgreSQL 16.15, RabbitMQ 4.4.0            | Docker                        | 5432 / 15672 (chỉ 127.0.0.1) | không mở ra ngoài        |
+| Thành phần                                  | Công nghệ                     | Cổng khi `pnpm dev`             | Cổng khi chạy Docker     |
+| ------------------------------------------- | ----------------------------- | ------------------------------- | ------------------------ |
+| `apps/gateway`                              | NestJS 12                     | 3000                            | `GATEWAY_PORT` (3000)    |
+| `apps/auth`, `inventory`, `sales`, `report` | NestJS 12 + Prisma 7          | 3001 / 3002 / 3003 / 3004       | không mở ra ngoài        |
+| `apps/backoffice` (admin + POS)             | React 19 + Vite 8             | 5173                            | `BACKOFFICE_PORT` (8080) |
+| `apps/storefront` (website cho khách)       | React 19 + Vite 8             | 5174                            | `STOREFRONT_PORT` (8081) |
+| `libs/contracts`, `libs/common`             | TypeScript (build bằng `tsc`) | —                               | —                        |
+| PostgreSQL 16.15, RabbitMQ 4.4.0            | Docker                        | 5432 / 5672 / 15672 (127.0.0.1) | không mở ra ngoài        |
 
 ## Yêu cầu
 

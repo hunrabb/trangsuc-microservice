@@ -54,7 +54,7 @@ docker-compose.yml, docker-compose.override.yml (chỉ dev), .env.example
 pnpm install
 cp .env.example .env                            # lần đầu: điền mật khẩu (cho Docker Compose)
 cp apps/<app>/.env.example apps/<app>/.env      # lần đầu, cho gateway/auth/inventory/sales/report (cho pnpm dev)
-docker compose up -d postgres rabbitmq rabbitmq-setup   # hạ tầng cho dev (override mở 127.0.0.1:5432 và :15672)
+docker compose up -d postgres rabbitmq rabbitmq-setup   # hạ tầng cho dev (override mở 127.0.0.1:5432, :5672 và :15672)
 pnpm dev                                        # chạy mọi app ở chế độ watch
 pnpm --filter @jewelry/<app> exec prisma migrate dev --name <ten>   # CHỈ máy dev; cần database shadow
 pnpm --filter @jewelry/<app> db:generate        # sinh Prisma client (turbo tự chạy trước build/typecheck/dev)
