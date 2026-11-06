@@ -1,0 +1,13 @@
+node_modules
+dist
+.turbo
+coverage
+pnpm-lock.yaml
+apps/*/src/generated
+apps/*/prisma/migrations
+secrets
+.env*
+
+# Tài liệu viết tay có sẵn: giữ nguyên định dạng, không để Prettier sửa.
+docs
+CLAUDE.md

@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Lint, typecheck, test, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # Phiên bản pnpm lấy từ `packageManager` trong package.json.
+      - uses: pnpm/action-setup@v6
+
+      # Phiên bản Node lấy từ .nvmrc; cache kho pnpm theo pnpm-lock.yaml.
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Định dạng (Prettier)
+        run: pnpm format:check
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+  docker:
+    name: docker compose build
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # Compose cần đủ biến trong .env để đọc file (build không dùng đến mật khẩu).
+      # Điền giá trị giả cho mọi biến *_PASSWORD còn trống.
+      - name: Tạo .env giả cho bước build
+        run: |
+          cp .env.example .env
+          sed -i -E 's/^([A-Z_]*PASSWORD)=$/\1=ci-khong-phai-mat-khau-that/' .env
+
+      - name: Build toàn bộ image
+        run: docker compose -f docker-compose.yml build

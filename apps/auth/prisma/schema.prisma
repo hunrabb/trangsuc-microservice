@@ -1,0 +1,12 @@
+// Schema Prisma của auth-service. Chưa có model (giai đoạn 1.1 chỉ dựng khung).
+// Prisma 7: URL kết nối KHÔNG nằm ở đây mà ở prisma.config.ts (DATABASE_URL, ?schema=auth).
+
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}

@@ -1,0 +1,208 @@
+{
+  "rabbit_version": "4.4.0",
+  "rabbitmq_version": "4.4.0",
+  "product_name": "RabbitMQ",
+  "product_version": "4.4.0",
+  "vhosts": [{ "name": "/" }],
+  "exchanges": [
+    {
+      "name": "domain.events",
+      "vhost": "/",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "dlx",
+      "vhost": "/",
+      "type": "direct",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    }
+  ],
+  "queues": [
+    {
+      "name": "inventory.events",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "classic",
+        "x-dead-letter-exchange": "dlx",
+        "x-dead-letter-routing-key": "inventory.events.dlq"
+      }
+    },
+    {
+      "name": "sales.events",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "classic",
+        "x-dead-letter-exchange": "dlx",
+        "x-dead-letter-routing-key": "sales.events.dlq"
+      }
+    },
+    {
+      "name": "report.events",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "classic",
+        "x-dead-letter-exchange": "dlx",
+        "x-dead-letter-routing-key": "report.events.dlq"
+      }
+    },
+    {
+      "name": "inventory.events.dlq",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": { "x-queue-type": "classic" }
+    },
+    {
+      "name": "sales.events.dlq",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": { "x-queue-type": "classic" }
+    },
+    {
+      "name": "report.events.dlq",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": { "x-queue-type": "classic" }
+    }
+  ],
+  "bindings": [
+    {
+      "source": "domain.events",
+      "vhost": "/",
+      "destination": "inventory.events",
+      "destination_type": "queue",
+      "routing_key": "order.created",
+      "arguments": {}
+    },
+    {
+      "source": "domain.events",
+      "vhost": "/",
+      "destination": "inventory.events",
+      "destination_type": "queue",
+      "routing_key": "order.cancelled",
+      "arguments": {}
+    },
+    {
+      "source": "domain.events",
+      "vhost": "/",
+      "destination": "inventory.events",
+      "destination_type": "queue",
+      "routing_key": "order.paid",
+      "arguments": {}
+    },
+    {
+      "source": "domain.events",
+      "vhost": "/",
+      "destination": "inventory.events",
+      "destination_type": "queue",
+      "routing_key": "order.shipping",
+      "arguments": {}
+    },
+    {
+      "source": "domain.events",
+      "vhost": "/",
+      "destination": "inventory.events",
+      "destination_type": "queue",
+      "routing_key": "branch.created",
+      "arguments": {}
+    },
+
+    {
+      "source": "domain.events",
+      "vhost": "/",
+      "destination": "sales.events",
+      "destination_type": "queue",
+      "routing_key": "stock.reserved",
+      "arguments": {}
+    },
+    {
+      "source": "domain.events",
+      "vhost": "/",
+      "destination": "sales.events",
+      "destination_type": "queue",
+      "routing_key": "stock.reserve_failed",
+      "arguments": {}
+    },
+    {
+      "source": "domain.events",
+      "vhost": "/",
+      "destination": "sales.events",
+      "destination_type": "queue",
+      "routing_key": "stock.reservation_expired",
+      "arguments": {}
+    },
+    {
+      "source": "domain.events",
+      "vhost": "/",
+      "destination": "sales.events",
+      "destination_type": "queue",
+      "routing_key": "order.processing_failed",
+      "arguments": {}
+    },
+
+    {
+      "source": "domain.events",
+      "vhost": "/",
+      "destination": "report.events",
+      "destination_type": "queue",
+      "routing_key": "order.completed",
+      "arguments": {}
+    },
+    {
+      "source": "domain.events",
+      "vhost": "/",
+      "destination": "report.events",
+      "destination_type": "queue",
+      "routing_key": "order.returned",
+      "arguments": {}
+    },
+    {
+      "source": "domain.events",
+      "vhost": "/",
+      "destination": "report.events",
+      "destination_type": "queue",
+      "routing_key": "stock.changed",
+      "arguments": {}
+    },
+
+    {
+      "source": "dlx",
+      "vhost": "/",
+      "destination": "inventory.events.dlq",
+      "destination_type": "queue",
+      "routing_key": "inventory.events.dlq",
+      "arguments": {}
+    },
+    {
+      "source": "dlx",
+      "vhost": "/",
+      "destination": "sales.events.dlq",
+      "destination_type": "queue",
+      "routing_key": "sales.events.dlq",
+      "arguments": {}
+    },
+    {
+      "source": "dlx",
+      "vhost": "/",
+      "destination": "report.events.dlq",
+      "destination_type": "queue",
+      "routing_key": "report.events.dlq",
+      "arguments": {}
+    }
+  ]
+}

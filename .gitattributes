@@ -1,0 +1,5 @@
+# Luôn dùng LF: script .sh chạy trong container Linux sẽ hỏng nếu có CRLF.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ico binary

@@ -1,0 +1,17 @@
+# Giữ context nhỏ và KHÔNG đưa bí mật vào image.
+**/node_modules
+**/dist
+**/.turbo
+**/coverage
+**/src/generated
+.git
+.github
+.vscode
+.idea
+**/.env
+**/.env.*
+secrets
+docs
+infra
+docker-compose*.yml
+*.md

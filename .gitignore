@@ -1,0 +1,22 @@
+# Thư viện và kết quả build
+node_modules/
+dist/
+.turbo/
+coverage/
+*.tsbuildinfo
+
+# Prisma client sinh tự động (chạy `pnpm db:generate` / turbo tự chạy trước build)
+apps/*/src/generated/
+
+# Biến môi trường và bí mật — KHÔNG commit
+.env
+.env.*
+!.env.example
+secrets/
+
+# Khác
+*.log
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
