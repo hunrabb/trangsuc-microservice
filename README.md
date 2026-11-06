@@ -68,6 +68,20 @@ docker compose up --build
 - **Chỉ** gateway, backoffice, storefront có `ports` trong `docker-compose.yml`. Chạy như production (không mở Postgres/RabbitMQ ra 127.0.0.1): `docker compose -f docker-compose.yml up --build`.
 - Dừng: `docker compose down` (giữ dữ liệu). `docker compose down -v` xoá luôn volume `pg_data`, `rabbitmq_data`.
 
+### Máy yếu (ít RAM, ví dụ WSL 2 ~4 GB): build từng image một
+
+Lần `docker compose up --build` đầu tiên build cùng lúc cả chục image (mỗi image chạy `pnpm install`/`pnpm deploy`). Trên máy ít RAM việc này có thể mất 20–25 phút, làm máy treo (`wsl.exe` timeout) và khiến Postgres/RabbitMQ chập chờn. Hãy build **tuần tự** rồi mới chạy:
+
+```bash
+for s in $(docker compose config --services | grep -vE '^(postgres|rabbitmq|rabbitmq-setup)$'); do
+  docker compose build "$s"
+done
+docker compose up -d --wait
+```
+
+- **`COMPOSE_PARALLEL_LIMIT` và `docker compose --parallel N` không giới hạn được việc build** ở Compose 5.x. Đã đo với 5.6.1: ba service vẫn build cùng lúc (kể cả khi đặt `COMPOSE_BAKE=false`), nên đừng trông cậy vào chúng; vòng lặp ở trên mới thật sự tuần tự.
+- Các lần sau (đã có cache) chạy `docker compose up --build -d --wait` như bình thường là đủ.
+
 ### Kiểm tra nhanh sau khi lên
 
 ```bash
