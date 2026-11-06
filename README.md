@@ -89,6 +89,8 @@ Topology (exchange `domain.events` kiểu topic, `dlx` kiểu direct, 3 queue `*
 docker compose run --rm rabbitmq-setup
 ```
 
+Healthcheck của `rabbitmq` là `rabbitmq-diagnostics -q check_port_connectivity` (chạy qua `gosu rabbitmq`): chỉ `healthy` khi mọi listener của node, kể cả AMQP 5672, đã nhận kết nối. (`ping` thì báo OK sớm hơn vài giây, khi cổng AMQP chưa mở.)
+
 Sửa tham số của một queue đã tồn tại thì RabbitMQ từ chối nạp (queue "inequivalent"); phải xoá queue đó trước (hoặc tạo queue mới).
 
 ## Biến môi trường
