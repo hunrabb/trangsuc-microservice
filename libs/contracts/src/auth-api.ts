@@ -32,16 +32,22 @@ const hasAdminRole = (assignments: readonly { role: string }[]): boolean =>
 export const assignmentsSchema = z.array(branchRoleSchema).min(1);
 
 // ---------------------------------------------------------------- Xác thực
-export const googleLoginRequestSchema = z.strictObject({ credential: nonEmpty });
+export const googleLoginRequestSchema = z.strictObject({
+  credential: nonEmpty.describe('ID token từ Google Identity Services'),
+});
 
 export const passwordLoginRequestSchema = z.strictObject({ email, password: nonEmpty });
 
+const newPassword = nonEmpty.describe(
+  `Tối thiểu ${PASSWORD_MIN_LENGTH} ký tự, tối đa ${PASSWORD_MAX_BYTES} byte UTF-8. Sai → PASSWORD_TOO_WEAK.`,
+);
+
 export const changePasswordRequestSchema = z.strictObject({
   currentPassword: nonEmpty,
-  newPassword: nonEmpty,
+  newPassword,
 });
 
-export const resetPasswordRequestSchema = z.strictObject({ newPassword: nonEmpty });
+export const resetPasswordRequestSchema = z.strictObject({ newPassword });
 
 export const authUserSchema = z.object({
   id: z.uuid(),
@@ -54,7 +60,7 @@ export const currentUserSchema = authUserSchema.extend({ googleLinked: z.boolean
 
 export const authSessionSchema = z.object({
   accessToken: z.string(),
-  expiresIn: z.number().int().positive(),
+  expiresIn: z.number().int().positive().describe('Số giây, 900'),
   user: authUserSchema,
 });
 
@@ -106,7 +112,7 @@ export const createUserRequestSchema = z
     fullName: nonEmpty,
     phone: z.string().optional(),
     assignments: assignmentsSchema,
-    password: nonEmpty.optional(),
+    password: newPassword.optional().describe('Bắt buộc khi và chỉ khi có vai trò ADMIN'),
   })
   .refine((body) => hasAdminRole(body.assignments) === (body.password !== undefined), {
     path: ['password'],
@@ -124,7 +130,10 @@ export const updateUserRequestSchema = z.strictObject({
  * nên schema chỉ kiểm dạng; `password` không có vai trò ADMIN thì vô nghĩa nên bị từ chối ngay ở đây.
  */
 export const replaceAssignmentsRequestSchema = z
-  .strictObject({ assignments: assignmentsSchema, password: nonEmpty.optional() })
+  .strictObject({
+    assignments: assignmentsSchema,
+    password: newPassword.optional().describe('Bắt buộc khi thêm vai trò ADMIN'),
+  })
   .refine((body) => body.password === undefined || hasAdminRole(body.assignments), {
     path: ['password'],
     error: 'password chỉ dùng khi có vai trò ADMIN',

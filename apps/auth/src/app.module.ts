@@ -13,6 +13,7 @@ import { Module } from '@nestjs/common';
 import { DB_SCHEMA, envSchema, SERVICE_NAME } from './config/env';
 import { PrismaModule } from './prisma/prisma.module';
 import { PrismaService } from './prisma/prisma.service';
+import { SessionModule } from './session/session.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { PrismaService } from './prisma/prisma.service';
     AppLoggerModule.forRoot(SERVICE_NAME),
     JwtAuthModule,
     PrismaModule,
+    SessionModule,
     MessagingModule.forRoot({
       service: SERVICE_NAME,
       dbSchema: DB_SCHEMA,

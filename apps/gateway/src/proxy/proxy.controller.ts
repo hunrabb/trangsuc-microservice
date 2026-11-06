@@ -55,7 +55,11 @@ export class ProxyController {
       // Ghép chuỗi, không dùng new URL(path, base): route.path đã được kiểm tra và không được đổi host.
       upstream = await fetch(`${this.upstreams[route.service]}${route.path}`, {
         method: req.method,
-        headers: forwardRequestHeaders(req.headers, getCorrelationId() ?? ''),
+        headers: forwardRequestHeaders(
+          req.headers,
+          getCorrelationId() ?? '',
+          req.socket.remoteAddress,
+        ),
         body,
         redirect: 'manual',
         signal: AbortSignal.timeout(PROXY_TIMEOUT_MS),

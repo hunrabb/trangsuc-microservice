@@ -14,9 +14,12 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "test:messaging": "turbo run test:messaging --concurrency=1",
+    "test:auth": "turbo run test:auth --concurrency=1",
+    "test:infra": "turbo run test:messaging test:auth --concurrency=1",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "openapi:validate": "validate-api docs/api/auth.openapi.yaml",
+    "openapi:generate": "pnpm --filter @jewelry/contracts build && node scripts/openapi-generate.mjs",
     "keys:generate": "node scripts/generate-jwt-keys.mjs",
     "outbox:requeue": "node scripts/outbox-requeue.mjs"
   },

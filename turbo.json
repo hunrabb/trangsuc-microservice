@@ -24,6 +24,10 @@
     "test:messaging": {
       "dependsOn": ["^build", "db:generate"],
       "cache": false
+    },
+    "test:auth": {
+      "dependsOn": ["^build", "db:generate"],
+      "cache": false
     }
   }
 }

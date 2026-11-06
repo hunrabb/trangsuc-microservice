@@ -79,6 +79,47 @@ export function signTestToken(privateKey: KeyObject, options: SignOptions = {}):
     .sign(privateKey, options.unknownCrit ? { crit: { 'x-la': true } } : undefined);
 }
 
+export interface TestKeyFiles extends TestKeys {
+  /** File private key tạm, dùng làm JWT_PRIVATE_KEY_PATH. */
+  privateKeyPath: string;
+}
+
+/** Như `createTestKeys`, kèm file private key cho service `auth` chạy thật. */
+export function createTestKeyFiles(kid: string = TEST_KID): TestKeyFiles {
+  const keys = createTestKeys(kid);
+  const privateKeyPath = join(keys.publicKeysDir, `${kid}.private.key`);
+  writeFileSync(privateKeyPath, keys.privateKey.export({ type: 'pkcs8', format: 'pem' }));
+  return { ...keys, privateKeyPath };
+}
+
+export interface GoogleIssuer {
+  /** Nội dung JWKS, phục vụ từ server giả hoặc `createLocalJWKSet`. */
+  jwks: { keys: Record<string, unknown>[] };
+  /** Ký ID token. Claim đặt `undefined` thì bị bỏ khỏi token. */
+  sign(claims: Record<string, unknown>): Promise<string>;
+}
+
+/** Giả lập Google: test tự động không bao giờ gọi Google thật. */
+export function createGoogleIssuer(): GoogleIssuer {
+  const { privateKey, publicKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
+  const kid = randomUUID();
+  return {
+    jwks: { keys: [{ ...publicKey.export({ format: 'jwk' }), kid, alg: 'RS256', use: 'sig' }] },
+    sign: (claims) => {
+      const now = Math.floor(Date.now() / 1000);
+      return new SignJWT({
+        iss: 'https://accounts.google.com',
+        email_verified: true,
+        iat: now,
+        exp: now + 3600,
+        ...claims,
+      })
+        .setProtectedHeader({ alg: 'RS256', typ: 'JWT', kid })
+        .sign(privateKey);
+    },
+  };
+}
+
 /** Token không có chữ ký, `alg: none`. */
 export function signNoneToken(kid: string = TEST_KID): string {
   const header = { alg: 'none', typ: 'JWT', kid };

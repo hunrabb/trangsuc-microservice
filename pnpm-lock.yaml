@@ -223,6 +223,12 @@ importers:
       '@prisma/client':
         specifier: 7.10.1
         version: 7.10.1(prisma@7.10.1(@types/node@24.19.2)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(typescript@6.0.3))(typescript@6.0.3)
+      bcryptjs:
+        specifier: 3.0.3
+        version: 3.0.3
+      jose:
+        specifier: 6.2.15
+        version: 6.2.15
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -233,6 +239,9 @@ importers:
         specifier: ^4.6.7
         version: 4.6.7
     devDependencies:
+      '@jewelry/test-utils':
+        specifier: workspace:*
+        version: link:../../tests/test-utils
       prisma:
         specifier: 7.10.1
         version: 7.10.1(@types/node@24.19.2)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(typescript@6.0.3)
@@ -473,6 +482,18 @@ importers:
       zod:
         specifier: ^4.6.7
         version: 4.6.7
+
+  tests/auth:
+    devDependencies:
+      '@jewelry/auth':
+        specifier: workspace:*
+        version: link:../../apps/auth
+      '@jewelry/gateway':
+        specifier: workspace:*
+        version: link:../../apps/gateway
+      '@jewelry/test-utils':
+        specifier: workspace:*
+        version: link:../test-utils
 
   tests/integration:
     devDependencies:
@@ -1412,6 +1433,10 @@ packages:
   balanced-match@4.0.4:
     resolution: {integrity: sha512-BLrgEcRTwX2o6gGxGOCNyMvGSp35YofuYzw9h1IMTRmKqttAZZVU67bdb9Pr2vUHA8+j3i2tJfjO6C6+4myGTA==}
     engines: {node: 18 || 20 || >=22}
+
+  bcryptjs@3.0.3:
+    resolution: {integrity: sha512-GlF5wPWnSa/X5LKM1o0wz0suXIINz1iHRLvTS+sLyi7XPbe5ycmYI3DlZqVGZZtDgl4DmasFg7gOB3JYbphV5g==}
+    hasBin: true
 
   better-result@2.10.0:
     resolution: {integrity: sha512-oQhh0y1qo2/ZKdAAEvHZAqKKiHOFU5k/bW96fE2ScgQOVkJRiHwB+nOS1SgFsYqRlxMDWvefXi9Q3px7QvgNDw==}
@@ -3638,6 +3663,8 @@ snapshots:
   aws-ssl-profiles@1.1.2: {}
 
   balanced-match@4.0.4: {}
+
+  bcryptjs@3.0.3: {}
 
   better-result@2.10.0: {}
 

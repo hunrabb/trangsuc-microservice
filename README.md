@@ -149,10 +149,42 @@ pnpm keys:generate k2     # đổi khoá: thêm kid mới
 
 ```bash
 docker compose up -d postgres rabbitmq rabbitmq-setup
-pnpm test:messaging    # khoảng 3 phút, có dừng và bật RabbitMQ thật
+pnpm test:infra        # test:messaging (khoảng 3 phút, có dừng và bật RabbitMQ thật) + test:auth
 ```
 
 `pnpm test:messaging` chạy được trên hạ tầng đang có dữ liệu: chỉ xoá đúng dữ liệu của mình. Nếu `report.events`, queue chờ hoặc DLQ của nó có thư không phải của test, có consumer đang chạy (tắt `pnpm dev` trước), hoặc bảng outbox có dòng thật mà worker hay job dọn sẽ đụng tới, test dừng và báo lỗi. Chạy xong, trạng thái phải y như trước.
+
+### ADMIN đầu tiên
+
+Mật khẩu chỉ nhận từ `ADMIN_PASSWORD` hoặc stdin, không qua tham số dòng lệnh, vì tham số lộ trong lịch sử shell và danh sách tiến trình. Tối thiểu 12 ký tự, tối đa 72 byte.
+
+```bash
+# Máy dev (đã pnpm build, chạy migrate, có apps/auth/.env)
+read -rs ADMIN_PASSWORD && export ADMIN_PASSWORD
+pnpm --filter @jewelry/auth admin:create -- --email admin@example.com --full-name "Quản Trị"
+
+# Server: truyền qua stdin
+docker compose exec -T auth node dist/cli/admin-create.js --email admin@example.com --full-name "Quản Trị" < file-mat-khau
+```
+
+Email đã tồn tại thì báo lỗi, không ghi đè.
+
+### Đăng nhập Google trên máy dev
+
+Test tự động không gọi Google thật. Muốn thử thật:
+
+1. Vào [Google Cloud Console](https://console.cloud.google.com/apis/credentials), tạo **OAuth client ID** loại **Web application**. Ở **Authorized JavaScript origins** thêm địa chỉ giao diện dev, ví dụ `http://localhost:5173`.
+2. Đặt `GOOGLE_CLIENT_ID=<client id>` trong `apps/auth/.env` (hoặc `.env` ở gốc nếu chạy Docker). Đây không phải bí mật. Không cần client secret. `GOOGLE_JWKS_URL` để mặc định.
+3. Bật hạ tầng và chạy migrate, rồi tạo sẵn user có email Google đó: lệnh `admin:create` ở trên là đủ.
+4. Lấy ID token, ví dụ từ [OAuth 2.0 Playground](https://developers.google.com/oauthplayground) hoặc giao diện dùng Google Identity Services. ID token phải có `aud` đúng client ID của bạn.
+5. Gửi thử:
+
+   ```bash
+   curl -i -X POST localhost:3000/api/auth/google \
+     -H 'content-type: application/json' -d '{"credential":"<ID token>"}'
+   ```
+
+   Trả về `200` kèm `accessToken` và cookie `rt_bo`. Cookie có `Secure`, nên trình duyệt chỉ gửi qua HTTPS hoặc `localhost`.
 
 ### Runbook: Thư outbox bị FAILED
 

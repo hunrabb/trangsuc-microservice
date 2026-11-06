@@ -58,7 +58,7 @@ Chỉ có 3 vai trò cố định (enum), gán theo chi nhánh; không có bản
 
 |  | Access token | Refresh token |
 | --- | --- | --- |
-| Dạng | JWT ký RS256 | Chuỗi ngẫu nhiên 64 byte, không phải JWT |
+| Dạng | JWT ký RS256, có `jti` | Chuỗi ngẫu nhiên 32 byte, không phải JWT |
 | Nội dung | `sub` (userId hoặc id tài khoản khách), `branches[{branchId, role}]` (rỗng với khách), `iss`, `aud`, `iat`, `exp`; header có `kid` | Không chứa gì |
 | Hạn | 15 phút | Hạn trượt 7 ngày (gia hạn mỗi lần refresh), hạn tuyệt đối 30 ngày tính từ `sessionStartedAt` |
 | Client lưu | Biến trong bộ nhớ React | Cookie `httpOnly; Secure; SameSite=Strict`: nhân viên `rt_bo`, `Path=/api/auth`; khách `rt_shop`, `Path=/api/shop/auth` (giai đoạn 6) |
@@ -90,7 +90,15 @@ Chỉ có 3 vai trò cố định (enum), gán theo chi nhánh; không có bản
 
 Các đường API nêu trong tài liệu này là đường ở gateway, chỉ để minh hoạ luồng. Danh sách endpoint đầy đủ nằm trong OpenAPI ở `docs/api/`: đã có `auth.openapi.yaml`, các service khác đang soạn.
 
-**Refresh:** băm cookie → tìm trong `RefreshToken` → kiểm tra tồn tại, chưa thu hồi, còn hạn trượt và hạn tuyệt đối, user `ACTIVE` → đọc lại vai trò mới nhất → thu hồi token cũ và phát token mới (xoay vòng) trong một transaction. Token đã thu hồi mà bị dùng lại → thu hồi mọi phiên của user đó.
+**Refresh:** trong một transaction, băm cookie rồi xoay vòng bằng UPDATE có điều kiện (`SET revokedAt, replacedAt WHERE tokenHash = ? AND revokedAt IS NULL RETURNING ...`):
+
+- **1 dòng:** kiểm tra hạn trượt, hạn tuyệt đối, user `ACTIVE`, còn vai trò; tạo token mới giữ nguyên `sessionStartedAt`; đọc lại vai trò mới nhất. Không đạt thì **rollback** rồi trả `401 SESSION_EXPIRED`, để cookie hết hạn gửi lại không bị coi nhầm là đánh cắp.
+- **0 dòng, không có token:** `401 SESSION_EXPIRED`.
+- **0 dòng, token bị thay trong 10 giây gần đây (`replacedAt`):** `409 REFRESH_CONFLICT`. Đây là hai tab refresh cùng lúc; client gửi lại là được, không thu hồi phiên.
+- **0 dòng, token vừa bị thu hồi trong 10 giây mà không phải do xoay vòng:** tab khác vừa đăng xuất; `401 SESSION_EXPIRED`, không thu hồi phiên khác.
+- **0 dòng, token đã thu hồi lâu hơn thế:** coi là bị đánh cắp: thu hồi mọi refresh token của user, ghi `AuditLog`, `401 SESSION_EXPIRED`.
+
+Mọi so sánh thời gian dùng `now()` của Postgres. Trả `401 SESSION_EXPIRED` thì xoá cookie; `409` thì không, vì cookie mới là của tab thắng.
 
 **Frontend:** interceptor axios bắt `TOKEN_EXPIRED`, chỉ chạy một lần refresh tại một thời điểm (các request khác chờ chung), rồi gửi lại request; refresh hỏng → về màn đăng nhập, lưu tạm giỏ hàng POS. Refresh chủ động khoảng 1 phút trước `exp`.
 
@@ -106,7 +114,7 @@ Các đường API nêu trong tài liệu này là đường ở gateway, chỉ 
 - Hạ vai trò khỏi ADMIN → xoá `passwordHash`, thu hồi mọi phiên. Nâng lên ADMIN → bắt buộc đặt mật khẩu trong cùng thao tác.
 - Rủi ro chấp nhận: Google lỗi thì chỉ ADMIN đăng nhập được.
 
-**Đăng nhập Google (cách A):** Google Identity Services trả ID token cho trình duyệt; trình duyệt gửi `credential` cho auth; auth kiểm bằng `jose` + JWKS của Google: `iss` ∈ {`https://accounts.google.com`, `accounts.google.com`}, `aud = GOOGLE_CLIENT_ID`, `exp`, `email_verified = true`. Ghép theo `sub` qua bảng `AuthIdentity(provider, subject)`. Nhân viên chỉ ghép được với email admin đã thêm trước, không tự đăng ký. Lần đầu ghép → ghi `AuditLog`.
+**Đăng nhập Google (cách A):** Google Identity Services trả ID token cho trình duyệt; trình duyệt gửi `credential` cho auth; auth kiểm bằng `jose` + JWKS của Google: `iss` ∈ {`https://accounts.google.com`, `accounts.google.com`}, `aud = GOOGLE_CLIENT_ID`, `exp`, `email_verified = true`. Ghép theo `sub` qua bảng `AuthIdentity(provider, subject)`. Nhân viên chỉ ghép được với email admin đã thêm trước, không tự đăng ký; user phải `ACTIVE`, có vai trò, chưa liên kết Google. Lần đầu ghép → ghi `AuditLog`. Hai lần đăng nhập đầu tiên song song: unique constraint làm trọng tài, bên thua đọc lại identity vừa tạo. Không lấy được khoá của Google → `503 SERVICE_UNAVAILABLE`.
 
 **Rủi ro Gmail cá nhân:** hệ thống không ép được xác minh 2 bước trên tài khoản Gmail cá nhân. Khuyến nghị mọi nhân viên bật xác minh 2 bước. Khi có dấu hiệu lạ: quản lý khoá tài khoản (`lock`) hoặc gỡ liên kết (`unlink-google`), cả hai đều thu hồi mọi phiên; nhân viên kiểm tra lại tài khoản Google rồi mới mở khoá và liên kết lại.
 
@@ -250,9 +258,9 @@ CustomerAccount (giai đoạn 6)
 | Bảng | Cột chính | Ghi chú |
 | --- | --- | --- |
 | Branch | code (unique), name, address, phone, isActive, version | Chi nhánh |
-| User | email (unique), passwordHash (null trừ ADMIN), fullName, phone, status (`ACTIVE`, `LOCKED`), version | Nhân viên |
+| User | email (unique, luôn chữ thường, có CHECK), passwordHash (null trừ ADMIN), fullName, phone, status (`ACTIVE`, `LOCKED`), version | Nhân viên |
 | UserBranch | userId, branchId (null = toàn hệ thống), role (`ADMIN`, `MANAGER`, `STAFF`) | Unique (userId, branchId) |
-| RefreshToken | userId, tokenHash (unique), expiresAt (hạn trượt), sessionStartedAt (hạn tuyệt đối), revokedAt | Phiên đăng nhập |
+| RefreshToken | userId, tokenHash (unique), expiresAt (hạn trượt), sessionStartedAt (hạn tuyệt đối), revokedAt, replacedAt (có giá trị khi bị xoay vòng), userAgent, ip | Phiên đăng nhập |
 | AuthIdentity | userId, provider (`GOOGLE`), subject (`sub` của nhà cung cấp) | Unique (provider, subject); một user tối đa một liên kết mỗi provider |
 | AuditLog | actorId, action, entityType, entityId, data (JSONB), correlationId | Chỉ ghi thêm. Ghi khi ghép Google lần đầu, gỡ liên kết, khoá/mở, đổi vai trò, đặt lại mật khẩu |
 
@@ -385,6 +393,9 @@ model RefreshToken {
   expiresAt        DateTime  // hạn trượt 7 ngày
   sessionStartedAt DateTime  // giữ nguyên qua mọi lần xoay vòng → hạn tuyệt đối 30 ngày
   revokedAt        DateTime?
+  replacedAt       DateTime? // có giá trị khi bị xoay vòng, phân biệt với đăng xuất
+  userAgent        String?
+  ip               String?
   user             User      @relation(fields: [userId], references: [id])
   createdAt        DateTime  @default(now())
   @@index([userId])
@@ -399,7 +410,7 @@ model AuthIdentity {
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
   @@unique([provider, subject])
-  @@unique([userId, provider])
+  @@unique([provider, userId])
 }
 
 model AuditLog { // chỉ ghi thêm

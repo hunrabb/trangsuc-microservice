@@ -16,7 +16,8 @@ info:
 
     - Thay đổi có `version` dùng khoá lạc quan: lệch → `409 VERSION_CONFLICT`.
 
-    - Schema zod tương ứng nằm trong `libs/contracts/src/auth-api.ts`.'
+    - `components/schemas` sinh từ zod trong `libs/contracts` bằng `pnpm openapi:generate`, không sửa tay. Riêng
+    `paths` viết tay.'
 tags:
 - name: Xác thực
 - name: Chi nhánh
@@ -28,8 +29,8 @@ paths:
       tags:
       - Xác thực
       summary: Đăng nhập nhân viên bằng Google
-      description: ID token sai → 401. Email chưa được cấp quyền hoặc tài khoản bị khoá → 403. Lần đầu ghép Google
-        ghi `AuditLog`.
+      description: ID token sai → 401. Email chưa được cấp quyền, tài khoản bị khoá hoặc không có vai trò → 403,
+        không tạo gì. Lần đầu ghép Google ghi `AuditLog`. Không lấy được khoá của Google → 503.
       x-roles:
       - công khai
       x-audience: không yêu cầu token
@@ -72,6 +73,14 @@ paths:
           description: 'Không có quyền: ACCOUNT_NOT_PROVISIONED'
           x-error-codes:
           - ACCOUNT_NOT_PROVISIONED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: 'Tạm thời không sẵn sàng: SERVICE_UNAVAILABLE'
+          x-error-codes:
+          - SERVICE_UNAVAILABLE
           content:
             application/json:
               schema:
@@ -136,8 +145,9 @@ paths:
       tags:
       - Xác thực
       summary: Xoay vòng refresh token
-      description: Hết hạn trượt 7 ngày hoặc hạn tuyệt đối 30 ngày → 401. Token đã thu hồi bị dùng lại → thu hồi
-        mọi phiên của user, 401.
+      description: Hết hạn trượt 7 ngày hoặc hạn tuyệt đối 30 ngày, hoặc không có cookie → 401, xoá cookie. Token
+        vừa bị thay trong 10 giây gần đây (hai tab refresh cùng lúc) → 409, không thu hồi phiên, client gửi lại
+        là được. Token đã thu hồi lâu hơn thế bị dùng lại → coi là bị đánh cắp, thu hồi mọi phiên của user, 401.
       x-roles:
       - công khai
       x-audience: không yêu cầu access token
@@ -159,6 +169,14 @@ paths:
           description: 'Chưa xác thực: SESSION_EXPIRED'
           x-error-codes:
           - SESSION_EXPIRED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 'Xung đột: REFRESH_CONFLICT'
+          x-error-codes:
+          - REFRESH_CONFLICT
           content:
             application/json:
               schema:
@@ -1056,291 +1074,347 @@ components:
       name: rt_bo
   schemas:
     ErrorResponse:
-      type: object
-      required:
-      - code
-      - message
-      - correlationId
+      type: "object"
       properties:
         code:
-          type: string
+          type: "string"
+          enum:
+            - "VALIDATION_FAILED"
+            - "INVALID_CREDENTIALS"
+            - "ACCOUNT_NOT_PROVISIONED"
+            - "SESSION_EXPIRED"
+            - "REFRESH_CONFLICT"
+            - "PASSWORD_TOO_WEAK"
+            - "INVALID_TOKEN"
+            - "TOKEN_EXPIRED"
+            - "FORBIDDEN"
+            - "NOT_FOUND"
+            - "METHOD_NOT_ALLOWED"
+            - "VERSION_CONFLICT"
+            - "INVALID_STATE"
+            - "IDEMPOTENCY_KEY_REUSED"
+            - "PAYLOAD_TOO_LARGE"
+            - "RATE_LIMITED"
+            - "SERVICE_UNAVAILABLE"
+            - "INTERNAL_ERROR"
         message:
-          type: string
+          type: "string"
         details:
-          type: object
+          type: "object"
+          propertyNames:
+            type: "string"
+          additionalProperties: {}
         correlationId:
-          type: string
-    Role:
-      type: string
-      enum:
-      - ADMIN
-      - MANAGER
-      - STAFF
-    Assignment:
-      type: object
-      additionalProperties: false
+          type: "string"
       required:
-      - branchId
-      - role
+        - "code"
+        - "message"
+        - "correlationId"
+      additionalProperties: false
+    Role:
+      type: "string"
+      enum:
+        - "ADMIN"
+        - "MANAGER"
+        - "STAFF"
+    Assignment:
+      type: "object"
       properties:
         branchId:
-          type:
-          - string
-          - 'null'
-          format: uuid
+          anyOf:
+            - type: "string"
+              format: "uuid"
+              pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            - type: "null"
         role:
-          $ref: '#/components/schemas/Role'
-      description: ADMIN có `branchId = null`; MANAGER, STAFF bắt buộc có `branchId`.
-    AuthUser:
-      type: object
-      additionalProperties: false
+          $ref: "#/components/schemas/Role"
       required:
-      - id
-      - email
-      - fullName
-      - branches
+        - "branchId"
+        - "role"
+      additionalProperties: false
+    AuthUser:
+      type: "object"
       properties:
         id:
-          type: string
-          format: uuid
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
         email:
-          type: string
-          format: email
+          type: "string"
+          format: "email"
+          pattern: "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
         fullName:
-          type: string
+          type: "string"
         branches:
-          type: array
+          type: "array"
           items:
-            $ref: '#/components/schemas/Assignment'
-    CurrentUser:
-      allOf:
-      - $ref: '#/components/schemas/AuthUser'
-      - type: object
-        required:
-        - googleLinked
-        properties:
-          googleLinked:
-            type: boolean
-    AuthSession:
-      type: object
-      additionalProperties: false
+            $ref: "#/components/schemas/Assignment"
       required:
-      - accessToken
-      - expiresIn
-      - user
+        - "id"
+        - "email"
+        - "fullName"
+        - "branches"
+      additionalProperties: false
+    CurrentUser:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        email:
+          type: "string"
+          format: "email"
+          pattern: "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+        fullName:
+          type: "string"
+        branches:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/Assignment"
+        googleLinked:
+          type: "boolean"
+      required:
+        - "id"
+        - "email"
+        - "fullName"
+        - "branches"
+        - "googleLinked"
+      additionalProperties: false
+    AuthSession:
+      type: "object"
       properties:
         accessToken:
-          type: string
+          type: "string"
         expiresIn:
-          type: integer
-          description: Số giây, 900
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
+          description: "Số giây, 900"
         user:
-          $ref: '#/components/schemas/AuthUser'
-    GoogleLoginRequest:
-      type: object
-      additionalProperties: false
+          $ref: "#/components/schemas/AuthUser"
       required:
-      - credential
+        - "accessToken"
+        - "expiresIn"
+        - "user"
+      additionalProperties: false
+    GoogleLoginRequest:
+      type: "object"
       properties:
         credential:
-          type: string
-          description: ID token từ Google Identity Services
-    PasswordLoginRequest:
-      type: object
-      additionalProperties: false
+          type: "string"
+          minLength: 1
+          description: "ID token từ Google Identity Services"
       required:
-      - email
-      - password
+        - "credential"
+      additionalProperties: false
+    PasswordLoginRequest:
+      type: "object"
       properties:
         email:
-          type: string
-          format: email
+          type: "string"
+          format: "email"
+          pattern: "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
         password:
-          type: string
+          type: "string"
           minLength: 1
-    ChangePasswordRequest:
-      type: object
-      additionalProperties: false
       required:
-      - currentPassword
-      - newPassword
+        - "email"
+        - "password"
+      additionalProperties: false
+    ChangePasswordRequest:
+      type: "object"
       properties:
         currentPassword:
-          type: string
+          type: "string"
           minLength: 1
         newPassword:
-          type: string
-          minLength: 12
-          description: Tối thiểu 12 ký tự, tối đa 72 byte UTF-8 (giới hạn của bcrypt). Sai → `PASSWORD_TOO_WEAK`.
+          type: "string"
+          minLength: 1
+          description: "Tối thiểu 12 ký tự, tối đa 72 byte UTF-8. Sai → PASSWORD_TOO_WEAK."
+      required:
+        - "currentPassword"
+        - "newPassword"
+      additionalProperties: false
     ResetPasswordRequest:
-      type: object
-      additionalProperties: false
-      required:
-      - newPassword
+      type: "object"
       properties:
         newPassword:
-          type: string
-          minLength: 12
-          description: Tối thiểu 12 ký tự, tối đa 72 byte UTF-8 (giới hạn của bcrypt). Sai → `PASSWORD_TOO_WEAK`.
+          type: "string"
+          minLength: 1
+          description: "Tối thiểu 12 ký tự, tối đa 72 byte UTF-8. Sai → PASSWORD_TOO_WEAK."
+      required:
+        - "newPassword"
+      additionalProperties: false
     Branch:
-      type: object
-      additionalProperties: false
-      required:
-      - id
-      - code
-      - name
-      - address
-      - phone
-      - isActive
-      - version
+      type: "object"
       properties:
         id:
-          type: string
-          format: uuid
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
         code:
-          type: string
+          type: "string"
         name:
-          type: string
+          type: "string"
         address:
           type:
-          - string
-          - 'null'
+            - "string"
+            - "null"
         phone:
           type:
-          - string
-          - 'null'
+            - "string"
+            - "null"
         isActive:
-          type: boolean
+          type: "boolean"
         version:
-          type: integer
-    CreateBranchRequest:
-      type: object
-      additionalProperties: false
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
       required:
-      - code
-      - name
+        - "id"
+        - "code"
+        - "name"
+        - "address"
+        - "phone"
+        - "isActive"
+        - "version"
+      additionalProperties: false
+    CreateBranchRequest:
+      type: "object"
       properties:
         code:
-          type: string
+          type: "string"
           minLength: 1
         name:
-          type: string
+          type: "string"
           minLength: 1
         address:
-          type: string
+          type: "string"
         phone:
-          type: string
-    UpdateBranchRequest:
-      type: object
-      additionalProperties: false
+          type: "string"
       required:
-      - version
+        - "code"
+        - "name"
+      additionalProperties: false
+    UpdateBranchRequest:
+      type: "object"
       properties:
         version:
-          type: integer
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
         name:
-          type: string
+          type: "string"
           minLength: 1
         address:
           type:
-          - string
-          - 'null'
+            - "string"
+            - "null"
         phone:
           type:
-          - string
-          - 'null'
-    User:
-      type: object
-      additionalProperties: false
+            - "string"
+            - "null"
       required:
-      - id
-      - email
-      - fullName
-      - phone
-      - status
-      - googleLinked
-      - branches
-      - version
+        - "version"
+      additionalProperties: false
+    User:
+      type: "object"
       properties:
         id:
-          type: string
-          format: uuid
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
         email:
-          type: string
-          format: email
+          type: "string"
+          format: "email"
+          pattern: "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
         fullName:
-          type: string
+          type: "string"
         phone:
           type:
-          - string
-          - 'null'
+            - "string"
+            - "null"
         status:
-          type: string
+          type: "string"
           enum:
-          - ACTIVE
-          - LOCKED
+            - "ACTIVE"
+            - "LOCKED"
         googleLinked:
-          type: boolean
+          type: "boolean"
         branches:
-          type: array
+          type: "array"
           items:
-            $ref: '#/components/schemas/Assignment'
+            $ref: "#/components/schemas/Assignment"
         version:
-          type: integer
-    CreateUserRequest:
-      type: object
-      additionalProperties: false
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
       required:
-      - email
-      - fullName
-      - assignments
+        - "id"
+        - "email"
+        - "fullName"
+        - "phone"
+        - "status"
+        - "googleLinked"
+        - "branches"
+        - "version"
+      additionalProperties: false
+    CreateUserRequest:
+      type: "object"
       properties:
         email:
-          type: string
-          format: email
+          type: "string"
+          format: "email"
+          pattern: "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
         fullName:
-          type: string
+          type: "string"
           minLength: 1
         phone:
-          type: string
+          type: "string"
         assignments:
-          type: array
           minItems: 1
+          type: "array"
           items:
-            $ref: '#/components/schemas/Assignment'
+            $ref: "#/components/schemas/Assignment"
         password:
-          type: string
-          minLength: 12
-          description: Bắt buộc khi và chỉ khi có vai trò ADMIN. Tối thiểu 12 ký tự, tối đa 72 byte UTF-8 (giới
-            hạn của bcrypt). Sai → `PASSWORD_TOO_WEAK`.
-    UpdateUserRequest:
-      type: object
-      additionalProperties: false
+          description: "Bắt buộc khi và chỉ khi có vai trò ADMIN"
+          type: "string"
+          minLength: 1
       required:
-      - version
+        - "email"
+        - "fullName"
+        - "assignments"
+      additionalProperties: false
+    UpdateUserRequest:
+      type: "object"
       properties:
         version:
-          type: integer
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
         fullName:
-          type: string
+          type: "string"
           minLength: 1
         phone:
           type:
-          - string
-          - 'null'
-    ReplaceAssignmentsRequest:
-      type: object
-      additionalProperties: false
+            - "string"
+            - "null"
       required:
-      - assignments
+        - "version"
+      additionalProperties: false
+    ReplaceAssignmentsRequest:
+      type: "object"
       properties:
         assignments:
-          type: array
           minItems: 1
+          type: "array"
           items:
-            $ref: '#/components/schemas/Assignment'
+            $ref: "#/components/schemas/Assignment"
         password:
-          type: string
-          minLength: 12
-          description: Bắt buộc khi thêm vai trò ADMIN. Tối thiểu 12 ký tự, tối đa 72 byte UTF-8 (giới hạn của bcrypt).
-            Sai → `PASSWORD_TOO_WEAK`.
+          description: "Bắt buộc khi thêm vai trò ADMIN"
+          type: "string"
+          minLength: 1
+      required:
+        - "assignments"
+      additionalProperties: false

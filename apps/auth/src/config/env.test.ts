@@ -17,6 +17,7 @@ const valid = {
   // Chỉ cần một file đọc được.
   JWT_PRIVATE_KEY_PATH: process.execPath,
   JWT_ACTIVE_KID: 'k1',
+  GOOGLE_CLIENT_ID: 'client-test',
 };
 
 describe('parseEnv (auth)', () => {
@@ -36,6 +37,7 @@ describe('parseEnv (auth)', () => {
       assert.deepEqual(result.problems.map((p) => p.variable).sort(), [
         'DATABASE_POOL_MAX',
         'DATABASE_URL',
+        'GOOGLE_CLIENT_ID',
         'JWT_ACTIVE_KID',
         'JWT_AUDIENCE_BACKOFFICE',
         'JWT_AUDIENCE_SHOP',
@@ -67,6 +69,15 @@ describe('parseEnv (auth)', () => {
   it('từ chối JWT_PRIVATE_KEY_PATH không đọc được', () => {
     const result = parseEnv({ ...valid, JWT_PRIVATE_KEY_PATH: '/khong/ton/tai.pem' });
     assert.equal(result.ok, false);
+  });
+
+  it('GOOGLE_JWKS_URL mặc định là địa chỉ của Google, test trỏ đi nơi khác được', () => {
+    const standard = parseEnv(valid);
+    assert.ok(standard.ok);
+    assert.equal(standard.env.GOOGLE_JWKS_URL, 'https://www.googleapis.com/oauth2/v3/certs');
+    const fake = parseEnv({ ...valid, GOOGLE_JWKS_URL: 'http://127.0.0.1:9999/jwks' });
+    assert.ok(fake.ok);
+    assert.equal(fake.env.GOOGLE_JWKS_URL, 'http://127.0.0.1:9999/jwks');
   });
 
   it('từ chối PORT không phải số', () => {

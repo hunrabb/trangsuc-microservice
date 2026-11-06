@@ -52,9 +52,9 @@ jobs:
       - name: Build
         run: pnpm build
 
-      # Test outbox/consumer cần Postgres và RabbitMQ thật, đúng topology trong definitions.json.
+      # Test outbox/consumer và phiên đăng nhập cần Postgres và RabbitMQ thật, đúng topology trong definitions.json.
       # Mật khẩu ngẫu nhiên cho từng lần chạy; override mở cổng 127.0.0.1 cho test trên máy runner.
-      - name: Hạ tầng cho test messaging
+      - name: Hạ tầng cho test
         run: |
           cp .env.example .env
           for name in $(grep -E '^[A-Z_]*PASSWORD=$' .env.example | cut -d= -f1); do
@@ -65,8 +65,8 @@ jobs:
           docker compose up -d --wait postgres rabbitmq
           docker compose run --rm rabbitmq-setup
 
-      - name: Test messaging (outbox, consumer, retry, DLQ)
-        run: pnpm test:messaging
+      - name: Test hạ tầng (outbox, consumer, retry, DLQ, phiên đăng nhập)
+        run: pnpm test:infra
 
   docker:
     name: docker compose build

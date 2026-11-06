@@ -35,6 +35,17 @@ describe('forwardRequestHeaders', () => {
   });
 });
 
+describe('x-forwarded-for', () => {
+  it('bỏ giá trị client tự gửi, đặt lại theo địa chỉ thật của kết nối', () => {
+    const headers = forwardRequestHeaders({ 'x-forwarded-for': '1.2.3.4' }, 'id', '10.0.0.5');
+    assert.equal(headers['x-forwarded-for'], '10.0.0.5');
+    assert.equal(
+      forwardRequestHeaders({ 'x-forwarded-for': '1.2.3.4' }, 'id')['x-forwarded-for'],
+      undefined,
+    );
+  });
+});
+
 describe('forwardResponseHeaders', () => {
   it('giữ set-cookie thành nhiều dòng, bỏ header không còn đúng sau khi fetch giải nén', () => {
     const upstream = new Headers({

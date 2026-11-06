@@ -44,6 +44,7 @@ infra/
 tests/
   integration/     test đa app: chạy dist của nhiều app rồi đọc log/HTTP (app không được import lẫn nhau)
   messaging/       test outbox, consumer, retry, DLQ trên Postgres + RabbitMQ thật của Compose (`pnpm test:messaging`)
+  auth/            test phiên đăng nhập trên Postgres thật (`pnpm test:auth`)
   test-utils/      chỉ cho test (signTestToken...); nằm ở devDependencies, ESLint cấm import từ code chạy thật
 scripts/           run-tests.mjs (chạy test, đỏ khi 0 test), generate-jwt-keys.mjs, outbox-requeue.mjs
 secrets/jwt/       (gitignore) private/<kid>.private.pem (chỉ auth), public/<kid>.public.pem (mọi service, read-only)
@@ -67,12 +68,16 @@ pnpm dev                                        # chạy mọi app ở chế đ�
 pnpm --filter @jewelry/<app> exec prisma migrate dev --name <ten>   # CHỈ máy dev; cần database shadow
 pnpm --filter @jewelry/<app> db:generate        # sinh Prisma client (turbo tự chạy trước build/typecheck/dev)
 pnpm test                                       # unit + tests/integration (chạy bản build thật của gateway, inventory; chưa cần Postgres)
-pnpm test:messaging                             # cần postgres, rabbitmq, rabbitmq-setup; dừng và bật RabbitMQ thật; không chạy trong `pnpm test`
+pnpm test:infra                                 # test:messaging + test:auth; cần postgres, rabbitmq, rabbitmq-setup; không chạy trong `pnpm test`
+pnpm test:messaging                             # có dừng và bật RabbitMQ thật
+pnpm test:auth                                  # phiên đăng nhập trên Postgres thật, Google là server giả
 pnpm outbox:requeue -- --service <app> [--event-type <x>] [--id <uuid>] [--dry-run]   # gửi lại dòng outbox FAILED; cần pnpm build trước
 pnpm lint && pnpm typecheck
 pnpm build
 pnpm format:check                               # Prettier (pnpm format để tự sửa)
 pnpm openapi:validate                           # kiểm tra các file docs/api/*.openapi.yaml
+pnpm openapi:generate                           # sinh components/schemas từ zod; `pnpm test` đỏ nếu file lệch
+pnpm --filter @jewelry/auth admin:create -- --email <email> --full-name <tên>   # tạo ADMIN đầu tiên; mật khẩu từ ADMIN_PASSWORD hoặc stdin
 docker compose up --build                       # chạy cả hệ thống (kèm override dev)
 docker compose -f docker-compose.yml up --build # chạy như production (không mở cổng dev)
 docker compose run --rm rabbitmq-setup          # nạp lại topology RabbitMQ sau khi sửa definitions.json
@@ -171,7 +176,7 @@ Chưa có (làm ở giai đoạn sau): `prisma db seed` (chưa có seed), `pnpm 
 
 - Access token: JWT **RS256**, 15 phút; chỉ `auth` giữ private key, các service khác chỉ có public key. Kiểm tra luôn ép `algorithms: ['RS256']`, `issuer`, `audience`, chọn key theo `kid`.
 - Hai loại token, cùng `iss`: `aud = store-backoffice` (nhân viên) và `store-shop` (khách). `JwtGuard` mặc định yêu cầu `aud` nhân viên; endpoint của khách đánh dấu `@Audience('shop')`.
-- Refresh token: chuỗi ngẫu nhiên, lưu **bản băm** SHA-256; hạn trượt 7 ngày, hạn tuyệt đối 30 ngày (`sessionStartedAt`); xoay vòng mỗi lần dùng; token đã thu hồi bị dùng lại → thu hồi mọi phiên của user. Cookie `httpOnly; Secure; SameSite=Strict`: nhân viên `rt_bo`, `Path=/api/auth`; khách `rt_shop`, `Path=/api/shop/auth`.
+- Refresh token: chuỗi ngẫu nhiên, lưu **bản băm** SHA-256; hạn trượt 7 ngày, hạn tuyệt đối 30 ngày (`sessionStartedAt`); xoay vòng mỗi lần dùng bằng UPDATE có điều kiện; token vừa bị thay trong 10 giây → `409 REFRESH_CONFLICT` (hai tab), không thu hồi; token đã thu hồi lâu hơn thế bị dùng lại → thu hồi mọi phiên của user. Cookie `httpOnly; Secure; SameSite=Strict`: nhân viên `rt_bo`, `Path=/api/auth`; khách `rt_shop`, `Path=/api/shop/auth`.
 - Vai trò: `ADMIN` (toàn hệ thống, `branchId = null`), `MANAGER`, `STAFF` theo chi nhánh. Dùng `JwtGuard` + `RolesGuard` + `@Roles(...)` trong `libs/common`; mọi endpoint mặc định cần đăng nhập, ngoại lệ đánh dấu `@Public()`.
 - Gateway xoá mọi header `x-user-*` từ client.
 - Đăng nhập nhân viên: MANAGER, STAFF **chỉ Google**; ADMIN Google hoặc mật khẩu. Ghép Google theo `sub` qua `AuthIdentity`, chỉ với email admin đã thêm trước.
@@ -187,7 +192,7 @@ Chưa có (làm ở giai đoạn sau): `prisma db seed` (chưa có seed), `pnpm 
 ## 13. Test
 
 - Unit: tính giá, chuyển trạng thái, phân loại lỗi.
-- Integration: Postgres thật (Testcontainers), không mock Prisma cho logic ghi dữ liệu. **Ngoại lệ:** outbox, consumer, retry, DLQ test bằng `pnpm test:messaging` trên Postgres và RabbitMQ của Docker Compose, vì cần đúng `definitions.json` và phải dừng, bật được broker.
+- Integration: Postgres thật (Testcontainers), không mock Prisma cho logic ghi dữ liệu. **Ngoại lệ:** outbox, consumer, retry, DLQ (`pnpm test:messaging`) và phiên đăng nhập (`pnpm test:auth`) chạy trên hạ tầng Docker Compose, vì cần đúng `definitions.json`, phải dừng và bật được broker, và chạy bản build thật qua gateway.
 - Test chạy trên hạ tầng dùng chung không được `deleteMany` cả bảng hay purge queue: chỉ xoá đúng dữ liệu của mình, thấy dữ liệu lạ mà test có thể đụng tới thì dừng và báo lỗi, chạy xong trạng thái phải y như trước.
 - **Đồng thời** — bắt buộc cho mọi chỗ ghi dữ liệu dùng chung. Bắn song song bằng `Promise.all`, kiểm tra kết quả cuối trong DB. Ví dụ: N request tranh một tem → đúng 1 thành công; trùng `Idempotency-Key` → 1 hoá đơn; thư trùng `eventId` → xử lý 1 lần.
 - Contract: payload sự kiện khớp zod schema trong `libs/contracts`.

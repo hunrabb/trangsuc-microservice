@@ -1,0 +1,16 @@
+{
+  "name": "@jewelry/auth-tests",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "eslint .",
+    "test:auth": "node ../../scripts/run-tests.mjs --sequential \"src/**/*.test.ts\""
+  },
+  "devDependencies": {
+    "@jewelry/auth": "workspace:*",
+    "@jewelry/gateway": "workspace:*",
+    "@jewelry/test-utils": "workspace:*"
+  }
+}

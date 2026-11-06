@@ -13,8 +13,17 @@ const HOP_BY_HOP = [
   'upgrade',
 ];
 
-/** `host`, `content-length`, `expect` do fetch tự đặt; `x-correlation-id` được gắn lại bằng mã của request. */
-const REQUEST_DROPPED = new Set([...HOP_BY_HOP, 'host', 'content-length', 'expect']);
+/**
+ * `host`, `content-length`, `expect` do fetch tự đặt; `x-correlation-id` được gắn lại bằng mã của request.
+ * `x-forwarded-for` của client không đáng tin: gateway đặt lại theo địa chỉ thật của kết nối.
+ */
+const REQUEST_DROPPED = new Set([
+  ...HOP_BY_HOP,
+  'host',
+  'content-length',
+  'expect',
+  'x-forwarded-for',
+]);
 
 /** fetch đã giải nén body nên `content-encoding`, `content-length` của service không còn đúng. */
 const RESPONSE_DROPPED = new Set([
@@ -33,6 +42,7 @@ function listedInConnection(value: string | string[] | undefined): Set<string> {
 export function forwardRequestHeaders(
   incoming: IncomingHttpHeaders,
   correlationId: string,
+  clientIp?: string,
 ): Record<string, string> {
   const listed = listedInConnection(incoming.connection);
   const headers: Record<string, string> = {};
@@ -49,6 +59,9 @@ export function forwardRequestHeaders(
     headers[lower] = Array.isArray(value) ? value.join(', ') : value;
   }
   headers['x-correlation-id'] = correlationId;
+  if (clientIp !== undefined) {
+    headers['x-forwarded-for'] = clientIp;
+  }
   return headers;
 }
 
