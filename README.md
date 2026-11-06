@@ -112,7 +112,7 @@ pnpm format:check  # Prettier; `pnpm format` để tự sửa
 
 Luật `no-restricted-imports` (xem `eslint.config.mjs`): một app **không** được import code của app khác; chỉ import `@jewelry/contracts` và `@jewelry/common`.
 
-CI (`.github/workflows/ci.yml`): cài thư viện (cache pnpm), format, lint, typecheck, test, build, rồi `docker compose build`. Job `smoke` chạy cả hệ thống bằng `docker compose -f docker-compose.yml up -d --build --wait` (**không** nạp `docker-compose.override.yml`, tức đúng cấu hình production), kiểm tra chỉ gateway/backoffice/storefront mở cổng, rồi gọi `/api/ping`.
+CI (`.github/workflows/ci.yml`): cài thư viện (cache pnpm), format, lint, typecheck, test, build, rồi `docker compose build`. Mọi job chạy trên `ubuntu-24.04` (ghim phiên bản, không dùng `ubuntu-latest`). Job `smoke` chạy cả hệ thống bằng `docker compose -f docker-compose.yml up -d --build --wait` (**không** nạp `docker-compose.override.yml`, tức đúng cấu hình production), kiểm tra chỉ gateway/backoffice/storefront mở cổng, rồi gọi `/api/ping`.
 
 ## Cấu trúc
 
