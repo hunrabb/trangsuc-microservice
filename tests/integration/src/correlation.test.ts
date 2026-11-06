@@ -86,6 +86,34 @@ describe('correlationId đi xuyên gateway → inventory', () => {
 });
 
 describe('kiểm tra cấu hình lúc khởi động', () => {
+  const smallPoolEnv = (service: string, port: number) => ({
+    PORT: String(port),
+    DATABASE_URL: `postgresql://test:test@127.0.0.1:1/test?schema=${service}`,
+    DATABASE_POOL_MAX: '14',
+  });
+
+  it('service có consumer mà pool nhỏ hơn mức cần: log rõ lý do và thoát mã 1', async () => {
+    const service = startService('report', smallPoolEnv('report', await freePort()));
+    const code = await new Promise((done) => service.child.once('close', done));
+
+    assert.equal(code, 1);
+    const fatal = service.logs.find((line) =>
+      /DATABASE_POOL_MAX = 14 quá nhỏ/.test(line.msg ?? ''),
+    );
+    assert.match(fatal?.msg ?? '', /tối thiểu 15/);
+    assert.equal(fatal?.service, 'report');
+  });
+
+  it('service chưa có consumer thì không bị ràng buộc pool', async () => {
+    const port = await freePort();
+    const service = startService('sales', smallPoolEnv('sales', port));
+    try {
+      await waitUntilLive(port);
+    } finally {
+      service.child.kill();
+    }
+  });
+
   it('thiếu biến thì log rõ tên biến và thoát mã 1', async () => {
     const service = startService('inventory', { PORT: '3999' });
     const code = await new Promise((done) => service.child.once('close', done));

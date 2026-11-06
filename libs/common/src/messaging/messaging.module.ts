@@ -8,7 +8,8 @@ import {
   Optional,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { type ConsumerDb, EventConsumer, type EventHandler } from './consumer';
+import { exitWithFatalLog } from '../config/parse-env';
+import { type ConsumerDb, consumerPoolProblem, EventConsumer, type EventHandler } from './consumer';
 import { type OutboxDb, OutboxWorker } from './outbox-worker';
 import { RabbitConnection } from './rabbit-connection';
 
@@ -76,15 +77,22 @@ export class MessagingModule {
           : [
               {
                 provide: EventConsumer,
-                inject: [MESSAGING_DB, RabbitConnection],
-                useFactory: (db: ConsumerDb, rabbit: RabbitConnection) =>
-                  new EventConsumer({
+                inject: [MESSAGING_DB, RabbitConnection, ConfigService],
+                useFactory: (db: ConsumerDb, rabbit: RabbitConnection, config: ConfigService) => {
+                  const problem = consumerPoolProblem(
+                    config.getOrThrow<number>('DATABASE_POOL_MAX'),
+                  );
+                  if (problem !== undefined) {
+                    exitWithFatalLog(options.service, `Dịch vụ không khởi động: ${problem}`);
+                  }
+                  return new EventConsumer({
                     db,
                     rabbit,
                     queue: options.consumer!.queue,
                     consumer: options.service,
                     handlers: options.consumer!.handlers as never,
-                  }),
+                  });
+                },
               },
             ]),
         MessagingLifecycle,

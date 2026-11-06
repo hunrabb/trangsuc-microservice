@@ -1,4 +1,5 @@
 import {
+  databasePoolMaxField,
   jwtEnvFields,
   jwtSigningEnvFields,
   nodeEnvField,
@@ -15,6 +16,7 @@ export const envSchema = z.object({
   NODE_ENV: nodeEnvField,
   PORT: portField,
   DATABASE_URL: postgresUrlField(DB_SCHEMA),
+  DATABASE_POOL_MAX: databasePoolMaxField,
   RABBITMQ_URL: rabbitUrlField,
   ...jwtEnvFields,
   ...jwtSigningEnvFields,

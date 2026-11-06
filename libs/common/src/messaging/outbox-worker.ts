@@ -2,7 +2,11 @@ import { EVENTS_EXCHANGE, MESSAGE_HEADERS } from '@jewelry/contracts';
 import { Logger } from '@nestjs/common';
 import { runWithCorrelationId } from '../correlation/correlation-id';
 import { OUTBOX_MAX_ATTEMPTS } from './outbox';
-import { RabbitUnavailableError, type RabbitConnection } from './rabbit-connection';
+import {
+  RabbitUnavailableError,
+  type RabbitConnection,
+  UnroutableMessageError,
+} from './rabbit-connection';
 
 const DEFAULT_INTERVAL_MS = 500;
 const DEFAULT_BATCH_SIZE = 100;
@@ -13,6 +17,14 @@ const LOCK_SECONDS = 30;
  */
 const SEND_WINDOW_MS = 25_000;
 const RETENTION_DAYS = 7;
+const BACKOFF_UNIT_MS = 1_000;
+const MAX_BACKOFF_MS = 5 * 60 * 1000;
+
+/** Thời gian nghỉ sau lần gửi lỗi thứ `attempts`: 2^attempts giây, tối đa 5 phút. */
+export function outboxBackoffMs(attempts: number, unitMs: number = BACKOFF_UNIT_MS): number {
+  return Math.min(2 ** attempts * unitMs, MAX_BACKOFF_MS);
+}
+
 const CLEANUP_INTERVAL_MS = 60 * 60 * 1000;
 
 /** Phần tối thiểu của Prisma client mà worker cần. */
@@ -27,6 +39,7 @@ interface ClaimedRow {
   payload: unknown;
   correlationId: string;
   createdAt: Date | string;
+  attempts: number;
 }
 
 export interface OutboxWorkerOptions {
@@ -38,6 +51,8 @@ export interface OutboxWorkerOptions {
   batchSize?: number;
   /** Rút trong test. Mặc định `SEND_WINDOW_MS`. */
   sendWindowMs?: number;
+  /** Rút thời gian nghỉ trong test. Mặc định 1 giây. */
+  backoffUnitMs?: number;
 }
 
 /**
@@ -153,12 +168,13 @@ export class OutboxWorker {
        SET status = 'PROCESSING', "lockedUntil" = now() + interval '${LOCK_SECONDS} seconds', "updatedAt" = now()
        WHERE id IN (
          SELECT id FROM ${this.table}
-         WHERE status = 'PENDING' OR (status = 'PROCESSING' AND "lockedUntil" < now())
+         WHERE (status = 'PENDING' AND ("nextAttemptAt" IS NULL OR "nextAttemptAt" <= now()))
+            OR (status = 'PROCESSING' AND "lockedUntil" < now())
          ORDER BY "createdAt"
          LIMIT $1
          FOR UPDATE SKIP LOCKED
        )
-       RETURNING id, "eventType", payload, "correlationId", "createdAt"`,
+       RETURNING id, "eventType", payload, "correlationId", "createdAt", attempts`,
       this.batchSize,
     );
   }
@@ -173,23 +189,32 @@ export class OutboxWorker {
   }
 
   private async recordFailure(row: ClaimedRow, error: unknown): Promise<void> {
+    const delayMs = outboxBackoffMs(row.attempts + 1, this.options.backoffUnitMs);
     const failed = await this.options.db.$queryRawUnsafe<{ status: string; attempts: number }[]>(
       `UPDATE ${this.table}
        SET attempts = attempts + 1,
            status = CASE WHEN attempts + 1 >= $2 THEN 'FAILED'::"${this.options.dbSchema}"."OutboxStatus"
                          ELSE 'PENDING'::"${this.options.dbSchema}"."OutboxStatus" END,
+           "nextAttemptAt" = CASE WHEN attempts + 1 >= $2 THEN NULL
+                                  ELSE now() + ($3::double precision * interval '1 millisecond') END,
            "lockedUntil" = NULL,
            "updatedAt" = now()
        WHERE id = $1::uuid AND status = 'PROCESSING'
        RETURNING status, attempts`,
       row.id,
       OUTBOX_MAX_ATTEMPTS,
+      delayMs,
     );
     await runWithCorrelationId(row.correlationId, async () => {
       const detail = `sự kiện ${row.eventType} ${row.id} (lần ${failed[0]?.attempts}): ${String(error)}`;
+      if (error instanceof UnroutableMessageError) {
+        this.logger.error(
+          `Không queue nào nhận ${detail}. Kiểm tra binding của routing key "${row.eventType}" trong infra/rabbitmq/definitions.json`,
+        );
+      }
       if (failed[0]?.status === 'FAILED') {
-        this.logger.error(`Dừng gửi ${detail}`);
-      } else {
+        this.logger.error(`Dừng gửi ${detail}. Sửa lỗi rồi chạy outbox:requeue (xem README)`);
+      } else if (!(error instanceof UnroutableMessageError)) {
         this.logger.warn(`Gửi lỗi, sẽ thử lại ${detail}`);
       }
     });

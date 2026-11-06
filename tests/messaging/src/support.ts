@@ -45,7 +45,9 @@ export interface TestDb {
   outboxEvent: {
     groupBy(args: unknown): Promise<{ status: string; _count: { _all: number } }[]>;
     count(args?: unknown): Promise<number>;
-    findUniqueOrThrow(args: unknown): Promise<{ status: string; attempts: number }>;
+    findUniqueOrThrow(
+      args: unknown,
+    ): Promise<{ status: string; attempts: number; nextAttemptAt: Date | null }>;
     findMany(args?: unknown): Promise<{ id: string; status: string; attempts: number }[]>;
     deleteMany(args?: unknown): Promise<unknown>;
   };
@@ -88,15 +90,17 @@ export const TEST_QUEUES = [
 /** Đánh dấu thư do test tự gửi, kể cả thư cố tình hỏng không đọc được `eventType`. */
 export const TEST_MESSAGE_HEADER = 'x-messaging-test';
 
-/** Thư của test: có dấu, hoặc là `system.test` (worker gửi, không có dấu). */
+/** Routing key chỉ test dùng; binding do test tự thêm rồi gỡ. */
+export const TEST_ROUTING_KEY = 'test.requeue';
+
+/** Thư của test: có dấu, hoặc là sự kiện của test do worker gửi (không có dấu). */
 function isTestMessage(content: Buffer, headers: Record<string, unknown> | undefined): boolean {
   if (headers?.[TEST_MESSAGE_HEADER] !== undefined) {
     return true;
   }
   try {
-    return (
-      (JSON.parse(content.toString('utf8')) as { eventType?: unknown }).eventType === 'system.test'
-    );
+    const { eventType } = JSON.parse(content.toString('utf8')) as { eventType?: unknown };
+    return eventType === 'system.test' || eventType === TEST_ROUTING_KEY;
   } catch {
     return false;
   }
@@ -110,6 +114,50 @@ async function withChannel<T>(work: (channel: amqplib.Channel) => Promise<T>): P
   } finally {
     await connection.close();
   }
+}
+
+const BINDING_PATH = `/bindings/%2F/e/domain.events/q/${QUEUES.REPORT}`;
+
+export async function addTestBinding(): Promise<void> {
+  const response = await management(BINDING_PATH, {
+    method: 'POST',
+    body: JSON.stringify({ routing_key: TEST_ROUTING_KEY }),
+  });
+  if (!response.ok) {
+    throw new Error(`Không thêm được binding: HTTP ${response.status}`);
+  }
+}
+
+/** Gỡ binding của test; chưa có thì thôi. */
+export async function removeTestBinding(): Promise<void> {
+  await management(`${BINDING_PATH}/${TEST_ROUTING_KEY}`, { method: 'DELETE' });
+}
+
+export async function eventBindings(): Promise<string[]> {
+  const response = await management('/bindings/%2F');
+  const bindings = (await response.json()) as {
+    source: string;
+    routing_key: string;
+    destination: string;
+  }[];
+  return bindings
+    .filter((binding) => binding.source === 'domain.events')
+    .map((binding) => `${binding.routing_key}→${binding.destination}`)
+    .sort();
+}
+
+/** Chạy đúng lệnh người vận hành dùng, kèm kết quả in ra. */
+export function outboxRequeue(...args: string[]): {
+  status: number | null;
+  stdout: string;
+  stderr: string;
+} {
+  const result = spawnSync('pnpm', ['-s', 'outbox:requeue', '--', '--service', 'report', ...args], {
+    cwd: REPO_ROOT,
+    env: { ...process.env, DATABASE_URL: databaseUrl('report') },
+    encoding: 'utf8',
+  });
+  return { status: result.status, stdout: result.stdout, stderr: result.stderr };
 }
 
 export interface QueueState {
@@ -254,6 +302,7 @@ export async function startService(service: 'inventory' | 'report'): Promise<Run
       PORT: String(port),
       DATABASE_URL: databaseUrl(service),
       RABBITMQ_URL: RABBIT_URL,
+      DATABASE_POOL_MAX: '20',
       JWT_PUBLIC_KEYS_DIR: keys.publicKeysDir,
       JWT_ISSUER: TEST_ISSUER,
       JWT_AUDIENCE: TEST_AUDIENCE,

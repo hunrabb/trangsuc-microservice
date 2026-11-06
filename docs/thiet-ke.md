@@ -85,6 +85,8 @@ Chỉ có 3 vai trò cố định (enum), gán theo chi nhánh; không có bản
 
 Đường không có trong bảng → `404 NOT_FOUND`. `/internal/*` và `/health/*` của service không bao giờ được gateway chuyển tiếp. Đường cần đăng nhập: gateway kiểm tra token trước, sai thì trả lỗi luôn, không chuyển tiếp.
 
+Các đường API nêu trong tài liệu này là đường ở gateway, chỉ để minh hoạ luồng. Danh sách endpoint đầy đủ sẽ nằm trong OpenAPI (đang soạn).
+
 **Refresh:** băm cookie → tìm trong `RefreshToken` → kiểm tra tồn tại, chưa thu hồi, còn hạn trượt và hạn tuyệt đối, user `ACTIVE` → đọc lại vai trò mới nhất → thu hồi token cũ và phát token mới (xoay vòng) trong một transaction. Token đã thu hồi mà bị dùng lại → thu hồi mọi phiên của user đó.
 
 **Frontend:** interceptor axios bắt `TOKEN_EXPIRED`, chỉ chạy một lần refresh tại một thời điểm (các request khác chờ chung), rồi gửi lại request; refresh hỏng → về màn đăng nhập, lưu tạm giỏ hàng POS. Refresh chủ động khoảng 1 phút trước `exp`.
@@ -163,7 +165,7 @@ Mọi luồng làm thay đổi tồn kho đều đi qua inventory-service và k�
 
 ### 4.2 Bán hàng tại quầy – hoá đơn POS (gọi trực tiếp)
 
-1. Thu ngân quét hàng, POS gọi `POST /orders` kèm header `Idempotency-Key` (mã chống gửi trùng, xem mục 7).
+1. Thu ngân quét hàng, POS gọi `POST /api/pos/orders` kèm header `Idempotency-Key` (mã chống gửi trùng, xem mục 7).
 2. sales-service gọi thẳng inventory-service để **trừ kho có điều kiện**: chỉ trừ khi còn đủ hàng.
 3. Đủ hàng → tạo hoá đơn trạng thái `AWAITING_PAYMENT`, hiện mã VietQR. Thiếu hàng → báo "không đủ hàng", không tạo hoá đơn.
 4. Thu ngân bấm "Đã nhận tiền" → hoá đơn `COMPLETED`, in hoá đơn. Khách không chuyển khoản / huỷ → hoá đơn `CANCELLED`, inventory cộng lại số đã trừ.
@@ -188,7 +190,7 @@ Mọi lần chuyển trạng thái là `UPDATE … WHERE id = ? AND status IN (<
 
 **Các bước**
 
-1. **Tạo đơn (sales):** website gọi `POST /orders` (có `Idempotency-Key`). Một transaction: tạo `Order(PENDING, warehouseId = null)` + outbox `order.created { orderId, items }`. Website hiện "Đang kiểm tra hàng…" và hỏi lại trạng thái mỗi 1–2 giây.
+1. **Tạo đơn (sales):** website gọi `POST /api/shop/orders` (có `Idempotency-Key`). Một transaction: tạo `Order(PENDING, warehouseId = null)` + outbox `order.created { orderId, items }`. Website hiện "Đang kiểm tra hàng…" và hỏi lại trạng thái mỗi 1–2 giây.
 2. **Chọn kho và giữ hàng (inventory):** nhận `order.created`.
    - Lấy các kho có `acceptsOnlineOrders = true` mà **mỗi** món của đơn đều có `onHand − reserved − onlineBuffer ≥ quantity`.
    - Xếp các kho theo **tổng số còn bán được online của các món trong đơn**, giảm dần (kho nhiều hàng nhất trước); bằng nhau thì theo `code`.
@@ -297,7 +299,7 @@ Doanh thu, lợi nhuận gộp theo ngày / chi nhánh / kênh = `SUM` trên `Or
 
 | Bảng | Cột chính | Ghi chú |
 | --- | --- | --- |
-| OutboxEvent | aggregateType, aggregateId, eventType, payload (JSONB), correlationId, status, attempts, lockedUntil, publishedAt | Ghi cùng transaction nghiệp vụ |
+| OutboxEvent | aggregateType, aggregateId, eventType, payload (JSONB), correlationId, status, attempts, lockedUntil, nextAttemptAt, publishedAt | Ghi cùng transaction nghiệp vụ |
 | ProcessedEvent | eventId + consumer (khoá chính), processedAt | Chống xử lý trùng |
 
 ## 6. Prisma schema (service lõi)
@@ -584,6 +586,7 @@ model OutboxEvent {
   status        OutboxStatus @default(PENDING)
   attempts      Int          @default(0)
   lockedUntil   DateTime?    @db.Timestamptz(3)
+  nextAttemptAt DateTime?    @db.Timestamptz(3)
   createdAt     DateTime     @default(now()) @db.Timestamptz(3)
   updatedAt     DateTime     @default(now()) @updatedAt @db.Timestamptz(3)
   publishedAt   DateTime?    @db.Timestamptz(3)
@@ -722,9 +725,9 @@ WHERE "warehouseId" = $wh AND "variantId" = $variant
 ### 7.2 Transactional Outbox
 
 1. Service ghi dữ liệu nghiệp vụ và `OutboxEvent(PENDING)` trong cùng một transaction, bằng `outbox.add(tx, ...)` (kiểm tra payload theo schema trong `libs/contracts`, kèm correlationId hiện tại).
-2. Worker chạy mỗi 500 ms. **Nhận lô:** một transaction ngắn chọn tối đa 100 dòng `PENDING` hoặc `PROCESSING` đã quá `lockedUntil` bằng `FOR UPDATE SKIP LOCKED`, đặt `PROCESSING`, `lockedUntil = now + 30 s`, rồi commit.
+2. Worker chạy mỗi 500 ms. **Nhận lô:** một transaction ngắn chọn tối đa 100 dòng `PENDING` đã tới `nextAttemptAt` (hoặc chưa có) hoặc `PROCESSING` đã quá `lockedUntil` bằng `FOR UPDATE SKIP LOCKED`, đặt `PROCESSING`, `lockedUntil = now + 30 s`, rồi commit.
 3. **Gửi** từng thư lên exchange `domain.events`, ngoài transaction: `persistent`, `mandatory`, `messageId = eventId`, header `x-correlation-id`, chờ publisher confirm. Thành công → `PUBLISHED`.
-4. Lỗi của thư (bị trả lại vì không queue nào nhận, nack) → về `PENDING`, `attempts + 1`; đủ 10 lần → `FAILED`, log lỗi. Thư bị trả lại vẫn được broker ack, nên phải bắt sự kiện `return`, không chỉ chờ confirm.
+4. Lỗi của thư (bị trả lại vì không queue nào nhận, nack) → về `PENDING`, `attempts + 1`, `nextAttemptAt = now + min(2^attempts giây, 5 phút)`; đủ 10 lần → `FAILED`, log lỗi. Sửa xong nguyên nhân thì gửi lại bằng `outbox:requeue` (xem README). Thư bị trả lại vẫn được broker ack, nên phải bắt sự kiện `return`, không chỉ chờ confirm.
 5. Mất kết nối không phải lỗi của thư, không tăng `attempts`: đang mất kết nối thì không nhận lô; đứt giữa lô thì trả phần còn lại về `PENDING`. Nếu không, chỉ 5 giây mất RabbitMQ là mọi dòng thành `FAILED`.
 6. Worker chỉ gửi trong 25 giây đầu của thời gian giữ dòng; phần chưa gửi về `PENDING`. 5 giây còn lại dành cho thư cuối chờ confirm, để dòng không hết hạn khi thư đang gửi.
 7. Job dọn xoá dòng `PUBLISHED` cũ hơn 7 ngày.
@@ -746,7 +749,7 @@ WHERE "warehouseId" = $wh AND "variantId" = $variant
 
 - Mỗi thư có phong bì `{ eventId, eventType, occurredAt, correlationId, payload }`; `eventId` = id dòng outbox. Consumer kiểm tra phong bì và payload bằng zod, đặt correlationId vào CLS.
 - Trong **một transaction**: ghi `ProcessedEvent(eventId, consumer)` trước, rồi gọi handler với `tx`. Trùng đúng khoá chính `ProcessedEvent` (`P2002` với `constraint.index = ProcessedEvent_pkey`; Prisma 7 không còn `meta.target`) → đã xử lý, ack. `P2002` ở bảng khác là lỗi thật. Lớp thứ hai chống trùng *việc*: unique theo `orderId` (`StockReservation`, `StockMovement`, `OrderRevenue`).
-- Manual ack sau khi commit; `prefetch = 10`, nhỏ hơn `connection_limit` của Prisma. Consumer chỉ subscribe queue có sẵn, không khai báo topology; user ứng dụng không có quyền `configure`.
+- Manual ack sau khi commit; `prefetch = 10`; service có consumer phải có `DATABASE_POOL_MAX >= prefetch + 5` (chừa cho worker outbox và request HTTP), không đạt thì không bật. Consumer chỉ subscribe queue có sẵn, không khai báo topology; user ứng dụng không có quyền `configure`.
 - Lỗi tạm thời (mất kết nối DB, timeout, `40P01`, `40001`, `TransientError`) → consumer gửi **bản sao** vào queue chờ `<queue>.retry.5s` / `.retry.30s` / `.retry.5m` kèm header đếm `x-retry-count`, chờ confirm, **rồi** mới ack thư gốc. Queue chờ có TTL, không có consumer, hết hạn thì thư quay lại queue chính. Quá 3 lần → DLQ. Gửi bản sao lỗi → trả thư gốc về queue, không mất thư.
 - Lỗi vĩnh viễn (sai schema, không có handler, `PermanentError`, mọi lỗi không nhận ra) → DLQ ngay. Lỗi nghiệp vụ (hết hàng) **không phải lỗi**: handler không ném, tự ghi outbox sự kiện kết quả (`stock.reserve_failed`), rồi ack.
 - Thư vào DLQ bằng bản sao: giữ nguyên nội dung, thêm header `x-error-kind`, `x-error-reason`, `x-failed-queue`, `x-correlation-id`. Dùng bản sao thay cho nack vì nack không mang được lý do lỗi. Log mức `error` kèm `correlationId`, phát `order.processing_failed` để sales đánh dấu đơn "cần xem xét" (chưa huỷ). Admin xem và đẩy lại thư từ DLQ sau khi sửa lỗi.
@@ -777,7 +780,7 @@ domain.events ─► <queue> ─► consumer ──ok──► commit, ack
 
 ### 7.6 Hiển thị tồn trên website
 
-- Website gọi `GET /stock/availability?variantIds=…`, trả tổng `onHand − reserved − onlineBuffer` trên các kho `acceptsOnlineOrders`. Con số được phép lệch vài giây; số chính xác được kiểm tra lại bằng UPDATE có điều kiện lúc giữ hàng.
+- Website gọi `GET /api/shop/stock/availability?variantIds=…`, trả tổng `onHand − reserved − onlineBuffer` trên các kho `acceptsOnlineOrders`. Con số được phép lệch vài giây; số chính xác được kiểm tra lại bằng UPDATE có điều kiện lúc giữ hàng.
 - `onlineBuffer` theo từng kho và biến thể giữ lại hàng cho khách tại quầy.
 
 ### 7.7 Báo cáo
@@ -793,6 +796,7 @@ report-service upsert `OrderRevenue` / `OrderLineSales` theo `orderId` khi nhậ
 **Câu hỏi còn mở**
 
 - Có cần quản lý lô / hạn sử dụng (batch, expiry) không?
+- Tồn kho hiển thị cho website: `/api/shop/*` đi tới sales nhưng dữ liệu tồn thuộc inventory, và HTTP nội bộ chỉ dành cho luồng POS. Cần chốt trước giai đoạn website: thêm tuyến công khai tới inventory, hay sales giữ bản đọc cập nhật qua sự kiện.
 - Có tích hợp hoá đơn điện tử ngay từ đầu không?
 - Chọn dịch vụ webhook biến động số dư ngân hàng nào?
 

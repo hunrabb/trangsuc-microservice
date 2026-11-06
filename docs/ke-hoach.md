@@ -67,7 +67,7 @@ Mục tiêu: `docker compose up` là cả hệ thống lên, một request đi x
 - [ ] In tem: mã tem, mẫu, tuổi vàng, trọng lượng.
 - [ ] Kiểm kê: quét tem → danh sách thiếu/thừa; hàng số lượng điều chỉnh theo chênh lệch.
 - [ ] AuditLog cho đổi giá, sửa trọng lượng, điều chỉnh kiểm kê.
-- [ ] API nội bộ cho sales: `POST /stock/deduct`, `POST /stock/release` (idempotent theo `orderId`), `GET /items/by-tag/:code`, `GET /price-quote` (tính giá theo giá vàng hiện tại).
+- [ ] API nội bộ cho sales: `POST /internal/stock/deduct`, `POST /internal/stock/release` (idempotent theo `orderId`), `GET /internal/items/by-tag/:code`, `GET /internal/price-quote` (tính giá theo giá vàng hiện tại).
 
 **Xong khi:** test đồng thời: hai quản lý cùng duyệt một phiếu → chỉ một lần nhập; hai request cùng giữ một tem → một thắng; 50 request trừ một mẫu thời trang còn 10 → đúng 10 thành công, tồn = 0; CHECK chặn số âm.
 
@@ -92,7 +92,7 @@ Mục tiêu: `docker compose up` là cả hệ thống lên, một request đi x
 
 ### Giai đoạn 6. Bán online (2–3 tuần)
 
-- [ ] inventory: `GET /stock/availability` (tổng còn bán được trên các kho nhận đơn online, giá tạm tính theo giá vàng hiện tại).
+- [ ] Website: `GET /api/shop/stock/availability` (cần chốt cách lấy dữ liệu từ inventory, xem câu hỏi còn mở cuối mục 7 của `docs/thiet-ke.md`; tổng còn bán được trên các kho nhận đơn online, giá tạm tính theo giá vàng hiện tại).
 - [ ] Saga đơn online: `order.created` → chọn kho nhiều hàng nhất có đủ cả đơn → giữ hàng (hàng có tem: chọn chiếc cụ thể và chốt giá; hàng số lượng: tăng `reserved`) → `stock.reserved` / `stock.reserve_failed` → `AWAITING_PAYMENT` / `CANCELLED`.
 - [ ] Job hết hạn giữ hàng mỗi phút; sales tự theo dõi đơn `PENDING` quá 10 / 30 phút; dấu `RELEASED` cho huỷ đến sớm.
 - [ ] Webhook ngân hàng: xác minh chữ ký, `BankTransaction` unique `bankTxnRef`, ghép theo nội dung, đủ / thiếu / không ghép được; `order.paid` → gia hạn giữ hàng.
@@ -116,7 +116,7 @@ Mục tiêu: `docker compose up` là cả hệ thống lên, một request đi x
 
 - [ ] Job đối soát mỗi đêm: `reserved` khớp lượt giữ, sổ kho khớp tồn, lượt giữ của đơn đã huỷ, đơn kẹt.
 - [ ] Thử tải giờ cao điểm: 3.000 đơn online trong 2 phút + 3 quầy bán liên tục; theo dõi độ dài queue, thời gian phản hồi POS, số lỗi.
-- [ ] Rà soát bảo mật: chỉ gateway mở port; mỗi schema một user DB; `private.pem` chỉ ở auth; rate limit đăng nhập; webhook ngân hàng có chữ ký; không lộ stack trace; HTTPS.
+- [ ] Rà soát bảo mật: chỉ gateway mở port; mỗi schema một user DB; `secrets/jwt/private/<kid>.private.pem` chỉ mount vào auth, các service chỉ có `secrets/jwt/public/`; rate limit đăng nhập; webhook ngân hàng có chữ ký; không lộ stack trace; HTTPS.
 - [ ] Sao lưu Postgres mỗi ngày (`pg_dump` ra nơi khác máy chủ) và **thử khôi phục thật** một lần.
 - [ ] Giám sát tối thiểu: cảnh báo khi DLQ có thư, service `ready` đỏ quá 1 phút, queue dài bất thường, đối soát có chỗ lệch.
 - [ ] Runbook: xử lý thư trong DLQ, khôi phục backup, đổi khoá JWT, khoá tài khoản nhân viên nghỉ việc.

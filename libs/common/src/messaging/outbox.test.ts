@@ -14,8 +14,14 @@ import {
 import { Logger } from '@nestjs/common';
 import { runWithCorrelationId } from '../correlation/correlation-id.ts';
 import { outbox, type OutboxTx } from './outbox.ts';
-import { type OutboxDb, OutboxWorker } from './outbox-worker.ts';
-import { rabbitCheck, RabbitUnavailableError } from './rabbit-connection.ts';
+import { consumerPoolProblem } from './consumer.ts';
+import { countFailedEvents, parseRequeueArgs, requeueFailedEvents } from './outbox-requeue.ts';
+import { type OutboxDb, outboxBackoffMs, OutboxWorker } from './outbox-worker.ts';
+import {
+  rabbitCheck,
+  RabbitUnavailableError,
+  UnroutableMessageError,
+} from './rabbit-connection.ts';
 
 const fakeTx = () => {
   const created: Record<string, unknown>[] = [];
@@ -64,6 +70,7 @@ describe('OutboxWorker khi mất RabbitMQ', () => {
     payload: {},
     correlationId: 'c',
     createdAt: new Date(),
+    attempts: 0,
   });
 
   const fakeDb = (rows: ReturnType<typeof row>[]) => {
@@ -140,10 +147,122 @@ describe('OutboxWorker khi mất RabbitMQ', () => {
     assert.equal(statements.filter((s) => s.sql.includes('attempts + 1')).length, 0);
   });
 
+  it('gửi lỗi: nghỉ theo số lần đã lỗi, truyền đúng thời gian vào SQL', async () => {
+    const { db, statements } = fakeDb([{ ...row('a'), attempts: 3 }]);
+    const worker = new OutboxWorker({
+      db,
+      dbSchema: 'report',
+      rabbit: {
+        isConnected: true,
+        publish: async () => {
+          throw new UnroutableMessageError('không queue nào nhận');
+        },
+      },
+    });
+    await worker.tick();
+    const failure = statements.find((s) => s.sql.includes('attempts + 1'));
+    assert.deepEqual(failure?.values, ['a', 10, 16_000]);
+  });
+
+  it('chỉ nhận dòng PENDING đã tới hạn', async () => {
+    const { db, statements } = fakeDb([]);
+    const rabbit = { isConnected: true, publish: async () => undefined };
+    await new OutboxWorker({ db, rabbit, dbSchema: 'report' }).tick();
+    const claim = statements.find((s) => s.sql.includes('SKIP LOCKED'));
+    assert.match(claim?.sql ?? '', /"nextAttemptAt" IS NULL OR "nextAttemptAt" <= now\(\)/);
+  });
+
   it('tên schema lạ bị từ chối vì đi thẳng vào SQL', () => {
     const { db } = fakeDb([]);
     const rabbit = { isConnected: true, publish: async () => undefined };
     assert.throws(() => new OutboxWorker({ db, rabbit, dbSchema: 'x"; DROP' }));
+  });
+});
+
+describe('outboxBackoffMs', () => {
+  it('2^attempts giây, tối đa 5 phút', () => {
+    assert.deepEqual(
+      [1, 2, 3, 8, 9, 10, 40].map((attempts) => outboxBackoffMs(attempts)),
+      [2_000, 4_000, 8_000, 256_000, 300_000, 300_000, 300_000],
+    );
+  });
+
+  it('rút được đơn vị trong test, trần vẫn là 5 phút', () => {
+    assert.equal(outboxBackoffMs(3, 10), 80);
+    assert.equal(outboxBackoffMs(30, 10), 300_000);
+  });
+});
+
+describe('kiểm tra pool lúc khởi động', () => {
+  it('đủ prefetch 10 + 5 thì qua', () => {
+    assert.equal(consumerPoolProblem(15), undefined);
+    assert.equal(consumerPoolProblem(20), undefined);
+  });
+
+  it('thiếu thì báo rõ lý do', () => {
+    assert.match(consumerPoolProblem(14) ?? '', /DATABASE_POOL_MAX = 14 quá nhỏ.*tối thiểu 15/);
+  });
+});
+
+describe('parseRequeueArgs', () => {
+  const id = randomUUID();
+
+  it('đọc đủ tham số, bỏ qua `--` của pnpm', () => {
+    assert.deepEqual(
+      parseRequeueArgs([
+        '--',
+        '--service',
+        'report',
+        '--event-type',
+        'system.test',
+        '--id',
+        id,
+        '--dry-run',
+      ]),
+      { service: 'report', eventType: 'system.test', id, dryRun: true },
+    );
+  });
+
+  it('bắt buộc --service', () => {
+    assert.throws(() => parseRequeueArgs(['--dry-run']), /Thiếu --service/);
+  });
+
+  it('từ chối id sai dạng và tham số lạ', () => {
+    assert.throws(() => parseRequeueArgs(['--service', 'report', '--id', 'x']), /UUID/);
+    assert.throws(() => parseRequeueArgs(['--service', 'report', '--xoa-het']));
+  });
+});
+
+describe('requeue', () => {
+  const recorder = () => {
+    const calls: { sql: string; values: unknown[] }[] = [];
+    const db = {
+      $queryRawUnsafe: async (sql: string, ...values: unknown[]) => {
+        calls.push({ sql, values });
+        return [{ count: 3n }];
+      },
+      $executeRawUnsafe: async (sql: string, ...values: unknown[]) => {
+        calls.push({ sql, values });
+        return 3;
+      },
+    } as unknown as OutboxDb;
+    return { db, calls };
+  };
+
+  it('chỉ đổi dòng FAILED, đặt lại attempts và nextAttemptAt', async () => {
+    const { db, calls } = recorder();
+    assert.equal(await requeueFailedEvents(db, 'report', { eventType: 'x' }), 3);
+    const { sql, values } = calls[0]!;
+    assert.match(sql, /status = 'PENDING', attempts = 0, "nextAttemptAt" = NULL/);
+    assert.match(sql, /WHERE status = 'FAILED'/);
+    assert.deepEqual(values, ['x', null]);
+  });
+
+  it('đếm cho --dry-run chỉ là SELECT', async () => {
+    const { db, calls } = recorder();
+    assert.equal(await countFailedEvents(db, 'report', {}), 3);
+    assert.match(calls[0]!.sql, /^SELECT count/);
+    assert.doesNotMatch(calls[0]!.sql, /UPDATE|DELETE/);
   });
 });
 

@@ -151,6 +151,26 @@ pnpm test:messaging    # khoảng 3 phút, có dừng và bật RabbitMQ thật
 
 `pnpm test:messaging` chạy được trên hạ tầng đang có dữ liệu: chỉ xoá đúng dữ liệu của mình. Nếu `report.events`, queue chờ hoặc DLQ của nó có thư không phải của test, có consumer đang chạy (tắt `pnpm dev` trước), hoặc bảng outbox có dòng thật mà worker hay job dọn sẽ đụng tới, test dừng và báo lỗi. Chạy xong, trạng thái phải y như trước.
 
+### Runbook: Thư outbox bị FAILED
+
+Dòng `OutboxEvent` thành `FAILED` sau 10 lần gửi lỗi (nghỉ 2, 4, 8... giây, tối đa 5 phút giữa các lần, tổng khoảng 13 phút).
+
+1. **Xem log** của service, tìm dòng mức `error` có `Không queue nào nhận` hoặc `Dừng gửi`. Dòng log nêu `eventType`, `eventId` và có `correlationId`.
+2. **Sửa nguyên nhân.** Thường là thiếu binding cho routing key: thêm vào `infra/rabbitmq/definitions.json`, rồi `docker compose run --rm rabbitmq-setup`. Lỗi ở handler thì deploy bản sửa.
+3. **Xem trước** số dòng sẽ đổi, rồi **gửi lại**:
+
+   ```bash
+   # Máy dev (đã pnpm build)
+   pnpm outbox:requeue -- --service report --dry-run
+   pnpm outbox:requeue -- --service report --event-type order.completed
+   pnpm outbox:requeue -- --service report --id <uuid>
+
+   # Server: chạy trong container của service, dùng đúng user DB của service đó
+   docker compose exec report node dist/cli/outbox-requeue.js --service report --dry-run
+   ```
+
+Lệnh bắt buộc có `--service`, chỉ đổi dòng `FAILED` về `PENDING`, đặt lại `attempts = 0`, `nextAttemptAt = null`, và in số dòng đã đổi. Không có `--event-type` hay `--id` thì đổi mọi dòng `FAILED` của service đó.
+
 ### Kiểm tra nhanh sau khi lên
 
 ```bash

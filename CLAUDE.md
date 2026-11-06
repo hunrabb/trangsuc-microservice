@@ -45,7 +45,7 @@ tests/
   integration/     test đa app: chạy dist của nhiều app rồi đọc log/HTTP (app không được import lẫn nhau)
   messaging/       test outbox, consumer, retry, DLQ trên Postgres + RabbitMQ thật của Compose (`pnpm test:messaging`)
   test-utils/      chỉ cho test (signTestToken...); nằm ở devDependencies, ESLint cấm import từ code chạy thật
-scripts/           run-tests.mjs (chạy test, đỏ khi 0 test), generate-jwt-keys.mjs
+scripts/           run-tests.mjs (chạy test, đỏ khi 0 test), generate-jwt-keys.mjs, outbox-requeue.mjs
 secrets/jwt/       (gitignore) private/<kid>.private.pem (chỉ auth), public/<kid>.public.pem (mọi service, read-only)
 docs/
 docker-compose.yml, docker-compose.override.yml (chỉ dev), .env.example
@@ -67,6 +67,7 @@ pnpm --filter @jewelry/<app> exec prisma migrate dev --name <ten>   # CHỈ máy
 pnpm --filter @jewelry/<app> db:generate        # sinh Prisma client (turbo tự chạy trước build/typecheck/dev)
 pnpm test                                       # unit + tests/integration (chạy bản build thật của gateway, inventory; chưa cần Postgres)
 pnpm test:messaging                             # cần postgres, rabbitmq, rabbitmq-setup; dừng và bật RabbitMQ thật; không chạy trong `pnpm test`
+pnpm outbox:requeue -- --service <app> [--event-type <x>] [--id <uuid>] [--dry-run]   # gửi lại dòng outbox FAILED; cần pnpm build trước
 pnpm lint && pnpm typecheck
 pnpm build
 pnpm format:check                               # Prettier (pnpm format để tự sửa)

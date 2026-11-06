@@ -26,18 +26,23 @@ import {
 } from '@jewelry/contracts';
 import { Logger } from '@nestjs/common';
 import {
+  addTestBinding,
   compose,
   drainTestMessages,
+  eventBindings,
   findForeignMessages,
   migrate,
+  outboxRequeue,
   peekQueue,
   prismaFor,
   queueStates,
   RABBIT_URL,
+  removeTestBinding,
   type RunningService,
   sleep,
   startService,
   TEST_MESSAGE_HEADER,
+  TEST_ROUTING_KEY,
   type TestDb,
   waitFor,
 } from './support.ts';
@@ -78,6 +83,7 @@ describe('outbox + consumer trên hạ tầng thật', () => {
         .sort();
     return {
       queues: await queueStates(),
+      bindings: await eventBindings(),
       reportOutbox: await count(db),
       inventoryOutbox: await count(inventoryDb),
       reportProcessed: await db.processedEvent.count(TEST_PROCESSED),
@@ -127,6 +133,7 @@ describe('outbox + consumer trên hạ tầng thật', () => {
     inventoryDb = prismaFor('inventory');
     await assertSafeToRun();
     await removeTestData(); // phần còn sót nếu lần chạy trước bị ngắt
+    await removeTestBinding();
     before_ = await snapshot();
   });
 
@@ -174,7 +181,7 @@ describe('outbox + consumer trên hạ tầng thật', () => {
 
   const newWorker = (
     rabbit: Pick<RabbitConnection, 'isConnected' | 'publish'>,
-    options: { sendWindowMs?: number } = {},
+    options: { sendWindowMs?: number; backoffUnitMs?: number } = {},
   ) =>
     new OutboxWorker({ db: db as never, rabbit, dbSchema: 'report', intervalMs: 50, ...options });
 
@@ -283,7 +290,7 @@ describe('outbox + consumer trên hạ tầng thật', () => {
     await emptyQueue(QUEUE);
     assert.equal(await db.processedEvent.count(TEST_PROCESSED), 1);
     assert.deepEqual(await peekQueue(DLQ), []);
-    assert.equal(calls >= 1, true);
+    assert.equal(calls, 1);
   });
 
   it('TransientError 2 lần rồi thành công: xử lý 1 lần, đúng thứ tự trễ', async () => {
@@ -596,25 +603,127 @@ describe('outbox + consumer trên hạ tầng thật', () => {
     );
   });
 
-  it('thư bị trả lại: về PENDING, tăng attempts, quá 10 lần thì FAILED', async () => {
-    const rabbit = await connect();
+  const insertRow = async (eventType: string, status = 'PENDING', attempts = 0) => {
     const id = randomUUID();
     await db.$executeRawUnsafe(
-      `INSERT INTO "report"."OutboxEvent" (id, "eventType", "aggregateType", "aggregateId", payload, "correlationId")
-       VALUES ($1::uuid, 'khong.co.binding', 'test', $1::uuid, '{}'::jsonb, 'x')`,
+      `INSERT INTO "report"."OutboxEvent" (id, "eventType", "aggregateType", "aggregateId", payload, "correlationId", status, attempts)
+       VALUES ($1::uuid, $2, 'test', $1::uuid, '{}'::jsonb, 'x', $3::"report"."OutboxStatus", $4)`,
       id,
+      eventType,
+      status,
+      attempts,
     );
-    const worker = newWorker(rabbit);
+    return id;
+  };
+
+  it('dòng PENDING chưa tới nextAttemptAt không bị nhận; tới hạn thì được nhận', async () => {
+    const rabbit = await connect();
+    const seen: string[] = [];
+    await startConsumer(async ({ message }) => void seen.push(message), rabbit);
+    const waiting = await addEvent('chua-toi-han');
+    const due = await addEvent('da-toi-han');
+    const setNext = (id: string, offset: string) =>
+      db.$executeRawUnsafe(
+        `UPDATE "report"."OutboxEvent" SET "nextAttemptAt" = now() + interval '${offset}' WHERE id = $1::uuid`,
+        id,
+      );
+    await setNext(waiting, '1 hour');
+    await setNext(due, '-1 second');
+
+    await newWorker(rabbit).tick();
+
+    await waitFor(() => seen.length === 1, 5_000, 'nhận thư');
+    assert.deepEqual(seen, ['da-toi-han']);
+    const row = await db.outboxEvent.findUniqueOrThrow({ where: { id: waiting } });
+    assert.equal(row.status, 'PENDING');
+  });
+
+  it('thư không có binding: các lần thử cách nhau tăng dần, đủ 10 lần thì FAILED', async () => {
+    const rabbit = await connect();
+    const id = await insertRow('khong.co.binding');
+    const unitMs = 5;
+    const sentAt: number[] = [];
+    const worker = newWorker(
+      {
+        get isConnected() {
+          return rabbit.isConnected;
+        },
+        publish: async (request) => {
+          sentAt.push(Date.now());
+          await rabbit.publish(request);
+        },
+      },
+      { backoffUnitMs: unitMs },
+    );
 
     await worker.tick();
     const first = await db.outboxEvent.findUniqueOrThrow({ where: { id } });
     assert.deepEqual([first.status, first.attempts], ['PENDING', 1]);
+    assert.ok(first.nextAttemptAt, 'phải có nextAttemptAt');
 
-    for (let index = 0; index < 12; index += 1) {
+    // Gọi tick liên tục: khoảng cách giữa các lần gửi chỉ do nextAttemptAt quyết định.
+    while ((await db.outboxEvent.findUniqueOrThrow({ where: { id } })).status !== 'FAILED') {
       await worker.tick();
     }
+
     const last = await db.outboxEvent.findUniqueOrThrow({ where: { id } });
-    assert.deepEqual([last.status, last.attempts], ['FAILED', 10]);
+    assert.deepEqual([last.status, last.attempts, last.nextAttemptAt], ['FAILED', 10, null]);
+    assert.equal(sentAt.length, 10);
+    sentAt.slice(1).forEach((time, index) => {
+      const gap = time - (sentAt[index] ?? 0);
+      const expected = 2 ** (index + 1) * unitMs;
+      assert.ok(
+        gap >= expected,
+        `lần ${index + 2} cách lần trước ${gap} ms, cần >= ${expected} ms`,
+      );
+    });
+    await worker.tick();
+    assert.equal(sentAt.length, 10);
+  });
+
+  it('requeue: FAILED về PENDING và được gửi khi đã có binding; --dry-run không đổi gì', async () => {
+    const rabbit = await connect();
+    const id = await insertRow(TEST_ROUTING_KEY, 'FAILED', 10);
+    const other = await insertRow('khong.co.binding', 'FAILED', 10);
+    const statusOf = async (rowId: string) => {
+      const row = await db.outboxEvent.findUniqueOrThrow({ where: { id: rowId } });
+      return [row.status, row.attempts, row.nextAttemptAt];
+    };
+
+    const dryRun = outboxRequeue('--id', id, '--dry-run');
+    assert.equal(dryRun.status, 0, dryRun.stderr);
+    assert.match(dryRun.stdout, /\[dry-run\] report: sẽ đổi 1 dòng/);
+    assert.deepEqual(await statusOf(id), ['FAILED', 10, null]);
+
+    await addTestBinding();
+    try {
+      const run = outboxRequeue('--id', id);
+      assert.equal(run.status, 0, run.stderr);
+      assert.match(run.stdout, /report: đã đổi 1 dòng/);
+      assert.deepEqual(await statusOf(id), ['PENDING', 0, null]);
+      assert.deepEqual(await statusOf(other), ['FAILED', 10, null]);
+
+      await newWorker(rabbit).tick();
+
+      const sent = await db.outboxEvent.findUniqueOrThrow({ where: { id } });
+      assert.equal(sent.status, 'PUBLISHED');
+      await waitFor(
+        async () => (await peekQueue(QUEUE)).some((m) => m.properties.message_id === id),
+        5_000,
+        'thư tới queue',
+      );
+    } finally {
+      await removeTestBinding();
+    }
+
+    assert.match(outboxRequeue('--id', id).stdout, /report: đã đổi 0 dòng/);
+  });
+
+  it('requeue từ chối id sai dạng và tham số lạ', () => {
+    const wrongId = outboxRequeue('--id', 'khong-phai-uuid');
+    assert.equal(wrongId.status, 1);
+    assert.match(wrongId.stderr, /UUID/);
+    assert.equal(outboxRequeue('--xoa-het').status, 1);
   });
 
   it('job dọn: chỉ xoá dòng PUBLISHED cũ hơn 7 ngày', async () => {

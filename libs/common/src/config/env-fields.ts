@@ -26,6 +26,12 @@ export const postgresUrlField = (dbSchema: string) =>
       `URL phải có ?schema=${dbSchema}`,
     );
 
+/** Số kết nối Postgres tối đa của một service. */
+export const databasePoolMaxField = requiredEnv('số nguyên')
+  .regex(/^\d+$/, 'phải là số nguyên')
+  .transform(Number)
+  .pipe(z.number().int().min(1, 'phải từ 1').max(200, 'phải đến 200'));
+
 /** Không có mặc định: thiếu là không được chạy. Dùng user ứng dụng, không dùng tài khoản quản trị. */
 export const rabbitUrlField = requiredEnv('URL')
   .pipe(z.url({ protocol: /^amqps?$/, error: 'phải là URL dạng amqp://user:pass@host:5672' }))

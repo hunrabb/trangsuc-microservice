@@ -13,7 +13,8 @@ import { PrismaClient } from '../generated/prisma/client';
 export class PrismaService extends PrismaClient implements OnModuleDestroy {
   constructor(config: ConfigService<Env, true>) {
     const connectionString = config.get('DATABASE_URL', { infer: true });
-    super({ adapter: new PrismaPg({ connectionString }, { schema: DB_SCHEMA }) });
+    const max = config.get('DATABASE_POOL_MAX', { infer: true });
+    super({ adapter: new PrismaPg({ connectionString, max }, { schema: DB_SCHEMA }) });
   }
 
   async onModuleDestroy(): Promise<void> {

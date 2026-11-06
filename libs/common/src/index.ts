@@ -22,5 +22,6 @@ export * from './messaging/consumer';
 export * from './messaging/message-errors';
 export * from './messaging/messaging.module';
 export * from './messaging/outbox';
+export * from './messaging/outbox-requeue';
 export * from './messaging/outbox-worker';
 export * from './messaging/rabbit-connection';

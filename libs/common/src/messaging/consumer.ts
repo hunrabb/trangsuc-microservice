@@ -24,6 +24,18 @@ import { RabbitConnection } from './rabbit-connection';
 /** Phải nhỏ hơn `connection_limit` của Prisma: mỗi thư đang xử lý chiếm một kết nối DB. */
 export const CONSUMER_PREFETCH = 10;
 
+/** Kết nối DB chừa thêm cho worker outbox và request HTTP. */
+export const CONSUMER_POOL_RESERVE = 5;
+
+/** Pool phải đủ cho toàn bộ prefetch cộng phần chừa lại. Trả về lý do nếu chưa đủ. */
+export function consumerPoolProblem(poolMax: number): string | undefined {
+  const required = CONSUMER_PREFETCH + CONSUMER_POOL_RESERVE;
+  return poolMax >= required
+    ? undefined
+    : `DATABASE_POOL_MAX = ${poolMax} quá nhỏ: service có consumer cần tối thiểu ${required} ` +
+        `(prefetch ${CONSUMER_PREFETCH} + ${CONSUMER_POOL_RESERVE} cho worker outbox và request HTTP)`;
+}
+
 const REQUEUE_DELAY_MS = 1_000;
 /** Header RabbitMQ tự thêm khi dead-letter. Bỏ đi khi gửi bản sao để không chồng dồn qua các lần thử. */
 const BROKER_HEADERS = /^x-(death|first-death-|last-death-)/;

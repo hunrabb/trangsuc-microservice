@@ -29,7 +29,7 @@ export function parseEnv<S extends z.ZodType>(
   return { ok: false, problems };
 }
 
-/** Cấu hình sai thì ghi log rõ tên biến rồi thoát mã 1. Logger đồng bộ để dòng log kịp ra trước khi thoát. */
+/** Cấu hình sai thì ghi log rõ tên biến rồi thoát mã 1. */
 export function validateEnv<S extends z.ZodType>(
   schema: S,
   raw: Record<string, unknown>,
@@ -40,9 +40,23 @@ export function validateEnv<S extends z.ZodType>(
     return result.env;
   }
   const list = result.problems.map((p) => `${p.variable} (${p.problem})`).join(', ');
+  exitWithFatalLog(service, `Cấu hình không hợp lệ, dịch vụ không khởi động: ${list}`, {
+    problems: result.problems,
+  });
+}
+
+/**
+ * Ghi log một dòng JSON rồi thoát mã 1. Logger đồng bộ để dòng log kịp ra trước khi thoát. Dùng thay cho `throw`
+ * trong provider của Nest: lỗi đi qua Nest cũng thoát mã 1 nhưng in ra nhiều dòng, không phải log JSON.
+ */
+export function exitWithFatalLog(
+  service: string,
+  message: string,
+  details: Record<string, unknown> = {},
+): never {
   pino(
     { base: { service }, formatters: { level: (label) => ({ level: label }) } },
     pino.destination({ dest: 1, sync: true }),
-  ).fatal({ problems: result.problems }, `Cấu hình không hợp lệ, dịch vụ không khởi động: ${list}`);
+  ).fatal(details, message);
   process.exit(1);
 }

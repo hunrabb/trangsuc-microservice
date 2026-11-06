@@ -16,7 +16,8 @@
     "test:messaging": "turbo run test:messaging --concurrency=1",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "keys:generate": "node scripts/generate-jwt-keys.mjs"
+    "keys:generate": "node scripts/generate-jwt-keys.mjs",
+    "outbox:requeue": "node scripts/outbox-requeue.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

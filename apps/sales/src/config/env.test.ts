@@ -8,6 +8,7 @@ const parseEnv = (raw: Record<string, unknown>) => parse(envSchema, raw);
 const valid = {
   PORT: '3000',
   DATABASE_URL: 'postgresql://sales_user:s3cret@postgres:5432/jewelry?schema=sales',
+  DATABASE_POOL_MAX: '20',
   RABBITMQ_URL: 'amqp://jewelry_app:s3cret@rabbitmq:5672',
   JWT_PUBLIC_KEYS_DIR: '/run/secrets/jwt-public',
   JWT_ISSUER: 'auth-service',
@@ -29,6 +30,7 @@ describe('parseEnv (sales)', () => {
     assert.equal(result.ok, false);
     if (!result.ok) {
       assert.deepEqual(result.problems.map((p) => p.variable).sort(), [
+        'DATABASE_POOL_MAX',
         'DATABASE_URL',
         'JWT_AUDIENCE',
         'JWT_ISSUER',

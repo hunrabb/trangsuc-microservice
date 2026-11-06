@@ -191,6 +191,7 @@ services:
       JWT_PRIVATE_KEY_PATH: /run/secrets/jwt-private.pem
       JWT_ACTIVE_KID: ${JWT_ACTIVE_KID:?JWT_ACTIVE_KID chưa đặt trong .env}
       DATABASE_URL: postgresql://auth_user:${AUTH_DB_PASSWORD:?AUTH_DB_PASSWORD chưa đặt trong .env}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB chưa đặt trong .env}?schema=auth
+      DATABASE_POOL_MAX: ${DATABASE_POOL_MAX:?DATABASE_POOL_MAX chưa đặt trong .env}
       RABBITMQ_URL: amqp://${RABBITMQ_APP_USER:?RABBITMQ_APP_USER chưa đặt trong .env}:${RABBITMQ_APP_PASSWORD:?RABBITMQ_APP_PASSWORD chưa đặt trong .env}@rabbitmq:5672
     volumes:
       - *jwt-public-volume
@@ -219,6 +220,7 @@ services:
       NODE_ENV: production
       PORT: '3000'
       DATABASE_URL: postgresql://inventory_user:${INVENTORY_DB_PASSWORD:?INVENTORY_DB_PASSWORD chưa đặt trong .env}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB chưa đặt trong .env}?schema=inventory
+      DATABASE_POOL_MAX: ${DATABASE_POOL_MAX:?DATABASE_POOL_MAX chưa đặt trong .env}
       RABBITMQ_URL: amqp://${RABBITMQ_APP_USER:?RABBITMQ_APP_USER chưa đặt trong .env}:${RABBITMQ_APP_PASSWORD:?RABBITMQ_APP_PASSWORD chưa đặt trong .env}@rabbitmq:5672
     volumes:
       - *jwt-public-volume
@@ -245,6 +247,7 @@ services:
       NODE_ENV: production
       PORT: '3000'
       DATABASE_URL: postgresql://sales_user:${SALES_DB_PASSWORD:?SALES_DB_PASSWORD chưa đặt trong .env}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB chưa đặt trong .env}?schema=sales
+      DATABASE_POOL_MAX: ${DATABASE_POOL_MAX:?DATABASE_POOL_MAX chưa đặt trong .env}
       RABBITMQ_URL: amqp://${RABBITMQ_APP_USER:?RABBITMQ_APP_USER chưa đặt trong .env}:${RABBITMQ_APP_PASSWORD:?RABBITMQ_APP_PASSWORD chưa đặt trong .env}@rabbitmq:5672
     volumes:
       - *jwt-public-volume
@@ -271,6 +274,7 @@ services:
       NODE_ENV: production
       PORT: '3000'
       DATABASE_URL: postgresql://report_user:${REPORT_DB_PASSWORD:?REPORT_DB_PASSWORD chưa đặt trong .env}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB chưa đặt trong .env}?schema=report
+      DATABASE_POOL_MAX: ${DATABASE_POOL_MAX:?DATABASE_POOL_MAX chưa đặt trong .env}
       RABBITMQ_URL: amqp://${RABBITMQ_APP_USER:?RABBITMQ_APP_USER chưa đặt trong .env}:${RABBITMQ_APP_PASSWORD:?RABBITMQ_APP_PASSWORD chưa đặt trong .env}@rabbitmq:5672
     volumes:
       - *jwt-public-volume

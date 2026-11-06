@@ -25,6 +25,7 @@ export const JWT_ENV = {
   JWT_AUDIENCE: TEST_AUDIENCE,
   // Cổng đóng: các test này không cần RabbitMQ, service vẫn chạy và tự thử kết nối lại.
   RABBITMQ_URL: 'amqp://test:test@127.0.0.1:1',
+  DATABASE_POOL_MAX: '20',
 };
 
 export function freePort(): Promise<number> {
