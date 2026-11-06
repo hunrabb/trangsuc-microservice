@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # Build từ THƯ MỤC GỐC repo:   docker build -f apps/inventory/Dockerfile .
 # Hai đích (target):
-#   migrate  → chạy `prisma migrate deploy` rồi thoát (dùng cho container inventory-migrate)
+#   migrate  → chờ Postgres nhận kết nối (tối đa ~60 s), chạy `prisma migrate deploy` rồi thoát (container inventory-migrate)
 #   runtime  → chạy dịch vụ (đích mặc định, là tầng cuối cùng)
 #
 # Phiên bản Node phải khớp .nvmrc và `engines` trong package.json; phiên bản pnpm khớp `packageManager`.
@@ -43,9 +43,11 @@ FROM runtime-base AS migrate
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=build --chown=node:node /out/migrate ./
+COPY --chown=node:node infra/migrate/wait-for-postgres.mjs ./wait-for-postgres.mjs
 USER node
-# Không có DATABASE_URL thì dừng ngay và nói rõ tên biến (thay vì để Prisma báo lỗi chung chung).
-CMD ["sh", "-c", ": \"${DATABASE_URL:?DATABASE_URL chưa được đặt}\" && exec node_modules/.bin/prisma migrate deploy"]
+# 1) Thiếu DATABASE_URL → dừng ngay, nói rõ tên biến. 2) Chờ Postgres nhận kết nối (tối đa ~60 s; quá hạn thoát mã 75, không chạy migrate).
+# 3) Chạy migrate; migration lỗi thì thoát luôn, KHÔNG thử lại (xem infra/migrate/wait-for-postgres.mjs).
+CMD ["sh", "-c", ": \"${DATABASE_URL:?DATABASE_URL chưa được đặt}\" && node wait-for-postgres.mjs && exec node_modules/.bin/prisma migrate deploy"]
 
 # ---------------------------------------------------------------- Đích: runtime (mặc định)
 FROM runtime-base AS runtime

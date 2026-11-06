@@ -31,7 +31,7 @@ x-static-healthcheck: &static-healthcheck
   retries: 5
   start_period: 5s
 
-# Container chạy một lần: `prisma migrate deploy` rồi thoát (mã 0).
+# Container chạy một lần: chờ Postgres nhận kết nối (tối đa ~60 s, quá hạn thoát mã 75), rồi `prisma migrate deploy` và thoát (mã 0).
 x-migrate: &migrate
   restart: 'no'
   logging: *logging

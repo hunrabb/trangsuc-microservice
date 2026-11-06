@@ -40,6 +40,7 @@ libs/
 infra/
   postgres/init/   script tạo schema + user (chỉ chạy khi volume trống)
   rabbitmq/        definitions.json (topology, không có mật khẩu), setup.mjs (nạp qua management API)
+  migrate/         wait-for-postgres.mjs (nhúng vào image *-migrate: chờ Postgres nhận kết nối trước prisma migrate deploy)
 secrets/           (gitignore) jwt_private.pem, jwt_public.pem
 docs/
 docker-compose.yml, docker-compose.override.yml (chỉ dev), .env.example

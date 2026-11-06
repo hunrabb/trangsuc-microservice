@@ -62,6 +62,7 @@ docker compose up --build
 ```
 
 - Mọi container `healthy`; `rabbitmq-setup` và 4 container `*-migrate` thoát với mã 0 (đúng thiết kế).
+- Mỗi container `*-migrate` chạy [infra/migrate/wait-for-postgres.mjs](infra/migrate/wait-for-postgres.mjs) trước `prisma migrate deploy`: chờ Postgres thật sự nhận kết nối (không chỉ mở cổng TCP; Postgres đang phục hồi vẫn bị coi là chưa sẵn sàng), tối đa ~60 giây, nghỉ tăng dần 0,5 → 5 giây. Quá hạn thì thoát mã **75** và log nêu lý do của lần thử cuối, **không** chạy migrate. Chỉ việc chờ được thử lại; migration lỗi thì thoát ngay, không thử lại.
 - Gateway: <http://localhost:3000> (hoặc `GATEWAY_PORT`) · Backoffice: <http://localhost:8080> · Storefront: <http://localhost:8081>.
 - Hai app frontend là file tĩnh phục vụ bởi nginx; nginx cũng chuyển `/api/*` về gateway (cùng origin, không cần CORS).
 - **Chỉ** gateway, backoffice, storefront có `ports` trong `docker-compose.yml`. Chạy như production (không mở Postgres/RabbitMQ ra 127.0.0.1): `docker compose -f docker-compose.yml up --build`.
@@ -116,6 +117,6 @@ CI (`.github/workflows/ci.yml`): cài thư viện (cache pnpm), format, lint, ty
 ```
 apps/        gateway, auth, inventory, sales, report (NestJS) · backoffice, storefront (React)
 libs/        contracts, common
-infra/       postgres/init (user + schema + shadow DB) · rabbitmq (definitions.json, setup.mjs)
+infra/       postgres/init (user + schema + shadow DB) · rabbitmq (definitions.json, setup.mjs) · migrate (chờ Postgres cho *-migrate)
 docs/        thiết kế và kế hoạch
 ```
