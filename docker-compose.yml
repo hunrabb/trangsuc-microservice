@@ -77,7 +77,10 @@ services:
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
-      test: ['CMD', 'rabbitmq-diagnostics', '-q', 'ping']
+      # PHẢI chạy bằng user rabbitmq (gosu). `docker exec` mặc định là root: nếu CLI chạy trước khi server
+      # kịp tạo /var/lib/rabbitmq/.erlang.cookie thì root tạo ra file đó (root:root, 0400), server (user
+      # rabbitmq) đọc không được → "eacces" → container thoát mã 1. Dễ gặp khi Erlang khởi động chậm (> interval).
+      test: ['CMD', 'gosu', 'rabbitmq', 'rabbitmq-diagnostics', '-q', 'ping']
       interval: 10s
       timeout: 10s
       retries: 10

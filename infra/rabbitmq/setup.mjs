@@ -10,7 +10,12 @@ import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+// Đọc (GET) và thăm dò API: 10 giây là đủ.
 const REQUEST_TIMEOUT_MS = 10_000;
+// Ghi (PUT/POST): RabbitMQ 4.x lưu metadata kèm fsync nên nạp users/permissions/definitions ngay sau khi
+// node vừa khởi động, trên đĩa chậm (VM/WSL), có thể mất vài chục giây. Container này `restart: 'no'`,
+// một lần timeout là hỏng cả `docker compose up --wait`, nên cho rộng tay.
+const WRITE_TIMEOUT_MS = 90_000;
 const WAIT_FOR_API_MS = 90_000;
 const VHOST = encodeURIComponent('/');
 
@@ -39,13 +44,25 @@ const definitionsPath =
 const authorization = `Basic ${Buffer.from(`${adminUser}:${adminPassword}`).toString('base64')}`;
 
 async function api(method, path, body) {
-  const response = await fetch(new URL(`/api${path}`, baseUrl), {
-    method,
-    headers: { authorization, 'content-type': 'application/json' },
-    body: body === undefined ? undefined : JSON.stringify(body),
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-  });
-  const text = await response.text();
+  const timeoutMs = method === 'GET' ? REQUEST_TIMEOUT_MS : WRITE_TIMEOUT_MS;
+  let response;
+  let text;
+  try {
+    response = await fetch(new URL(`/api${path}`, baseUrl), {
+      method,
+      headers: { authorization, 'content-type': 'application/json' },
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    text = await response.text();
+  } catch (error) {
+    // Nói rõ request nào, thay vì chỉ "The operation was aborted due to timeout".
+    const reason =
+      error instanceof Error && error.name === 'TimeoutError'
+        ? `quá ${timeoutMs / 1000} giây không có phản hồi`
+        : String(error);
+    fail(`${method} /api${path} → ${reason}`);
+  }
   if (!response.ok) {
     // Không in nội dung request (có mật khẩu); chỉ in phản hồi của server.
     fail(`${method} /api${path} → HTTP ${response.status}: ${text}`);
