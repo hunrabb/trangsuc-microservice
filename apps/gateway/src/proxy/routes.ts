@@ -5,23 +5,38 @@ export interface ProxyRoute {
   /** Khớp theo đoạn đường dẫn: `/api/pos` khớp `/api/pos/x`, không khớp `/api/posx`. */
   prefix: string;
   service: UpstreamService;
-  /** Phần bị bỏ khỏi đầu đường dẫn khi chuyển tiếp. */
-  strip: string;
+  /** Thay `prefix` bằng chuỗi này khi chuyển tiếp. */
+  rewriteTo: string;
+  requiresAuth: boolean;
+  /** Chỉ khớp đúng `prefix`, không nhận đường con. */
+  exact?: boolean;
 }
 
 export const PROXY_ROUTES: readonly ProxyRoute[] = [
-  { prefix: '/api/pos', service: 'sales', strip: '/api' },
-  { prefix: '/api/shop', service: 'sales', strip: '/api' },
-  { prefix: '/api/online-orders', service: 'sales', strip: '/api' },
-  { prefix: '/api/admin/auth', service: 'auth', strip: '/api/admin/auth' },
-  { prefix: '/api/admin/inventory', service: 'inventory', strip: '/api/admin/inventory' },
-  { prefix: '/api/admin/sales', service: 'sales', strip: '/api/admin/sales' },
-  { prefix: '/api/admin/reports', service: 'report', strip: '/api/admin/reports' },
-  { prefix: '/webhooks/bank', service: 'sales', strip: '' },
+  { prefix: '/api/auth', service: 'auth', rewriteTo: '/auth', requiresAuth: false },
+  { prefix: '/api/pos', service: 'sales', rewriteTo: '/pos', requiresAuth: true },
+  {
+    prefix: '/api/online-orders',
+    service: 'sales',
+    rewriteTo: '/online-orders',
+    requiresAuth: true,
+  },
+  { prefix: '/api/shop', service: 'sales', rewriteTo: '/shop', requiresAuth: false },
+  { prefix: '/api/admin/auth', service: 'auth', rewriteTo: '/admin', requiresAuth: true },
+  { prefix: '/api/admin/inventory', service: 'inventory', rewriteTo: '/admin', requiresAuth: true },
+  { prefix: '/api/admin/sales', service: 'sales', rewriteTo: '/admin', requiresAuth: true },
+  { prefix: '/api/admin/reports', service: 'report', rewriteTo: '/admin', requiresAuth: true },
+  {
+    prefix: '/webhooks/bank',
+    service: 'sales',
+    rewriteTo: '/webhooks/bank',
+    requiresAuth: false,
+    exact: true,
+  },
 ];
 
-/** Đoạn đầu của đường dẫn phía service không bao giờ được gateway chuyển tới. */
-const BLOCKED_FIRST_SEGMENT = 'internal';
+/** Đoạn đầu đường dẫn phía service mà gateway không bao giờ chuyển tới. */
+const BLOCKED_FIRST_SEGMENTS = new Set(['internal', 'health']);
 
 function decodeSegment(segment: string): string | undefined {
   try {
@@ -48,16 +63,25 @@ function isSafePath(path: string): boolean {
 
 function isBlocked(path: string): boolean {
   const first = decodeSegment(path.split('/')[1] ?? '');
-  return first?.toLowerCase() === BLOCKED_FIRST_SEGMENT;
+  return first !== undefined && BLOCKED_FIRST_SEGMENTS.has(first.toLowerCase());
 }
 
 export interface ResolvedRoute {
   service: UpstreamService;
   /** Đường dẫn + query gửi tới service, luôn bắt đầu bằng một dấu `/`. */
   path: string;
+  requiresAuth: boolean;
 }
 
-/** Tìm đích chuyển tiếp cho URL thô của request; không khớp hoặc không an toàn → `undefined`. */
+function matches(route: ProxyRoute, path: string): boolean {
+  return path === route.prefix || (!route.exact && path.startsWith(`${route.prefix}/`));
+}
+
+/**
+ * Tìm đích chuyển tiếp cho URL thô của request; không khớp hoặc không an toàn → `undefined`.
+ * Kiểm tra cả phần sau tiền tố lẫn đường đã viết lại: `/api/admin/inventory/health/ready` viết lại thành
+ * `/admin/health/ready`, không bắt đầu bằng `/health` nhưng vẫn phải bị chặn.
+ */
 export function resolveRoute(
   rawUrl: string,
   routes: readonly ProxyRoute[] = PROXY_ROUTES,
@@ -66,13 +90,18 @@ export function resolveRoute(
   const path = queryStart === -1 ? rawUrl : rawUrl.slice(0, queryStart);
   const query = queryStart === -1 ? '' : rawUrl.slice(queryStart);
 
-  const route = routes.find((r) => path === r.prefix || path.startsWith(`${r.prefix}/`));
+  const route = routes.find((candidate) => matches(candidate, path));
   if (route === undefined) {
     return undefined;
   }
-  const rewritten = path.slice(route.strip.length) || '/';
-  if (!isSafePath(rewritten) || isBlocked(rewritten)) {
+  const remainder = path.slice(route.prefix.length);
+  const rewritten = `${route.rewriteTo}${remainder}`;
+  if (!isSafePath(rewritten) || isBlocked(remainder) || isBlocked(rewritten)) {
     return undefined;
   }
-  return { service: route.service, path: `${rewritten}${query}` };
+  return {
+    service: route.service,
+    path: `${rewritten}${query}`,
+    requiresAuth: route.requiresAuth,
+  };
 }

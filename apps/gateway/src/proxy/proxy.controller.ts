@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { BusinessError, ConfigService, getCorrelationId } from '@jewelry/common';
+import { BusinessError, ConfigService, getCorrelationId, JwtGuard, Public } from '@jewelry/common';
 import { All, Controller, Logger, Req, Res } from '@nestjs/common';
 import type { Env } from '../config/env';
 import { forwardRequestHeaders, forwardResponseHeaders } from './headers';
@@ -13,13 +13,21 @@ const NO_BODY_METHODS = new Set(['GET', 'HEAD']);
 
 type ProxyRequest = IncomingMessage & { originalUrl: string; method: string };
 
-/** Khai báo sau các controller riêng của gateway (`/api/ping`) để không che chúng. */
+/**
+ * Khai báo sau các controller riêng của gateway (`/api/ping`) để không che chúng.
+ * `@Public()` vì việc cần đăng nhập hay không phụ thuộc bảng định tuyến: đường không có trong bảng phải là
+ * 404 chứ không phải 401, nên `JwtGuard` được gọi trong handler, sau khi tra bảng và trước khi đọc body.
+ */
+@Public()
 @Controller()
 export class ProxyController {
   private readonly logger = new Logger(ProxyController.name);
   private readonly upstreams: Record<UpstreamService, string>;
 
-  constructor(config: ConfigService<Env, true>) {
+  constructor(
+    config: ConfigService<Env, true>,
+    private readonly jwtGuard: JwtGuard,
+  ) {
     const origin = (key: 'AUTH_URL' | 'INVENTORY_URL' | 'SALES_URL' | 'REPORT_URL') =>
       new URL(config.get(key, { infer: true })).origin;
     this.upstreams = {
@@ -35,6 +43,9 @@ export class ProxyController {
     const route = resolveRoute(req.originalUrl);
     if (route === undefined) {
       throw new BusinessError('NOT_FOUND', `Cannot ${req.method} ${req.originalUrl}`, 404);
+    }
+    if (route.requiresAuth) {
+      this.jwtGuard.authenticate(req);
     }
     const body = await this.readRequestBody(req, res);
 

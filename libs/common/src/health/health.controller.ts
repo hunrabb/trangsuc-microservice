@@ -1,4 +1,5 @@
 import { Controller, Get, Inject, Logger, Res } from '@nestjs/common';
+import { Public } from '../auth/decorators';
 import { type ReadinessCheck, runReadinessChecks } from './readiness';
 
 export const READINESS_CHECKS = Symbol('READINESS_CHECKS');
@@ -8,6 +9,7 @@ interface ReadyResponse {
   checks: Record<string, string>;
 }
 
+@Public()
 @Controller('health')
 export class HealthController {
   private readonly logger = new Logger(HealthController.name);

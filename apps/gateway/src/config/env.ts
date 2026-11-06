@@ -1,4 +1,4 @@
-import { httpUrlField, nodeEnvField, portField } from '@jewelry/common';
+import { httpUrlField, jwtEnvFields, nodeEnvField, portField } from '@jewelry/common';
 import { z } from 'zod';
 
 export const SERVICE_NAME = 'gateway';
@@ -11,6 +11,7 @@ export const envSchema = z.object({
   INVENTORY_URL: httpUrlField,
   SALES_URL: httpUrlField,
   REPORT_URL: httpUrlField,
+  ...jwtEnvFields,
 });
 
 export type Env = z.infer<typeof envSchema>;

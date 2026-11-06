@@ -8,6 +8,12 @@ const parseEnv = (raw: Record<string, unknown>) => parse(envSchema, raw);
 const valid = {
   PORT: '3000',
   DATABASE_URL: 'postgresql://auth_user:s3cret@postgres:5432/jewelry?schema=auth',
+  JWT_PUBLIC_KEYS_DIR: '/run/secrets/jwt-public',
+  JWT_ISSUER: 'auth-service',
+  JWT_AUDIENCE: 'store-system',
+  // Chỉ cần một file đọc được.
+  JWT_PRIVATE_KEY_PATH: process.execPath,
+  JWT_ACTIVE_KID: 'k1',
 };
 
 describe('parseEnv (auth)', () => {
@@ -24,7 +30,15 @@ describe('parseEnv (auth)', () => {
     const result = parseEnv({});
     assert.equal(result.ok, false);
     if (!result.ok) {
-      assert.deepEqual(result.problems.map((p) => p.variable).sort(), ['DATABASE_URL', 'PORT']);
+      assert.deepEqual(result.problems.map((p) => p.variable).sort(), [
+        'DATABASE_URL',
+        'JWT_ACTIVE_KID',
+        'JWT_AUDIENCE',
+        'JWT_ISSUER',
+        'JWT_PRIVATE_KEY_PATH',
+        'JWT_PUBLIC_KEYS_DIR',
+        'PORT',
+      ]);
     }
   });
 
@@ -41,6 +55,11 @@ describe('parseEnv (auth)', () => {
       ...valid,
       DATABASE_URL: 'postgresql://auth_user:s3cret@postgres:5432/jewelry?schema=public',
     });
+    assert.equal(result.ok, false);
+  });
+
+  it('từ chối JWT_PRIVATE_KEY_PATH không đọc được', () => {
+    const result = parseEnv({ ...valid, JWT_PRIVATE_KEY_PATH: '/khong/ton/tai.pem' });
     assert.equal(result.ok, false);
   });
 

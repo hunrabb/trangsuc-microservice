@@ -14,7 +14,8 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "keys:generate": "node scripts/generate-jwt-keys.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

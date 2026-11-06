@@ -1,6 +1,7 @@
 import { type ChildProcess, spawn } from 'node:child_process';
 import { createServer } from 'node:net';
 import { resolve } from 'node:path';
+import { createTestKeys, TEST_AUDIENCE, TEST_ISSUER, type TestKeys } from '@jewelry/test-utils';
 
 const REPO_ROOT = resolve(import.meta.dirname, '../../..');
 const STARTUP_TIMEOUT_MS = 15_000;
@@ -14,6 +15,15 @@ export interface RunningService {
   child: ChildProcess;
   logs: LogLine[];
 }
+
+export const testKeys: TestKeys = createTestKeys();
+
+/** Khoá tạm cho mỗi lần chạy, không dùng secrets/: test không phụ thuộc khoá thật. */
+export const JWT_ENV = {
+  JWT_PUBLIC_KEYS_DIR: testKeys.publicKeysDir,
+  JWT_ISSUER: TEST_ISSUER,
+  JWT_AUDIENCE: TEST_AUDIENCE,
+};
 
 export function freePort(): Promise<number> {
   return new Promise((done, fail) => {
@@ -30,7 +40,7 @@ export function freePort(): Promise<number> {
 export function startService(app: string, env: Record<string, string>): RunningService {
   const child = spawn(process.execPath, [resolve(REPO_ROOT, `apps/${app}/dist/main.js`)], {
     cwd: import.meta.dirname,
-    env: { PATH: process.env.PATH, NODE_ENV: 'test', ...env },
+    env: { PATH: process.env.PATH, NODE_ENV: 'test', ...JWT_ENV, ...env },
     stdio: ['ignore', 'pipe', 'inherit'],
   });
   const logs: LogLine[] = [];

@@ -43,7 +43,9 @@ infra/
   migrate/         wait-for-postgres.mjs (nhúng vào image *-migrate: chờ Postgres nhận kết nối trước prisma migrate deploy)
 tests/
   integration/     test đa app: chạy dist của nhiều app rồi đọc log/HTTP (app không được import lẫn nhau)
-secrets/           (gitignore) jwt_private.pem, jwt_public.pem
+  test-utils/      chỉ cho test (signTestToken...); nằm ở devDependencies, ESLint cấm import từ code chạy thật
+scripts/           run-tests.mjs (chạy test, đỏ khi 0 test), generate-jwt-keys.mjs
+secrets/jwt/       (gitignore) private/<kid>.private.pem (chỉ auth), public/<kid>.public.pem (mọi service, read-only)
 docs/
 docker-compose.yml, docker-compose.override.yml (chỉ dev), .env.example
 ```
@@ -55,6 +57,7 @@ docker-compose.yml, docker-compose.override.yml (chỉ dev), .env.example
 
 ```bash
 pnpm install
+pnpm keys:generate [kid]                        # sinh khoá JWT vào secrets/jwt/ (mặc định kid = k1); không ghi đè khoá đã có
 cp .env.example .env                            # lần đầu: điền mật khẩu (cho Docker Compose)
 cp apps/<app>/.env.example apps/<app>/.env      # lần đầu, cho gateway/auth/inventory/sales/report (cho pnpm dev)
 docker compose up -d postgres rabbitmq rabbitmq-setup   # hạ tầng cho dev (override mở 127.0.0.1:5432, :5672 và :15672)
@@ -133,7 +136,21 @@ Chưa có (làm ở giai đoạn sau): `prisma db seed` (chưa có seed), `pnpm 
 ## 10. API
 
 - Client chỉ gọi qua gateway. Chỉ gateway, backoffice và storefront mở port ra ngoài.
-- Tiền tố đường dẫn ở gateway: `/api/pos/*` (POS), `/api/shop/*` (website, công khai), `/api/online-orders/*` (xử lý đơn online), `/api/admin/*`, `/webhooks/bank`. Đường `/internal/*` **không bao giờ** được gateway chuyển tiếp.
+- Bảng định tuyến của gateway (`apps/gateway/src/proxy/routes.ts`):
+
+  | Đường ở gateway | Service | Đường ở service | Cần đăng nhập |
+  |---|---|---|---|
+  | `/api/auth/*` | auth | `/auth/*` | Không (login, refresh, logout) |
+  | `/api/pos/*` | sales | `/pos/*` | Có |
+  | `/api/online-orders/*` | sales | `/online-orders/*` | Có |
+  | `/api/shop/*` | sales | `/shop/*` | Không (website khách) |
+  | `/api/admin/auth/*` | auth | `/admin/*` | Có |
+  | `/api/admin/inventory/*` | inventory | `/admin/*` | Có |
+  | `/api/admin/sales/*` | sales | `/admin/*` | Có |
+  | `/api/admin/reports/*` | report | `/admin/*` | Có |
+  | `/webhooks/bank` | sales | `/webhooks/bank` | Không (kiểm chữ ký ở giai đoạn 6) |
+
+- Đường không có trong bảng → `404 NOT_FOUND`. `/internal/*` và `/health/*` của service **không bao giờ** được gateway chuyển tiếp.
 - `channel` của đơn (`POS` / `WEBSITE`) do server tự đặt theo đường dẫn được gọi, không lấy từ body.
 - Mọi body vào kiểm tra bằng DTO + `class-validator` (hoặc zod). Không tin `branchId`, `role` từ client: lấy từ `req.user` và lọc truy vấn theo chi nhánh người dùng được phép.
 - Endpoint tạo hoá đơn / đơn hàng bắt buộc header `Idempotency-Key`; lưu `idempotencyKey` (unique) + `requestHash`; trùng key khác nội dung → `422 IDEMPOTENCY_KEY_REUSED`.
@@ -147,8 +164,8 @@ Chưa có (làm ở giai đoạn sau): `prisma db seed` (chưa có seed), `pnpm 
 ## 11. Xác thực
 
 - Access token: JWT **RS256**, 15 phút; chỉ `auth` giữ private key, các service khác chỉ có public key. Kiểm tra luôn ép `algorithms: ['RS256']`, `issuer`, `audience`, chọn key theo `kid`.
-- Refresh token: chuỗi ngẫu nhiên, lưu **bản băm** SHA-256; hạn trượt 7 ngày, hạn tuyệt đối 30 ngày (`sessionStartedAt`); xoay vòng mỗi lần dùng; token đã thu hồi bị dùng lại → thu hồi mọi phiên của user. Cookie `httpOnly; Secure; SameSite=Strict; Path=/auth/refresh`.
-- Vai trò: `ADMIN` (toàn hệ thống, `branchId = null`), `MANAGER`, `STAFF` theo chi nhánh. Dùng `JwtGuard` + `RolesGuard` + `@Roles(...)` trong `libs/common`.
+- Refresh token: chuỗi ngẫu nhiên, lưu **bản băm** SHA-256; hạn trượt 7 ngày, hạn tuyệt đối 30 ngày (`sessionStartedAt`); xoay vòng mỗi lần dùng; token đã thu hồi bị dùng lại → thu hồi mọi phiên của user. Cookie `httpOnly; Secure; SameSite=Strict; Path=/api/auth/refresh`.
+- Vai trò: `ADMIN` (toàn hệ thống, `branchId = null`), `MANAGER`, `STAFF` theo chi nhánh. Dùng `JwtGuard` + `RolesGuard` + `@Roles(...)` trong `libs/common`; mọi endpoint mặc định cần đăng nhập, ngoại lệ đánh dấu `@Public()`.
 - Gateway xoá mọi header `x-user-*` từ client.
 - Mật khẩu: bcrypt; thông báo lỗi đăng nhập chung "Sai email hoặc mật khẩu"; rate limit bằng `@nestjs/throttler`.
 
@@ -171,5 +188,6 @@ Chưa có (làm ở giai đoạn sau): `prisma db seed` (chưa có seed), `pnpm 
 - Chỉ làm đúng phạm vi trong prompt. Thấy việc khác cần làm → ghi vào báo cáo, không tự làm.
 - Không thêm thư viện mới nếu prompt không cho phép; cần thì đề xuất trong báo cáo.
 - Không sửa migration đã commit; tạo migration mới.
+- Thứ tự bắt buộc: **kiểm chứng → đọc kết quả → commit → push**, mỗi bước một lệnh riêng, không ghép chung. Trước mỗi lần kiểm chứng, dừng mọi tiến trình `node`/`pnpm dev` còn sót và kiểm tra cổng 3000–3004 đang trống.
 - Trước khi báo xong: chạy `pnpm lint`, `pnpm typecheck`, `pnpm test` (và `pnpm test:concurrency` nếu có ghi dữ liệu dùng chung). Không báo xong khi còn test đỏ.
 - **Báo cáo cuối** gồm: file đã tạo/sửa; migration mới; sự kiện/API mới hoặc thay đổi; **mọi chỗ phải tự quyết định** mà thiết kế không nói; việc còn dở hoặc rủi ro thấy được.

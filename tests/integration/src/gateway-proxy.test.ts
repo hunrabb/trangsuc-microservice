@@ -6,11 +6,13 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import type { AddressInfo } from 'node:net';
 import { after, before, beforeEach, describe, it } from 'node:test';
 import { gzipSync } from 'node:zlib';
+import { signTestToken } from '@jewelry/test-utils';
 import {
   freePort,
   type LogLine,
   type RunningService,
   startService,
+  testKeys,
   waitForLogs,
   waitUntilLive,
 } from './support.ts';
@@ -22,6 +24,8 @@ interface Seen {
   sha256: string;
   size: number;
 }
+
+const bearer = () => `Bearer ${signTestToken(testKeys.privateKey, { kid: testKeys.kid })}`;
 
 type LoggedRequest = LogLine & { req?: { headers?: Record<string, string> } };
 
@@ -95,7 +99,7 @@ describe('gateway chuyển tiếp request', () => {
   it('gateway → sales: 404 NOT_FOUND định dạng chung, correlationId khớp header và body', async () => {
     const id = randomUUID();
     const response = await fetch(`${gatewayUrl}/api/pos/khong-ton-tai`, {
-      headers: { 'x-correlation-id': id },
+      headers: { 'x-correlation-id': id, authorization: bearer() },
     });
     const body = await expectErrorBody(response, 404, 'NOT_FOUND');
 
@@ -109,6 +113,7 @@ describe('gateway chuyển tiếp request', () => {
     await fetch(`${gatewayUrl}/api/pos/thu`, {
       headers: {
         'x-correlation-id': id,
+        authorization: bearer(),
         'x-user-role': 'ADMIN',
         'x-user-id': '1',
         'x-khac': 'co',
@@ -129,7 +134,7 @@ describe('gateway chuyển tiếp request', () => {
     assert.equal(seen.length, 0);
   });
 
-  it('/internal/* luôn 404, kể cả đi vòng qua tiền tố có cắt đường dẫn', async () => {
+  it('/internal/* và /health/* của service luôn 404, kể cả đi vòng qua tiền tố có cắt đường dẫn', async () => {
     const paths = [
       '/internal/ping',
       '/INTERNAL/ping',
@@ -138,25 +143,32 @@ describe('gateway chuyển tiếp request', () => {
       '/api/admin/inventory/%69nternal/ping',
       '/api/admin/inventory/%2e%2e/internal/ping',
       '/api/admin/inventory//internal/ping',
+      '/api/admin/inventory/health/ready',
+      '/api/admin/inventory/%68ealth/live',
     ];
     for (const path of paths) {
       await expectErrorBody(await fetch(`${gatewayUrl}${path}`), 404, 'NOT_FOUND');
+      const withToken = await fetch(`${gatewayUrl}${path}`, {
+        headers: { authorization: bearer() },
+      });
+      await expectErrorBody(withToken, 404, 'NOT_FOUND');
     }
     assert.deepEqual(seen, []);
   });
 
   it('body nhị phân đi nguyên byte, query được giữ, Authorization được giữ', async () => {
     const payload = randomBytes(64 * 1024);
+    const token = bearer();
     const response = await fetch(`${gatewayUrl}/api/admin/inventory/products?a=1&b=x%20y`, {
       method: 'POST',
-      headers: { authorization: 'Bearer t', 'content-type': 'application/octet-stream' },
+      headers: { authorization: token, 'content-type': 'application/octet-stream' },
       body: payload,
     });
 
     assert.equal(response.status, 200);
     assert.equal(seen[0]?.method, 'POST');
-    assert.equal(seen[0]?.url, '/products?a=1&b=x%20y');
-    assert.equal(seen[0]?.headers.authorization, 'Bearer t');
+    assert.equal(seen[0]?.url, '/admin/products?a=1&b=x%20y');
+    assert.equal(seen[0]?.headers.authorization, token);
     assert.equal(seen[0]?.headers['content-type'], 'application/octet-stream');
     assert.equal(seen[0]?.sha256, createHash('sha256').update(payload).digest('hex'));
   });
@@ -172,17 +184,17 @@ describe('gateway chuyển tiếp request', () => {
         })
         .end(compressed);
     };
-    const response = await fetch(`${gatewayUrl}/api/admin/auth/login`, { method: 'POST' });
+    const response = await fetch(`${gatewayUrl}/api/auth/login`, { method: 'POST' });
 
     assert.equal(response.status, 201);
     assert.deepEqual(await response.json(), { ok: true });
     assert.deepEqual(response.headers.getSetCookie(), ['a=1; HttpOnly', 'b=2']);
-    assert.equal(seen[0]?.url, '/login');
+    assert.equal(seen[0]?.url, '/auth/login');
   });
 
   it('gateway không retry: service trả 503 thì đi thẳng về client sau một lần gọi', async () => {
     reply = (res) => void res.writeHead(503).end('dang bao tri');
-    const response = await fetch(`${gatewayUrl}/api/admin/auth/x`, { method: 'POST' });
+    const response = await fetch(`${gatewayUrl}/api/auth/x`, { method: 'POST' });
 
     assert.equal(response.status, 503);
     assert.equal(await response.text(), 'dang bao tri');
@@ -190,13 +202,15 @@ describe('gateway chuyển tiếp request', () => {
   });
 
   it('service không kết nối được: 503 SERVICE_UNAVAILABLE', async () => {
-    const response = await fetch(`${gatewayUrl}/api/admin/reports/daily`);
+    const response = await fetch(`${gatewayUrl}/api/admin/reports/daily`, {
+      headers: { authorization: bearer() },
+    });
     await expectErrorBody(response, 503, 'SERVICE_UNAVAILABLE');
   });
 
   it('body đúng 1 MB qua được, vượt thì 413 định dạng chung và không tới service', async () => {
     const limit = 1024 * 1024;
-    const ok = await fetch(`${gatewayUrl}/api/admin/auth/x`, {
+    const ok = await fetch(`${gatewayUrl}/api/auth/x`, {
       method: 'POST',
       body: Buffer.alloc(limit),
     });
@@ -204,13 +218,13 @@ describe('gateway chuyển tiếp request', () => {
     assert.equal(seen[0]?.size, limit);
 
     seen = [];
-    const declared = await fetch(`${gatewayUrl}/api/admin/auth/x`, {
+    const declared = await fetch(`${gatewayUrl}/api/auth/x`, {
       method: 'POST',
       body: Buffer.alloc(limit + 1),
     });
     await expectErrorBody(declared, 413, 'PAYLOAD_TOO_LARGE');
 
-    const chunked = await fetch(`${gatewayUrl}/api/admin/auth/x`, {
+    const chunked = await fetch(`${gatewayUrl}/api/auth/x`, {
       method: 'POST',
       duplex: 'half',
       body: new ReadableStream({
@@ -228,7 +242,11 @@ describe('gateway chuyển tiếp request', () => {
     const id = randomUUID();
     const response = await fetch(`${gatewayUrl}/api/pos/x`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-correlation-id': id },
+      headers: {
+        'content-type': 'application/json',
+        'x-correlation-id': id,
+        authorization: bearer(),
+      },
       body: '{hong',
     });
     const body = await expectErrorBody(response, 400, 'VALIDATION_FAILED');

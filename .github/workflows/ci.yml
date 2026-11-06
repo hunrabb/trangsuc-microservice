@@ -39,6 +39,9 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      - name: Sinh khoá JWT
+        run: pnpm keys:generate
+
       - name: Test
         run: pnpm test
 
@@ -85,6 +88,18 @@ jobs:
             echo "::error::.env còn biến trống: $(grep -E '^[A-Z_]+=$' .env | cut -d= -f1 | tr '\n' ' ')"
             exit 1
           fi
+
+      # Cần Node phiên bản trong .nvmrc để chạy script sinh khoá. auth chạy bằng uid 1000 trong container, còn
+      # file do uid của runner tạo với quyền 600, nên phải mở quyền đọc (khoá dùng một lần, không phải bí mật thật).
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      - name: Sinh khoá JWT
+        run: |
+          node scripts/generate-jwt-keys.mjs
+          chmod 644 secrets/jwt/private/*.pem
+          chmod 755 secrets/jwt/private
 
       # CHỈ docker-compose.yml (`-f`): không nạp docker-compose.override.yml (cấu hình dev, mở Postgres/RabbitMQ ra
       # 127.0.0.1), để thử đúng cấu hình production. Mọi lệnh compose trong job này đều có `-f docker-compose.yml`.

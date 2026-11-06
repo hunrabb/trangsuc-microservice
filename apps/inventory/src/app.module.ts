@@ -3,6 +3,7 @@ import {
   AppLoggerModule,
   CorrelationModule,
   HealthModule,
+  JwtAuthModule,
   postgresCheck,
 } from '@jewelry/common';
 import { Module } from '@nestjs/common';
@@ -16,6 +17,7 @@ import { PrismaService } from './prisma/prisma.service';
     AppConfigModule.forRoot({ service: SERVICE_NAME, schema: envSchema }),
     CorrelationModule,
     AppLoggerModule.forRoot(SERVICE_NAME),
+    JwtAuthModule,
     PrismaModule,
     HealthModule.forRoot({
       inject: [PrismaService],

@@ -1,3 +1,4 @@
+import { accessSync, constants, statSync } from 'node:fs';
 import { z } from 'zod';
 
 /** Khối dựng schema cấu hình. Schema của từng app vẫn nằm trong app đó (`src/config/env.ts`). */
@@ -24,3 +25,33 @@ export const postgresUrlField = (dbSchema: string) =>
       (value) => new URL(value).searchParams.get('schema') === dbSchema,
       `URL phải có ?schema=${dbSchema}`,
     );
+
+const nonEmptyEnv = (kind: string) => requiredEnv(kind).min(1, 'không được để trống');
+
+/** Có file và tiến trình đọc được: mount sai hoặc sai quyền thì dịch vụ không bật. */
+function isReadableFile(path: string): boolean {
+  try {
+    accessSync(path, constants.R_OK);
+    return statSync(path).isFile();
+  } catch {
+    return false;
+  }
+}
+
+export const readableFileField = nonEmptyEnv('đường dẫn').refine(
+  isReadableFile,
+  'không đọc được file',
+);
+
+/** Kiểm tra token: mọi service. `JWT_PUBLIC_KEYS_DIR` chứa `<kid>.public.pem`, được nạp khi khởi động. */
+export const jwtEnvFields = {
+  JWT_PUBLIC_KEYS_DIR: nonEmptyEnv('đường dẫn'),
+  JWT_ISSUER: nonEmptyEnv('chuỗi'),
+  JWT_AUDIENCE: nonEmptyEnv('chuỗi'),
+};
+
+/** Ký token: chỉ auth. */
+export const jwtSigningEnvFields = {
+  JWT_PRIVATE_KEY_PATH: readableFileField,
+  JWT_ACTIVE_KID: nonEmptyEnv('chuỗi'),
+};

@@ -1,7 +1,8 @@
-import { callInternal, ConfigService } from '@jewelry/common';
+import { callInternal, ConfigService, Public } from '@jewelry/common';
 import { Controller, Get } from '@nestjs/common';
 import type { Env } from '../config/env';
 
+@Public()
 @Controller('api')
 export class PingController {
   constructor(private readonly config: ConfigService<Env, true>) {}

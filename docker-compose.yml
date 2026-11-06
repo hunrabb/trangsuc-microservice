@@ -33,6 +33,14 @@ x-ready-healthcheck: &ready-healthcheck
     - -e
     - "fetch('http://127.0.0.1:3000/health/ready').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
 
+# Kiểm tra access token: mọi app NestJS. Chỉ mount thư mục public, read-only.
+x-jwt-env: &jwt-env
+  JWT_PUBLIC_KEYS_DIR: /run/secrets/jwt-public
+  JWT_ISSUER: ${JWT_ISSUER:?JWT_ISSUER chưa đặt trong .env}
+  JWT_AUDIENCE: ${JWT_AUDIENCE:?JWT_AUDIENCE chưa đặt trong .env}
+
+x-jwt-public-volume: &jwt-public-volume ./secrets/jwt/public:/run/secrets/jwt-public:ro
+
 x-static-healthcheck: &static-healthcheck
   test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:8080/']
   interval: 10s
@@ -177,9 +185,16 @@ services:
     image: jewelry/auth:dev
     restart: unless-stopped
     environment:
+      <<: *jwt-env
       NODE_ENV: production
       PORT: '3000'
+      JWT_PRIVATE_KEY_PATH: /run/secrets/jwt-private.pem
+      JWT_ACTIVE_KID: ${JWT_ACTIVE_KID:?JWT_ACTIVE_KID chưa đặt trong .env}
       DATABASE_URL: postgresql://auth_user:${AUTH_DB_PASSWORD:?AUTH_DB_PASSWORD chưa đặt trong .env}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB chưa đặt trong .env}?schema=auth
+    volumes:
+      - *jwt-public-volume
+      # Chỉ auth có private key, và chỉ đúng file đang dùng.
+      - ./secrets/jwt/private/${JWT_ACTIVE_KID:?JWT_ACTIVE_KID chưa đặt trong .env}.private.pem:/run/secrets/jwt-private.pem:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -199,9 +214,12 @@ services:
     image: jewelry/inventory:dev
     restart: unless-stopped
     environment:
+      <<: *jwt-env
       NODE_ENV: production
       PORT: '3000'
       DATABASE_URL: postgresql://inventory_user:${INVENTORY_DB_PASSWORD:?INVENTORY_DB_PASSWORD chưa đặt trong .env}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB chưa đặt trong .env}?schema=inventory
+    volumes:
+      - *jwt-public-volume
     depends_on:
       postgres:
         condition: service_healthy
@@ -221,9 +239,12 @@ services:
     image: jewelry/sales:dev
     restart: unless-stopped
     environment:
+      <<: *jwt-env
       NODE_ENV: production
       PORT: '3000'
       DATABASE_URL: postgresql://sales_user:${SALES_DB_PASSWORD:?SALES_DB_PASSWORD chưa đặt trong .env}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB chưa đặt trong .env}?schema=sales
+    volumes:
+      - *jwt-public-volume
     depends_on:
       postgres:
         condition: service_healthy
@@ -243,9 +264,12 @@ services:
     image: jewelry/report:dev
     restart: unless-stopped
     environment:
+      <<: *jwt-env
       NODE_ENV: production
       PORT: '3000'
       DATABASE_URL: postgresql://report_user:${REPORT_DB_PASSWORD:?REPORT_DB_PASSWORD chưa đặt trong .env}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB chưa đặt trong .env}?schema=report
+    volumes:
+      - *jwt-public-volume
     depends_on:
       postgres:
         condition: service_healthy
@@ -266,6 +290,7 @@ services:
     image: jewelry/gateway:dev
     restart: unless-stopped
     environment:
+      <<: *jwt-env
       NODE_ENV: production
       PORT: '3000'
       AUTH_URL: http://auth:3000
@@ -274,6 +299,8 @@ services:
       REPORT_URL: http://report:3000
     ports:
       - '${GATEWAY_PORT:-3000}:3000'
+    volumes:
+      - *jwt-public-volume
     depends_on:
       inventory:
         condition: service_healthy

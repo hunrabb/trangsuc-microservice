@@ -12,6 +12,7 @@
 **/.env
 **/.env.*
 secrets
+scripts
 docs
 infra
 docker-compose*.yml

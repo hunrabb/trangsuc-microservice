@@ -34,7 +34,10 @@ docker compose ps          # postgres, rabbitmq: healthy; rabbitmq-setup: exited
 for app in gateway auth inventory sales report; do cp apps/$app/.env.example apps/$app/.env; done
 #    → sửa DIEN_MAT_KHAU trong apps/{auth,inventory,sales,report}/.env
 
-# 3. Chạy tất cả ở chế độ watch (turbo dựng libs/ trước, sinh Prisma client, rồi chạy các app)
+# 3. Sinh khoá JWT (mọi app đều cần để khởi động)
+pnpm keys:generate
+
+# 4. Chạy tất cả ở chế độ watch (turbo dựng libs/ trước, sinh Prisma client, rồi chạy các app)
 pnpm dev
 ```
 
@@ -86,22 +89,36 @@ docker compose up -d --wait
 
 ### Gateway chuyển tiếp request
 
-Bảng định tuyến nằm ở [apps/gateway/src/proxy/routes.ts](apps/gateway/src/proxy/routes.ts). Khớp theo đoạn đường dẫn (`/api/pos` không khớp `/api/posx`) và phân biệt hoa thường. Không khớp → `404 NOT_FOUND`.
+Bảng định tuyến nằm ở [apps/gateway/src/proxy/routes.ts](apps/gateway/src/proxy/routes.ts). Khớp theo đoạn đường dẫn (`/api/pos` không khớp `/api/posx`) và phân biệt hoa thường. Không có trong bảng → `404 NOT_FOUND`.
 
-| Đường dẫn ở gateway      | Service     | Đường dẫn ở service | Quy tắc viết lại          |
-| ------------------------ | ----------- | ------------------- | ------------------------- |
-| `/api/pos/x`             | `sales`     | `/pos/x`            | bỏ `/api`                 |
-| `/api/shop/x`            | `sales`     | `/shop/x`           | bỏ `/api`                 |
-| `/api/online-orders/x`   | `sales`     | `/online-orders/x`  | bỏ `/api`                 |
-| `/api/admin/auth/x`      | `auth`      | `/x`                | bỏ `/api/admin/auth`      |
-| `/api/admin/inventory/x` | `inventory` | `/x`                | bỏ `/api/admin/inventory` |
-| `/api/admin/sales/x`     | `sales`     | `/x`                | bỏ `/api/admin/sales`     |
-| `/api/admin/reports/x`   | `report`    | `/x`                | bỏ `/api/admin/reports`   |
-| `/webhooks/bank`         | `sales`     | `/webhooks/bank`    | giữ nguyên                |
+| Đường ở gateway          | Service     | Đường ở service    | Cần đăng nhập |
+| ------------------------ | ----------- | ------------------ | ------------- |
+| `/api/auth/x`            | `auth`      | `/auth/x`          | Không         |
+| `/api/pos/x`             | `sales`     | `/pos/x`           | Có            |
+| `/api/online-orders/x`   | `sales`     | `/online-orders/x` | Có            |
+| `/api/shop/x`            | `sales`     | `/shop/x`          | Không         |
+| `/api/admin/auth/x`      | `auth`      | `/admin/x`         | Có            |
+| `/api/admin/inventory/x` | `inventory` | `/admin/x`         | Có            |
+| `/api/admin/sales/x`     | `sales`     | `/admin/x`         | Có            |
+| `/api/admin/reports/x`   | `report`    | `/admin/x`         | Có            |
+| `/webhooks/bank`         | `sales`     | `/webhooks/bank`   | Không         |
 
-- Query giữ nguyên. Đường sau khi viết lại bắt đầu bằng `/internal`, hoặc có `..`, `%2f`, `\`, `//` → `404`.
+- Query giữ nguyên. Phần sau tiền tố hoặc đường đã viết lại bắt đầu bằng `/internal`, `/health`, hoặc đường có `..`, `%2f`, `\`, `//` → `404`.
+- Đường cần đăng nhập: gateway kiểm tra token trước khi chuyển tiếp, sai thì trả `401` luôn; `Authorization` vẫn đi xuống và service kiểm tra lại.
 - Xoá header `x-user-*` và hop-by-hop; giữ các header khác (`Authorization`, `Content-Type`, `Cookie`...); gắn `x-correlation-id`.
 - Body đi nguyên byte, tối đa 1 MB (vượt → `413 PAYLOAD_TOO_LARGE`). Timeout 10 giây. Gateway không tự retry. Service không trả lời → `503 SERVICE_UNAVAILABLE`.
+
+### Khoá JWT
+
+```bash
+pnpm keys:generate        # tạo kid mặc định k1; đã có thì giữ nguyên
+pnpm keys:generate k2     # đổi khoá: thêm kid mới
+```
+
+- `secrets/jwt/private/<kid>.private.pem`: chỉ `auth` được mount, và chỉ đúng file của `JWT_ACTIVE_KID`.
+- `secrets/jwt/public/<kid>.public.pem`: gateway và 4 service mount cả thư mục, read-only. Hai thư mục tách riêng để mount public không thể kéo theo private.
+- Mọi service nạp `*.public.pem` lúc khởi động, `kid` là tên file; thêm khoá mới phải khởi động lại.
+- Container chạy bằng uid 1000: file private phải đọc được với uid đó, nếu không `auth` không bật.
 
 ### Kiểm tra nhanh sau khi lên
 

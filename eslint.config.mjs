@@ -88,6 +88,27 @@ export default defineConfig([
     rules: restrictCrossAppImports,
   },
 
+  // signTestToken ký được token bằng khoá test: code chạy thật không được phép đụng tới.
+  {
+    files: ['apps/**/*.{ts,tsx,mjs,js}', 'libs/**/*.{ts,tsx,mjs,js}'],
+    ignores: ['**/*.test.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          ...restrictCrossAppImports['no-restricted-imports'][1],
+          paths: [
+            ...restrictCrossAppImports['no-restricted-imports'][1].paths,
+            {
+              name: '@jewelry/test-utils',
+              message: '@jewelry/test-utils chỉ dùng trong file *.test.ts.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+
   // Nest dùng decorator + emitDecoratorMetadata nên cần import "giá trị" cho kiểu tham số constructor.
   {
     files: ['apps/**/*.ts'],

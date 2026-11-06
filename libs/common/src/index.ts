@@ -1,5 +1,10 @@
 export { ConfigService } from '@nestjs/config';
 
+export * from './auth/decorators';
+export * from './auth/jwt-auth.module';
+export * from './auth/jwt-verifier';
+export * from './auth/jwt.guard';
+export * from './auth/roles.guard';
 export * from './bootstrap/bootstrap-service';
 export * from './config/app-config.module';
 export * from './config/env-fields';

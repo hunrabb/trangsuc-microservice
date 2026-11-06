@@ -11,6 +11,9 @@ const valid = {
   INVENTORY_URL: 'http://inventory:3000',
   SALES_URL: 'http://sales:3000',
   REPORT_URL: 'http://report:3000',
+  JWT_PUBLIC_KEYS_DIR: '/run/secrets/jwt-public',
+  JWT_ISSUER: 'auth-service',
+  JWT_AUDIENCE: 'store-system',
 };
 
 describe('parseEnv (gateway)', () => {
@@ -30,6 +33,9 @@ describe('parseEnv (gateway)', () => {
       assert.deepEqual(result.problems.map((p) => p.variable).sort(), [
         'AUTH_URL',
         'INVENTORY_URL',
+        'JWT_AUDIENCE',
+        'JWT_ISSUER',
+        'JWT_PUBLIC_KEYS_DIR',
         'PORT',
         'REPORT_URL',
         'SALES_URL',

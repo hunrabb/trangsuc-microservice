@@ -8,6 +8,9 @@ const parseEnv = (raw: Record<string, unknown>) => parse(envSchema, raw);
 const valid = {
   PORT: '3000',
   DATABASE_URL: 'postgresql://inventory_user:s3cret@postgres:5432/jewelry?schema=inventory',
+  JWT_PUBLIC_KEYS_DIR: '/run/secrets/jwt-public',
+  JWT_ISSUER: 'auth-service',
+  JWT_AUDIENCE: 'store-system',
 };
 
 describe('parseEnv (inventory)', () => {
@@ -24,7 +27,13 @@ describe('parseEnv (inventory)', () => {
     const result = parseEnv({});
     assert.equal(result.ok, false);
     if (!result.ok) {
-      assert.deepEqual(result.problems.map((p) => p.variable).sort(), ['DATABASE_URL', 'PORT']);
+      assert.deepEqual(result.problems.map((p) => p.variable).sort(), [
+        'DATABASE_URL',
+        'JWT_AUDIENCE',
+        'JWT_ISSUER',
+        'JWT_PUBLIC_KEYS_DIR',
+        'PORT',
+      ]);
     }
   });
 

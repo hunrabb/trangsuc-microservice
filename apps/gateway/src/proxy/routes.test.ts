@@ -3,21 +3,22 @@ import { describe, it } from 'node:test';
 import { resolveRoute } from './routes.ts';
 
 describe('resolveRoute', () => {
-  const cases: [string, string, string][] = [
-    ['/api/pos/orders', 'sales', '/pos/orders'],
-    ['/api/shop/products?page=2&q=a%20b', 'sales', '/shop/products?page=2&q=a%20b'],
-    ['/api/online-orders/1', 'sales', '/online-orders/1'],
-    ['/api/admin/auth/login', 'auth', '/login'],
-    ['/api/admin/inventory/products/1', 'inventory', '/products/1'],
-    ['/api/admin/sales/orders', 'sales', '/orders'],
-    ['/api/admin/reports/daily', 'report', '/daily'],
-    ['/webhooks/bank', 'sales', '/webhooks/bank'],
-    ['/api/admin/reports', 'report', '/'],
-    ['/api/pos/orders/', 'sales', '/pos/orders/'],
+  const cases: [string, string, string, boolean][] = [
+    ['/api/auth/login', 'auth', '/auth/login', false],
+    ['/api/pos/orders', 'sales', '/pos/orders', true],
+    ['/api/online-orders/1', 'sales', '/online-orders/1', true],
+    ['/api/shop/products?page=2&q=a%20b', 'sales', '/shop/products?page=2&q=a%20b', false],
+    ['/api/admin/auth/users', 'auth', '/admin/users', true],
+    ['/api/admin/inventory/products/1', 'inventory', '/admin/products/1', true],
+    ['/api/admin/sales/pos/x', 'sales', '/admin/pos/x', true],
+    ['/api/admin/reports/daily', 'report', '/admin/daily', true],
+    ['/webhooks/bank', 'sales', '/webhooks/bank', false],
+    ['/api/admin/reports', 'report', '/admin', true],
+    ['/api/pos/orders/', 'sales', '/pos/orders/', true],
   ];
-  for (const [url, service, path] of cases) {
+  for (const [url, service, path, requiresAuth] of cases) {
     it(`${url} → ${service} ${path}`, () => {
-      assert.deepEqual(resolveRoute(url), { service, path });
+      assert.deepEqual(resolveRoute(url), { service, path, requiresAuth });
     });
   }
 
@@ -29,6 +30,7 @@ describe('resolveRoute', () => {
       '/api/admin/khac/x',
       '/webhooks/khac',
       '/webhooks/bankx',
+      '/webhooks/bank/x',
       '/API/pos/x',
       'http://evil/api/pos/x',
     ]) {
@@ -45,6 +47,18 @@ describe('resolveRoute', () => {
       '/api/admin/sales/internal/stock?x=1',
       '/api/admin/auth/Internal/x',
       '/api/admin/reports/internal/',
+    ]) {
+      assert.equal(resolveRoute(url), undefined, url);
+    }
+  });
+
+  it('không có đường nào tới /health/* của service', () => {
+    for (const url of [
+      '/api/admin/inventory/health/ready',
+      '/api/admin/inventory/health',
+      '/api/admin/sales/HEALTH/live',
+      '/api/admin/reports/%68ealth/ready',
+      '/api/admin/auth/health/',
     ]) {
       assert.equal(resolveRoute(url), undefined, url);
     }
