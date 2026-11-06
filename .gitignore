@@ -1,6 +1,7 @@
 # Thư viện và kết quả build
 node_modules/
 dist/
+test-build/
 .turbo/
 coverage/
 *.tsbuildinfo

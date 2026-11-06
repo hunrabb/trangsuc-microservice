@@ -1,6 +1,7 @@
 # Giữ context nhỏ và KHÔNG đưa bí mật vào image.
 **/node_modules
 **/dist
+**/test-build
 **/.turbo
 **/coverage
 **/src/generated

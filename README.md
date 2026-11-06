@@ -84,6 +84,25 @@ docker compose up -d --wait
 - **`COMPOSE_PARALLEL_LIMIT` và `docker compose --parallel N` không giới hạn được việc build** ở Compose 5.x. Đã đo với 5.6.1: ba service vẫn build cùng lúc (kể cả khi đặt `COMPOSE_BAKE=false`), nên đừng trông cậy vào chúng; vòng lặp ở trên mới thật sự tuần tự.
 - Các lần sau (đã có cache) chạy `docker compose up --build -d --wait` như bình thường là đủ.
 
+### Gateway chuyển tiếp request
+
+Bảng định tuyến nằm ở [apps/gateway/src/proxy/routes.ts](apps/gateway/src/proxy/routes.ts). Khớp theo đoạn đường dẫn (`/api/pos` không khớp `/api/posx`) và phân biệt hoa thường. Không khớp → `404 NOT_FOUND`.
+
+| Đường dẫn ở gateway      | Service     | Đường dẫn ở service | Quy tắc viết lại          |
+| ------------------------ | ----------- | ------------------- | ------------------------- |
+| `/api/pos/x`             | `sales`     | `/pos/x`            | bỏ `/api`                 |
+| `/api/shop/x`            | `sales`     | `/shop/x`           | bỏ `/api`                 |
+| `/api/online-orders/x`   | `sales`     | `/online-orders/x`  | bỏ `/api`                 |
+| `/api/admin/auth/x`      | `auth`      | `/x`                | bỏ `/api/admin/auth`      |
+| `/api/admin/inventory/x` | `inventory` | `/x`                | bỏ `/api/admin/inventory` |
+| `/api/admin/sales/x`     | `sales`     | `/x`                | bỏ `/api/admin/sales`     |
+| `/api/admin/reports/x`   | `report`    | `/x`                | bỏ `/api/admin/reports`   |
+| `/webhooks/bank`         | `sales`     | `/webhooks/bank`    | giữ nguyên                |
+
+- Query giữ nguyên. Đường sau khi viết lại bắt đầu bằng `/internal`, hoặc có `..`, `%2f`, `\`, `//` → `404`.
+- Xoá header `x-user-*` và hop-by-hop; giữ các header khác (`Authorization`, `Content-Type`, `Cookie`...); gắn `x-correlation-id`.
+- Body đi nguyên byte, tối đa 1 MB (vượt → `413 PAYLOAD_TOO_LARGE`). Timeout 10 giây. Gateway không tự retry. Service không trả lời → `503 SERVICE_UNAVAILABLE`.
+
 ### Kiểm tra nhanh sau khi lên
 
 ```bash

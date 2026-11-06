@@ -58,6 +58,7 @@ export default defineConfig([
   globalIgnores([
     '**/node_modules/**',
     '**/dist/**',
+    '**/test-build/**',
     '**/.turbo/**',
     '**/coverage/**',
     'apps/*/src/generated/**',

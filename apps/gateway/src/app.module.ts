@@ -2,6 +2,7 @@ import { AppConfigModule, AppLoggerModule, CorrelationModule, HealthModule } fro
 import { Module } from '@nestjs/common';
 import { envSchema, SERVICE_NAME } from './config/env';
 import { PingController } from './ping/ping.controller';
+import { ProxyController } from './proxy/proxy.controller';
 
 @Module({
   imports: [
@@ -10,6 +11,7 @@ import { PingController } from './ping/ping.controller';
     AppLoggerModule.forRoot(SERVICE_NAME),
     HealthModule.forRoot(),
   ],
-  controllers: [PingController],
+  // Thứ tự có ý nghĩa: ProxyController bắt mọi /api/*, phải đứng sau.
+  controllers: [PingController, ProxyController],
 })
 export class AppModule {}

@@ -18,5 +18,8 @@
     "dev": "tsc -p tsconfig.json --watch --preserveWatchOutput",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint ."
+  },
+  "dependencies": {
+    "zod": "^4.6.7"
   }
 }

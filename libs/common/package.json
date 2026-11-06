@@ -18,9 +18,10 @@
     "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
     "typecheck": "tsc -p tsconfig.json",
     "lint": "eslint .",
-    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test \"src/**/*.test.ts\""
+    "test": "tsc -p tsconfig.test.json && node --test \"test-build/**/*.test.js\""
   },
   "dependencies": {
+    "@jewelry/contracts": "workspace:*",
     "@nestjs/common": "^12.3.3",
     "@nestjs/config": "^12.1.0",
     "@nestjs/core": "^12.3.3",

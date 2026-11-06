@@ -1,20 +1,21 @@
-import type { INestApplication, Type } from '@nestjs/common';
+import type { Type } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { Logger } from 'nestjs-pino';
+import { GlobalExceptionFilter } from '../errors/global-exception.filter';
 
 export interface BootstrapOptions {
   service: string;
   module: Type<unknown>;
-  /** Việc riêng của app, chạy trước khi nhận request (ví dụ middleware chặn đường nội bộ). */
-  configure?: (app: INestApplication) => void;
+  /** `false`: app tự đọc body thô (gateway chuyển tiếp nguyên byte). */
+  bodyParser?: boolean;
 }
 
-async function start({ module, configure }: BootstrapOptions): Promise<void> {
-  const app = await NestFactory.create(module, { bufferLogs: true });
+async function start({ module, bodyParser = true }: BootstrapOptions): Promise<void> {
+  const app = await NestFactory.create(module, { bufferLogs: true, bodyParser });
   app.useLogger(app.get(Logger));
+  app.useGlobalFilters(new GlobalExceptionFilter());
   app.enableShutdownHooks();
-  configure?.(app);
 
   const port = app.get(ConfigService).getOrThrow<number>('PORT');
   await app.listen(port, '0.0.0.0');

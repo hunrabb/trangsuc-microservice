@@ -5,7 +5,13 @@ import { envSchema } from './env.ts';
 
 const parseEnv = (raw: Record<string, unknown>) => parse(envSchema, raw);
 
-const valid = { PORT: '3000', INVENTORY_URL: 'http://inventory:3000' };
+const valid = {
+  PORT: '3000',
+  AUTH_URL: 'http://auth:3000',
+  INVENTORY_URL: 'http://inventory:3000',
+  SALES_URL: 'http://sales:3000',
+  REPORT_URL: 'http://report:3000',
+};
 
 describe('parseEnv (gateway)', () => {
   it('chấp nhận cấu hình hợp lệ và đổi PORT sang số', () => {
@@ -21,7 +27,13 @@ describe('parseEnv (gateway)', () => {
     const result = parseEnv({});
     assert.equal(result.ok, false);
     if (!result.ok) {
-      assert.deepEqual(result.problems.map((p) => p.variable).sort(), ['INVENTORY_URL', 'PORT']);
+      assert.deepEqual(result.problems.map((p) => p.variable).sort(), [
+        'AUTH_URL',
+        'INVENTORY_URL',
+        'PORT',
+        'REPORT_URL',
+        'SALES_URL',
+      ]);
     }
   });
 

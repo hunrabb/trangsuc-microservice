@@ -418,6 +418,9 @@ importers:
 
   libs/common:
     dependencies:
+      '@jewelry/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       '@nestjs/common':
         specifier: ^12.3.3
         version: 12.3.3(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -452,7 +455,11 @@ importers:
         specifier: ^4.6.7
         version: 4.6.7
 
-  libs/contracts: {}
+  libs/contracts:
+    dependencies:
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
 
   tests/integration:
     devDependencies:
@@ -462,6 +469,9 @@ importers:
       '@jewelry/inventory':
         specifier: workspace:*
         version: link:../../apps/inventory
+      '@jewelry/sales':
+        specifier: workspace:*
+        version: link:../../apps/sales
 
 packages:
 

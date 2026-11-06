@@ -1,7 +1,12 @@
-import { Controller, Get, Inject, Logger, ServiceUnavailableException } from '@nestjs/common';
+import { Controller, Get, Inject, Logger, Res } from '@nestjs/common';
 import { type ReadinessCheck, runReadinessChecks } from './readiness';
 
 export const READINESS_CHECKS = Symbol('READINESS_CHECKS');
+
+interface ReadyResponse {
+  status: 'ok' | 'error';
+  checks: Record<string, string>;
+}
 
 @Controller('health')
 export class HealthController {
@@ -14,15 +19,20 @@ export class HealthController {
     return { status: 'ok' };
   }
 
-  /** Chi tiết lỗi chỉ ghi log, phản hồi chỉ nói kiểm tra nào hỏng. */
+  /**
+   * Chi tiết lỗi chỉ ghi log, phản hồi chỉ nói kiểm tra nào hỏng.
+   * Đặt status trực tiếp thay vì ném lỗi: body của /health/* không theo định dạng lỗi chung.
+   */
   @Get('ready')
-  async ready(): Promise<{ status: 'ok'; checks: Record<string, string> }> {
+  async ready(
+    @Res({ passthrough: true }) response: { status(code: number): unknown },
+  ): Promise<ReadyResponse> {
     const report = await runReadinessChecks(this.checks, (name, error) => {
       this.logger.warn(`Kiểm tra sẵn sàng "${name}" thất bại: ${String(error)}`);
     });
     if (!report.ready) {
-      throw new ServiceUnavailableException({ status: 'error', checks: report.checks });
+      response.status(503);
     }
-    return { status: 'ok', checks: report.checks };
+    return { status: report.ready ? 'ok' : 'error', checks: report.checks };
   }
 }

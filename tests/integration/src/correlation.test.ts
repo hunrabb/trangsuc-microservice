@@ -2,85 +2,17 @@
 // devDependencies `workspace:*` khiến turbo build hai app này trước. Không cần Postgres:
 // /api/ping không chạm DB và Prisma chỉ kết nối khi có truy vấn đầu tiên.
 import assert from 'node:assert/strict';
-import { type ChildProcess, spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { createServer } from 'node:net';
-import { resolve } from 'node:path';
 import { after, before, describe, it } from 'node:test';
+import {
+  freePort,
+  type RunningService,
+  startService,
+  waitForLogs,
+  waitUntilLive,
+} from './support.ts';
 
-const REPO_ROOT = resolve(import.meta.dirname, '../../..');
-const STARTUP_TIMEOUT_MS = 15_000;
 const UUID_PATTERN = /^[0-9a-f-]{36}$/;
-
-interface LogLine {
-  service?: string;
-  correlationId?: string | null;
-  msg?: string;
-}
-
-interface RunningService {
-  child: ChildProcess;
-  logs: LogLine[];
-}
-
-function freePort(): Promise<number> {
-  return new Promise((done, fail) => {
-    const server = createServer();
-    server.once('error', fail);
-    server.listen(0, '127.0.0.1', () => {
-      const address = server.address();
-      const port = typeof address === 'object' && address ? address.port : 0;
-      server.close(() => done(port));
-    });
-  });
-}
-
-function startService(app: string, env: Record<string, string>): RunningService {
-  const child = spawn(process.execPath, [resolve(REPO_ROOT, `apps/${app}/dist/main.js`)], {
-    cwd: import.meta.dirname,
-    env: { PATH: process.env.PATH, NODE_ENV: 'test', ...env },
-    stdio: ['ignore', 'pipe', 'inherit'],
-  });
-  const logs: LogLine[] = [];
-  let buffer = '';
-  child.stdout?.on('data', (chunk: Buffer) => {
-    buffer += chunk.toString();
-    const lines = buffer.split('\n');
-    buffer = lines.pop() ?? '';
-    for (const line of lines) {
-      if (line.trim() !== '') {
-        logs.push(JSON.parse(line) as LogLine);
-      }
-    }
-  });
-  return { child, logs };
-}
-
-async function waitUntilLive(port: number): Promise<void> {
-  const deadline = Date.now() + STARTUP_TIMEOUT_MS;
-  while (Date.now() < deadline) {
-    try {
-      const response = await fetch(`http://127.0.0.1:${port}/health/live`);
-      if (response.ok) {
-        return;
-      }
-    } catch {
-      // chưa mở cổng
-    }
-    await new Promise((done) => setTimeout(done, 100));
-  }
-  throw new Error(`Service ở cổng ${port} không lên trong ${STARTUP_TIMEOUT_MS} ms`);
-}
-
-/** Dòng "request completed" được ghi sau khi phản hồi đã đi, nên phải chờ. */
-async function waitForLogs(service: RunningService, correlationId: string): Promise<LogLine[]> {
-  const deadline = Date.now() + 2000;
-  const matching = () => service.logs.filter((line) => line.correlationId === correlationId);
-  while (Date.now() < deadline && matching().length === 0) {
-    await new Promise((done) => setTimeout(done, 20));
-  }
-  return matching();
-}
 
 describe('correlationId đi xuyên gateway → inventory', () => {
   let gateway: RunningService;
@@ -96,7 +28,10 @@ describe('correlationId đi xuyên gateway → inventory', () => {
     });
     gateway = startService('gateway', {
       PORT: String(gatewayPort),
+      AUTH_URL: 'http://127.0.0.1:1',
       INVENTORY_URL: `http://127.0.0.1:${inventoryPort}`,
+      SALES_URL: 'http://127.0.0.1:1',
+      REPORT_URL: 'http://127.0.0.1:1',
     });
     await Promise.all([waitUntilLive(inventoryPort), waitUntilLive(gatewayPort)]);
   });

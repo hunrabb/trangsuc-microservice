@@ -268,7 +268,10 @@ services:
     environment:
       NODE_ENV: production
       PORT: '3000'
+      AUTH_URL: http://auth:3000
       INVENTORY_URL: http://inventory:3000
+      SALES_URL: http://sales:3000
+      REPORT_URL: http://report:3000
     ports:
       - '${GATEWAY_PORT:-3000}:3000'
     depends_on:
