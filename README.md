@@ -63,6 +63,7 @@ docker compose up --build
 
 - Mọi container `healthy`; `rabbitmq-setup` và 4 container `*-migrate` thoát với mã 0 (đúng thiết kế).
 - Mỗi container `*-migrate` chạy [infra/migrate/wait-for-postgres.mjs](infra/migrate/wait-for-postgres.mjs) trước `prisma migrate deploy`: chờ Postgres thật sự nhận kết nối (không chỉ mở cổng TCP; Postgres đang phục hồi vẫn bị coi là chưa sẵn sàng), tối đa ~60 giây, nghỉ tăng dần 0,5 → 5 giây. Quá hạn thì thoát mã **75** và log nêu lý do của lần thử cuối, **không** chạy migrate. Chỉ việc chờ được thử lại; migration lỗi thì thoát ngay, không thử lại.
+- Script này tới image qua build context riêng `migrate-scripts` (`additional_contexts` trong `docker-compose.yml`), còn `infra` bị `.dockerignore` loại khỏi context chính: sửa script chỉ build lại bước cuối của `*-migrate`, không đụng tầng `COPY . .`. Build tay đích `migrate` thì thêm `--build-context migrate-scripts=infra/migrate`.
 - Gateway: <http://localhost:3000> (hoặc `GATEWAY_PORT`) · Backoffice: <http://localhost:8080> · Storefront: <http://localhost:8081>.
 - Hai app frontend là file tĩnh phục vụ bởi nginx; nginx cũng chuyển `/api/*` về gateway (cùng origin, không cần CORS). Mọi đường `/internal/*` trả **404** (không rơi vào trang SPA).
 - **Chỉ** gateway, backoffice, storefront có `ports` trong `docker-compose.yml`. Chạy như production (không mở Postgres/RabbitMQ ra 127.0.0.1): `docker compose -f docker-compose.yml up --build`.

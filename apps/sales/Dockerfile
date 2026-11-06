@@ -1,5 +1,6 @@
 # syntax=docker/dockerfile:1
 # Build từ THƯ MỤC GỐC repo:   docker build -f apps/sales/Dockerfile .
+# Build riêng đích migrate:     docker build -f apps/sales/Dockerfile --target migrate --build-context migrate-scripts=infra/migrate .
 # Hai đích (target):
 #   migrate  → chờ Postgres nhận kết nối (tối đa ~60 s), chạy `prisma migrate deploy` rồi thoát (container sales-migrate)
 #   runtime  → chạy dịch vụ (đích mặc định, là tầng cuối cùng)
@@ -43,7 +44,9 @@ FROM runtime-base AS migrate
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=build --chown=node:node /out/migrate ./
-COPY --chown=node:node infra/migrate/wait-for-postgres.mjs ./wait-for-postgres.mjs
+# Lấy từ build context riêng `migrate-scripts` (= infra/migrate, khai báo trong docker-compose.yml): `infra` bị .dockerignore
+# loại khỏi context chính, nên sửa script không làm build lại tầng `COPY . .` của mọi image.
+COPY --from=migrate-scripts --chown=node:node wait-for-postgres.mjs ./wait-for-postgres.mjs
 USER node
 # 1) Thiếu DATABASE_URL → dừng ngay, nói rõ tên biến. 2) Chờ Postgres nhận kết nối (tối đa ~60 s; quá hạn thoát mã 75, không chạy migrate).
 # 3) Chạy migrate; migration lỗi thì thoát luôn, KHÔNG thử lại (xem infra/migrate/wait-for-postgres.mjs).

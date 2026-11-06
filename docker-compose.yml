@@ -118,6 +118,8 @@ services:
       context: .
       dockerfile: apps/auth/Dockerfile
       target: migrate
+      additional_contexts:
+        migrate-scripts: ./infra/migrate
     image: jewelry/auth-migrate:dev
     environment:
       DATABASE_URL: postgresql://auth_user:${AUTH_DB_PASSWORD:?AUTH_DB_PASSWORD chưa đặt trong .env}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB chưa đặt trong .env}?schema=auth
@@ -128,6 +130,8 @@ services:
       context: .
       dockerfile: apps/inventory/Dockerfile
       target: migrate
+      additional_contexts:
+        migrate-scripts: ./infra/migrate
     image: jewelry/inventory-migrate:dev
     environment:
       DATABASE_URL: postgresql://inventory_user:${INVENTORY_DB_PASSWORD:?INVENTORY_DB_PASSWORD chưa đặt trong .env}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB chưa đặt trong .env}?schema=inventory
@@ -138,6 +142,8 @@ services:
       context: .
       dockerfile: apps/sales/Dockerfile
       target: migrate
+      additional_contexts:
+        migrate-scripts: ./infra/migrate
     image: jewelry/sales-migrate:dev
     environment:
       DATABASE_URL: postgresql://sales_user:${SALES_DB_PASSWORD:?SALES_DB_PASSWORD chưa đặt trong .env}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB chưa đặt trong .env}?schema=sales
@@ -148,6 +154,8 @@ services:
       context: .
       dockerfile: apps/report/Dockerfile
       target: migrate
+      additional_contexts:
+        migrate-scripts: ./infra/migrate
     image: jewelry/report-migrate:dev
     environment:
       DATABASE_URL: postgresql://report_user:${REPORT_DB_PASSWORD:?REPORT_DB_PASSWORD chưa đặt trong .env}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB chưa đặt trong .env}?schema=report

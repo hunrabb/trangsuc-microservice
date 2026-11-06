@@ -12,8 +12,6 @@
 **/.env.*
 secrets
 docs
-# Chỉ infra/migrate (script chờ Postgres của container *-migrate) được đưa vào image.
-infra/*
-!infra/migrate
+infra
 docker-compose*.yml
 *.md
