@@ -86,12 +86,26 @@ jobs:
             exit 1
           fi
 
+      # CHỈ docker-compose.yml (`-f`): không nạp docker-compose.override.yml (cấu hình dev, mở Postgres/RabbitMQ ra
+      # 127.0.0.1), để thử đúng cấu hình production. Mọi lệnh compose trong job này đều có `-f docker-compose.yml`.
       # --wait: chờ mọi service chạy lâu `healthy`; lỗi nếu có container thoát khác 0 (kể cả *-migrate, rabbitmq-setup).
-      - name: Khởi động hệ thống
-        run: docker compose up -d --build --wait
+      - name: Khởi động hệ thống (chỉ docker-compose.yml, không có override)
+        run: docker compose -f docker-compose.yml up -d --build --wait
 
       - name: Trạng thái container
-        run: docker compose ps -a
+        run: docker compose -f docker-compose.yml ps -a
+
+      # Bằng chứng trong log rằng override KHÔNG được nạp: chỉ 3 service này có cổng ra máy chủ; Postgres (5432)
+      # và RabbitMQ (5672, 15672) không được mở. Nạp override thì bước này thất bại.
+      - name: Chỉ gateway, backoffice, storefront mở cổng ra máy chủ
+        run: |
+          published=$(docker compose -f docker-compose.yml ps --format json \
+            | jq -rs 'flatten | map(select(any(.Publishers[]?; .PublishedPort > 0))) | map(.Service) | sort | join(",")')
+          echo "Service có cổng mở ra máy chủ: ${published}"
+          if [ "${published}" != "backoffice,gateway,storefront" ]; then
+            echo "::error::Mong đợi đúng backoffice,gateway,storefront. Có thể docker-compose.override.yml đã bị nạp."
+            exit 1
+          fi
 
       - name: Gateway → inventory qua /api/ping
         run: |
@@ -107,9 +121,9 @@ jobs:
       - name: Log của mọi container (khi thất bại)
         if: failure()
         run: |
-          docker compose ps -a
-          docker compose logs --no-color --timestamps
+          docker compose -f docker-compose.yml ps -a
+          docker compose -f docker-compose.yml logs --no-color --timestamps
 
       - name: Dọn dẹp
         if: always()
-        run: docker compose down -v
+        run: docker compose -f docker-compose.yml down -v
