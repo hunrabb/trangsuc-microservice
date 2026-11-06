@@ -26,6 +26,7 @@
     "@nestjs/config": "^12.1.0",
     "@nestjs/core": "^12.3.3",
     "@nestjs/platform-express": "^12.3.3",
+    "jose": "6.2.15",
     "nestjs-cls": "^7.0.2",
     "nestjs-pino": "^5.3.1",
     "pino": "^10.4.0",

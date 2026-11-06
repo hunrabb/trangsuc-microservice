@@ -120,6 +120,23 @@ pnpm keys:generate k2     # đổi khoá: thêm kid mới
 - Mọi service nạp `*.public.pem` lúc khởi động, `kid` là tên file; thêm khoá mới phải khởi động lại.
 - Container chạy bằng uid 1000: file private phải đọc được với uid đó, nếu không `auth` không bật.
 
+### Khoá JWT trên server thật
+
+- Private key thuộc uid 1000 (user `node` trong container), quyền `600`, và chỉ mount vào `auth`:
+
+  ```bash
+  sudo chown 1000:1000 secrets/jwt/private/<kid>.private.pem
+  sudo chmod 600 secrets/jwt/private/<kid>.private.pem
+  ```
+
+- Không dùng `chmod 644` như CI: khoá trong CI dùng một lần, khoá thật thì không.
+- Đổi khoá, theo đúng thứ tự:
+  1. Thêm khoá mới: `pnpm keys:generate k2`, đặt quyền file private như trên.
+  2. Restart gateway và các service để chúng nạp public key mới. Lúc này mọi service tin cả hai khoá, `auth` vẫn ký bằng khoá cũ.
+  3. Đổi `JWT_ACTIVE_KID=k2` rồi restart `auth`: token mới được ký bằng khoá mới.
+  4. Sau 15 phút (hạn của access token) gỡ khoá cũ khỏi `public/` và `private/`, rồi restart các service.
+- Bỏ qua bước 2 thì token ký bằng khoá mới sẽ bị từ chối cho tới khi các service restart.
+
 ### Kiểm tra nhanh sau khi lên
 
 ```bash

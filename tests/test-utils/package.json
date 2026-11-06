@@ -17,5 +17,8 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint ."
+  },
+  "dependencies": {
+    "jose": "6.2.15"
   }
 }

@@ -89,7 +89,7 @@ describe('gateway kiểm tra token trước khi chuyển tiếp', () => {
 
   it('token hợp lệ: tới inventory, đường đã viết lại', async () => {
     const id = randomUUID();
-    const response = await call('/api/admin/inventory/thu', id, `Bearer ${token()}`);
+    const response = await call('/api/admin/inventory/thu', id, `Bearer ${await token()}`);
 
     assert.equal(response.status, 404);
     const logged = (await waitForLogs(inventory, id)) as LoggedRequest[];
@@ -98,7 +98,7 @@ describe('gateway kiểm tra token trước khi chuyển tiếp', () => {
 
   it('token hết hạn: 401 TOKEN_EXPIRED, không chuyển tiếp', async () => {
     const exp = Math.floor(Date.now() / 1000) - 3600;
-    await expectRejected(`Bearer ${token({ exp })}`, 401, 'TOKEN_EXPIRED');
+    await expectRejected(`Bearer ${await token({ exp })}`, 401, 'TOKEN_EXPIRED');
   });
 
   it('alg: none, HS256 ký bằng public key, khoá lạ: 401, không chuyển tiếp', async () => {
@@ -106,8 +106,8 @@ describe('gateway kiểm tra token trước khi chuyển tiếp', () => {
     const forged = [
       signNoneToken(testKeys.kid),
       signHs256WithPublicKey(testKeys.publicPem, testKeys.kid),
-      signTestToken(stranger.privateKey, { kid: testKeys.kid }),
-      signTestToken(testKeys.privateKey, { kid: 'la' }),
+      await signTestToken(stranger.privateKey, { kid: testKeys.kid }),
+      await signTestToken(testKeys.privateKey, { kid: 'la' }),
     ];
     for (const value of forged) {
       await expectRejected(`Bearer ${value}`, 401, 'INVALID_TOKEN');
@@ -115,7 +115,7 @@ describe('gateway kiểm tra token trước khi chuyển tiếp', () => {
   });
 
   it('/api/admin/inventory/health/ready: 404, kể cả có token, không tới inventory', async () => {
-    for (const authorization of [undefined, `Bearer ${token()}`]) {
+    for (const authorization of [undefined, `Bearer ${await token()}`]) {
       const id = randomUUID();
       const response = await call('/api/admin/inventory/health/ready', id, authorization);
       assert.equal(response.status, 404);
@@ -127,7 +127,7 @@ describe('gateway kiểm tra token trước khi chuyển tiếp', () => {
 
   it('/api/admin/sales/pos/x tới sales ở /admin/pos/x, không phải /pos/x', async () => {
     const id = randomUUID();
-    await call('/api/admin/sales/pos/x', id, `Bearer ${token()}`);
+    await call('/api/admin/sales/pos/x', id, `Bearer ${await token()}`);
     const logged = (await waitForLogs(sales, id)) as LoggedRequest[];
     assert.ok(logged.some((line) => line.req?.url === '/admin/pos/x'));
     assert.ok(!logged.some((line) => line.req?.url === '/pos/x'));

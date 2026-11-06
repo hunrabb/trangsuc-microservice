@@ -433,6 +433,9 @@ importers:
       '@nestjs/platform-express':
         specifier: ^12.3.3
         version: 12.3.3(@nestjs/common@12.3.3(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@12.3.3)
+      jose:
+        specifier: 6.2.15
+        version: 6.2.15
       nestjs-cls:
         specifier: ^7.0.2
         version: 7.0.2(@nestjs/common@12.3.3(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@12.3.3)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -480,7 +483,11 @@ importers:
         specifier: workspace:*
         version: link:../test-utils
 
-  tests/test-utils: {}
+  tests/test-utils:
+    dependencies:
+      jose:
+        specifier: 6.2.15
+        version: 6.2.15
 
 packages:
 
@@ -1911,6 +1918,9 @@ packages:
   jiti@2.7.0:
     resolution: {integrity: sha512-AC/7JofJvZGrrneWNaEnJeOLUx+JlGt7tNa0wZiRPT4MY1wmfKjt2+6O2p2uz2+skll8OZZmJMNqeke7kKbNgQ==}
     hasBin: true
+
+  jose@6.2.15:
+    resolution: {integrity: sha512-qdF6ewcZARtef63fJ9AKKZPgxw+t7USH6HLXYcD4CrdmSvDp79rpJSPFEKc90QBeGS63u1KQtN2MZQHC0yDIzA==}
 
   json-schema-traverse@0.4.1:
     resolution: {integrity: sha512-xbbCH5dCYU5T8LcEhhuh7HJ88HXuW3qsI3Y0zOZFKfZEHcpWiHU/Jxzk629Brsab/mMiHQti9wMP+845RPe3Vg==}
@@ -4102,6 +4112,8 @@ snapshots:
   iterare@1.2.1: {}
 
   jiti@2.7.0: {}
+
+  jose@6.2.15: {}
 
   json-schema-traverse@0.4.1: {}
 

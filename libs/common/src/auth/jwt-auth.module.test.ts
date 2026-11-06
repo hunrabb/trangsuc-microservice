@@ -90,13 +90,13 @@ describe('JwtAuthModule qua HTTP thật', () => {
 
   it('@CurrentUser() nhận đúng user trong token', async () => {
     const sub = randomUUID();
-    const response = await get('/can-dang-nhap', tokenFor(manager, sub));
+    const response = await get('/can-dang-nhap', await tokenFor(manager, sub));
     assert.deepEqual(await response.json(), { id: sub });
   });
 
   it('@Roles: đúng chi nhánh qua, sai chi nhánh 403 FORBIDDEN', async () => {
-    assert.equal((await get(`/chi-nhanh/${BRANCH_A}`, tokenFor(manager))).status, 200);
-    const denied = await get(`/chi-nhanh/${BRANCH_B}`, tokenFor(manager));
+    assert.equal((await get(`/chi-nhanh/${BRANCH_A}`, await tokenFor(manager))).status, 200);
+    const denied = await get(`/chi-nhanh/${BRANCH_B}`, await tokenFor(manager));
     assert.equal(denied.status, 403);
     assert.equal(((await denied.json()) as { code: string }).code, 'FORBIDDEN');
   });
@@ -106,7 +106,7 @@ describe('JwtAuthModule qua HTTP thật', () => {
   });
 
   it('ADMIN qua mọi chi nhánh', async () => {
-    const admin = tokenFor([{ branchId: null, role: 'ADMIN' }]);
+    const admin = await tokenFor([{ branchId: null, role: 'ADMIN' }]);
     assert.equal((await get(`/chi-nhanh/${BRANCH_B}`, admin)).status, 200);
   });
 });

@@ -25,7 +25,8 @@ interface Seen {
   size: number;
 }
 
-const bearer = () => `Bearer ${signTestToken(testKeys.privateKey, { kid: testKeys.kid })}`;
+const bearer = async () =>
+  `Bearer ${await signTestToken(testKeys.privateKey, { kid: testKeys.kid })}`;
 
 type LoggedRequest = LogLine & { req?: { headers?: Record<string, string> } };
 
@@ -99,7 +100,7 @@ describe('gateway chuyển tiếp request', () => {
   it('gateway → sales: 404 NOT_FOUND định dạng chung, correlationId khớp header và body', async () => {
     const id = randomUUID();
     const response = await fetch(`${gatewayUrl}/api/pos/khong-ton-tai`, {
-      headers: { 'x-correlation-id': id, authorization: bearer() },
+      headers: { 'x-correlation-id': id, authorization: await bearer() },
     });
     const body = await expectErrorBody(response, 404, 'NOT_FOUND');
 
@@ -113,7 +114,7 @@ describe('gateway chuyển tiếp request', () => {
     await fetch(`${gatewayUrl}/api/pos/thu`, {
       headers: {
         'x-correlation-id': id,
-        authorization: bearer(),
+        authorization: await bearer(),
         'x-user-role': 'ADMIN',
         'x-user-id': '1',
         'x-khac': 'co',
@@ -149,7 +150,7 @@ describe('gateway chuyển tiếp request', () => {
     for (const path of paths) {
       await expectErrorBody(await fetch(`${gatewayUrl}${path}`), 404, 'NOT_FOUND');
       const withToken = await fetch(`${gatewayUrl}${path}`, {
-        headers: { authorization: bearer() },
+        headers: { authorization: await bearer() },
       });
       await expectErrorBody(withToken, 404, 'NOT_FOUND');
     }
@@ -158,7 +159,7 @@ describe('gateway chuyển tiếp request', () => {
 
   it('body nhị phân đi nguyên byte, query được giữ, Authorization được giữ', async () => {
     const payload = randomBytes(64 * 1024);
-    const token = bearer();
+    const token = await bearer();
     const response = await fetch(`${gatewayUrl}/api/admin/inventory/products?a=1&b=x%20y`, {
       method: 'POST',
       headers: { authorization: token, 'content-type': 'application/octet-stream' },
@@ -203,7 +204,7 @@ describe('gateway chuyển tiếp request', () => {
 
   it('service không kết nối được: 503 SERVICE_UNAVAILABLE', async () => {
     const response = await fetch(`${gatewayUrl}/api/admin/reports/daily`, {
-      headers: { authorization: bearer() },
+      headers: { authorization: await bearer() },
     });
     await expectErrorBody(response, 503, 'SERVICE_UNAVAILABLE');
   });
@@ -245,7 +246,7 @@ describe('gateway chuyển tiếp request', () => {
       headers: {
         'content-type': 'application/json',
         'x-correlation-id': id,
-        authorization: bearer(),
+        authorization: await bearer(),
       },
       body: '{hong',
     });

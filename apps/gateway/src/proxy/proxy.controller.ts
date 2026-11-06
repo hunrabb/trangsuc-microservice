@@ -45,7 +45,7 @@ export class ProxyController {
       throw new BusinessError('NOT_FOUND', `Cannot ${req.method} ${req.originalUrl}`, 404);
     }
     if (route.requiresAuth) {
-      this.jwtGuard.authenticate(req);
+      await this.jwtGuard.authenticate(req);
     }
     const body = await this.readRequestBody(req, res);
 

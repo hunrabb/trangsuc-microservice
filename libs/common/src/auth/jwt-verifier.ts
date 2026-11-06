@@ -1,7 +1,8 @@
-import { createPublicKey, type KeyObject, verify } from 'node:crypto';
+import { createPublicKey, type KeyObject } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { accessTokenClaimsSchema, type BranchRole } from '@jewelry/contracts';
+import { errors, type JWTPayload, jwtVerify } from 'jose';
 import { BusinessError } from '../errors/business-error';
 
 const PUBLIC_KEY_SUFFIX = '.public.pem';
@@ -9,7 +10,6 @@ const MIN_RSA_BITS = 2048;
 /** Độ lệch đồng hồ tối đa giữa các service (docs/thiet-ke.md). */
 export const CLOCK_SKEW_SECONDS = 30;
 const MAX_TOKEN_LENGTH = 8192;
-const SEGMENT = /^[A-Za-z0-9_-]+$/;
 
 export interface AuthUser {
   id: string;
@@ -47,72 +47,48 @@ export function loadPublicKeys(dir: string): Map<string, KeyObject> {
 
 const invalid = () => new BusinessError('INVALID_TOKEN', 'Token không hợp lệ', 401);
 
-function decodeJson(segment: string): Record<string, unknown> {
-  let value: unknown;
-  try {
-    value = JSON.parse(Buffer.from(segment, 'base64url').toString('utf8'));
-  } catch {
-    throw invalid();
-  }
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    throw invalid();
-  }
-  return value as Record<string, unknown>;
-}
-
-function matchesAudience(aud: unknown, audience: string): boolean {
-  return Array.isArray(aud) ? aud.includes(audience) : aud === audience;
-}
-
 /**
- * Kiểm tra access token, trả về user; sai → `401`. Thứ tự có ý nghĩa: chữ ký được kiểm trước mọi claim,
- * nên chỉ token thật do auth ký mới có thể nhận `TOKEN_EXPIRED`.
- *
- * Thuật toán cố định là RS256: `alg` trong header chỉ được so khớp đúng chuỗi đó và không bao giờ
- * quyết định cách kiểm chữ ký, nên `none` hay `HS256` ký bằng public key không có đường đi.
+ * Kiểm tra chữ ký và claim chuẩn bằng `jose`. `algorithms` cố định RS256; `exp` phải khai báo bắt buộc
+ * vì `jwtVerify` mặc định coi nó là tuỳ chọn. Chữ ký được kiểm trước mọi claim, nên chỉ token thật do
+ * auth ký mới có thể nhận `TOKEN_EXPIRED`.
  */
-export function verifyAccessToken(token: string, options: JwtVerification): AuthUser {
-  const parts = token.split('.');
-  if (
-    token.length > MAX_TOKEN_LENGTH ||
-    parts.length !== 3 ||
-    !parts.every((part) => SEGMENT.test(part))
-  ) {
-    throw invalid();
-  }
-  const [headerPart, payloadPart, signaturePart] = parts as [string, string, string];
-
-  const header = decodeJson(headerPart);
-  // `crit` đòi hiểu phần mở rộng mà bên kiểm tra không hỗ trợ: RFC 7515 bắt buộc từ chối.
-  if (header.alg !== 'RS256' || typeof header.kid !== 'string' || 'crit' in header) {
-    throw invalid();
-  }
-  const key = options.keys.get(header.kid);
-  if (key === undefined) {
-    throw invalid();
-  }
-  const signed = Buffer.from(`${headerPart}.${payloadPart}`);
-  if (!verify('sha256', signed, key, Buffer.from(signaturePart, 'base64url'))) {
-    throw invalid();
-  }
-
-  const payload = decodeJson(payloadPart);
-  if (payload.iss !== options.issuer || !matchesAudience(payload.aud, options.audience)) {
-    throw invalid();
-  }
-  const now = Date.now() / 1000;
-  if (typeof payload.exp !== 'number' || !Number.isFinite(payload.exp)) {
-    throw invalid();
-  }
-  if (payload.nbf !== undefined) {
-    if (typeof payload.nbf !== 'number' || payload.nbf > now + CLOCK_SKEW_SECONDS) {
-      throw invalid();
+async function verifySignedPayload(token: string, options: JwtVerification): Promise<JWTPayload> {
+  try {
+    const { payload } = await jwtVerify(
+      token,
+      ({ kid }) => {
+        const key = kid === undefined ? undefined : options.keys.get(kid);
+        if (key === undefined) {
+          throw invalid();
+        }
+        return key;
+      },
+      {
+        algorithms: ['RS256'],
+        issuer: options.issuer,
+        audience: options.audience,
+        clockTolerance: CLOCK_SKEW_SECONDS,
+        requiredClaims: ['exp'],
+      },
+    );
+    return payload;
+  } catch (error) {
+    if (error instanceof errors.JWTExpired) {
+      throw new BusinessError('TOKEN_EXPIRED', 'Token đã hết hạn', 401);
     }
+    throw invalid();
   }
-  if (now > payload.exp + CLOCK_SKEW_SECONDS) {
-    throw new BusinessError('TOKEN_EXPIRED', 'Token đã hết hạn', 401);
-  }
+}
 
+/** Kiểm tra access token, trả về user; sai → `401`. Claims nghiệp vụ được kiểm sau chữ ký. */
+export async function verifyAccessToken(
+  token: string,
+  options: JwtVerification,
+): Promise<AuthUser> {
+  if (token.length > MAX_TOKEN_LENGTH) {
+    throw invalid();
+  }
+  const payload = await verifySignedPayload(token, options);
   const claims = accessTokenClaimsSchema.safeParse(payload);
   if (!claims.success) {
     throw invalid();

@@ -1,5 +1,7 @@
 # Thiết kế hệ thống quản lý chuỗi cửa hàng
 
+> Tài liệu này trong repo là nguồn sự thật; mọi thay đổi thiết kế ghi vào đây.
+
 Nov 4, 2026 · @khai
 
 ## 1. Tổng quan & kiến trúc
@@ -59,13 +61,29 @@ Chỉ có 3 vai trò cố định (enum), gán theo chi nhánh; không có bản
 | Dạng | JWT ký RS256 | Chuỗi ngẫu nhiên 64 byte, không phải JWT |
 | Nội dung | `sub` (userId), `branches[{branchId, role}]`, `iss`, `aud`, `iat`, `exp`; header có `kid` | Không chứa gì |
 | Hạn | 15 phút | Hạn trượt 7 ngày (gia hạn mỗi lần refresh), hạn tuyệt đối 30 ngày tính từ `sessionStartedAt` |
-| Client lưu | Biến trong bộ nhớ React | Cookie `httpOnly; Secure; SameSite=Strict; Path=/auth/refresh` |
+| Client lưu | Biến trong bộ nhớ React | Cookie `httpOnly; Secure; SameSite=Strict; Path=/api/auth/refresh` |
 | Server lưu | Không lưu | Bản băm SHA-256 trong `auth.RefreshToken` |
 | Ai kiểm tra | Gateway và mọi service, bằng public key, không gọi DB | Chỉ auth-service, tra DB |
 
-**Khoá:** chỉ auth-service giữ `private.pem` để ký; gateway và các service khác chỉ được mount `public.pem`. Đổi khoá bằng `kid`: ký bằng khoá mới, các service giữ cả public key cũ và mới trong 15 phút.
+**Khoá:** mỗi cặp khoá RSA 2048 có một `kid`, sinh bằng `pnpm keys:generate [kid]`. Private key ở `secrets/jwt/private/<kid>.private.pem`: chỉ auth-service được mount, và chỉ đúng file của `JWT_ACTIVE_KID` (đường dẫn trong `JWT_PRIVATE_KEY_PATH`). Public key ở `secrets/jwt/public/<kid>.public.pem`: gateway và mọi service mount cả thư mục, read-only, qua `JWT_PUBLIC_KEYS_DIR`. Hai thư mục tách riêng để mount thư mục public không thể kéo theo private key. Mỗi service nạp mọi `*.public.pem` lúc khởi động, `kid` là tên file; thiếu khoá, gặp private key trong thư mục public hoặc RSA dưới 2048 bit → service không bật. Đổi khoá bằng `kid`: thêm khoá mới → restart các service → đổi `JWT_ACTIVE_KID` để ký bằng khoá mới → sau 15 phút gỡ khoá cũ.
 
-**Kiểm tra access token (gateway + mọi service):** ép `algorithms: ['RS256']`, chọn public key theo `kid`, kiểm tra chữ ký, `exp` (lệch tối đa 30 giây), `iss = auth-service`, `aud = store-system`. Hết hạn → `401 TOKEN_EXPIRED`; sai → `401 INVALID_TOKEN`. Gateway xoá mọi header `x-user-*` từ client và chuyển nguyên `Authorization` xuống service.
+**Kiểm tra access token (gateway + mọi service):** dùng thư viện `jose`, ép `algorithms: ['RS256']`, chọn public key theo `kid` (`kid` thiếu hoặc lạ → từ chối), kiểm tra chữ ký trước, rồi `exp` (bắt buộc, lệch tối đa 30 giây), `nbf`, `iss`, `aud` (`JWT_ISSUER = auth-service`, `JWT_AUDIENCE = store-system`), rồi claims `sub`, `branches` bằng zod (`accessTokenClaimsSchema`). Hết hạn → `401 TOKEN_EXPIRED`; sai → `401 INVALID_TOKEN`. Gateway xoá mọi header `x-user-*` từ client và chuyển nguyên `Authorization` xuống service; service kiểm tra lại token (lớp bảo vệ thứ hai). Mọi endpoint mặc định cần đăng nhập, ngoại lệ đánh dấu `@Public()`.
+
+**Định tuyến ở gateway** (`apps/gateway/src/proxy/routes.ts`):
+
+| Đường ở gateway | Service | Đường ở service | Cần đăng nhập |
+| --- | --- | --- | --- |
+| `/api/auth/*` | auth | `/auth/*` | Không (login, refresh, logout) |
+| `/api/pos/*` | sales | `/pos/*` | Có |
+| `/api/online-orders/*` | sales | `/online-orders/*` | Có |
+| `/api/shop/*` | sales | `/shop/*` | Không (website khách) |
+| `/api/admin/auth/*` | auth | `/admin/*` | Có |
+| `/api/admin/inventory/*` | inventory | `/admin/*` | Có |
+| `/api/admin/sales/*` | sales | `/admin/*` | Có |
+| `/api/admin/reports/*` | report | `/admin/*` | Có |
+| `/webhooks/bank` | sales | `/webhooks/bank` | Không (kiểm chữ ký ở giai đoạn 6) |
+
+Đường không có trong bảng → `404 NOT_FOUND`. `/internal/*` và `/health/*` của service không bao giờ được gateway chuyển tiếp. Đường cần đăng nhập: gateway kiểm tra token trước, sai thì trả lỗi luôn, không chuyển tiếp.
 
 **Refresh:** băm cookie → tìm trong `RefreshToken` → kiểm tra tồn tại, chưa thu hồi, còn hạn trượt và hạn tuyệt đối, user `ACTIVE` → đọc lại vai trò mới nhất → thu hồi token cũ và phát token mới (xoay vòng) trong một transaction. Token đã thu hồi mà bị dùng lại → thu hồi mọi phiên của user đó.
 

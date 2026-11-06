@@ -61,32 +61,35 @@ describe('JwtGuard', () => {
     guard = new JwtGuard(new Reflector(), verification);
   });
 
-  const check = (token: string) => {
+  const check = async (token: string) => {
     const request = { headers: { authorization: `Bearer ${token}` } } as {
       headers: { authorization: string };
       user?: AuthUser;
     };
-    guard.canActivate(contextFor(request));
+    await guard.canActivate(contextFor(request));
     return request.user;
   };
   const now = () => Math.floor(Date.now() / 1000);
 
-  it('token đúng: gắn req.user = { id, branches }', () => {
+  it('token đúng: gắn req.user = { id, branches }', async () => {
     const sub = randomUUID();
     const branches = [{ branchId: BRANCH_A, role: 'MANAGER' }];
-    assert.deepEqual(check(signTestToken(keys.privateKey, { claims: { sub, branches } })), {
-      id: sub,
-      branches,
-    });
+    assert.deepEqual(
+      await check(await signTestToken(keys.privateKey, { claims: { sub, branches } })),
+      {
+        id: sub,
+        branches,
+      },
+    );
   });
 
-  it('sai chữ ký: ký bằng khoá khác', () => {
+  it('sai chữ ký: ký bằng khoá khác', async () => {
     const other = createTestKeys();
-    assert.throws(() => check(signTestToken(other.privateKey)), isInvalid);
+    await assert.rejects(check(await signTestToken(other.privateKey)), isInvalid);
   });
 
-  it('sai chữ ký: sửa payload sau khi ký', () => {
-    const [header, , signature] = signTestToken(keys.privateKey).split('.');
+  it('sai chữ ký: sửa payload sau khi ký', async () => {
+    const [header, , signature] = (await signTestToken(keys.privateKey)).split('.');
     const forged = Buffer.from(
       JSON.stringify({
         sub: randomUUID(),
@@ -96,52 +99,67 @@ describe('JwtGuard', () => {
         exp: now() + 900,
       }),
     ).toString('base64url');
-    assert.throws(() => check(`${header}.${forged}.${signature}`), isInvalid);
+    await assert.rejects(check(`${header}.${forged}.${signature}`), isInvalid);
   });
 
-  it('hết hạn quá 30 giây: TOKEN_EXPIRED', () => {
-    const token = signTestToken(keys.privateKey, { claims: { exp: now() - 31 } });
-    assert.throws(() => check(token), isExpired);
+  it('hết hạn quá 30 giây: TOKEN_EXPIRED', async () => {
+    const token = await signTestToken(keys.privateKey, { claims: { exp: now() - 31 } });
+    await assert.rejects(check(token), isExpired);
   });
 
-  it('hết hạn trong 30 giây cho phép lệch: vẫn nhận', () => {
-    assert.ok(check(signTestToken(keys.privateKey, { claims: { exp: now() - 25 } })));
+  it('hết hạn trong 30 giây cho phép lệch: vẫn nhận', async () => {
+    assert.ok(await check(await signTestToken(keys.privateKey, { claims: { exp: now() - 25 } })));
   });
 
-  it('token giả đã hết hạn không được báo TOKEN_EXPIRED', () => {
+  it('token giả đã hết hạn không được báo TOKEN_EXPIRED', async () => {
     const other = createTestKeys();
-    const token = signTestToken(other.privateKey, { claims: { exp: now() - 3600 } });
-    assert.throws(() => check(token), isInvalid);
+    const token = await signTestToken(other.privateKey, { claims: { exp: now() - 3600 } });
+    await assert.rejects(check(token), isInvalid);
   });
 
-  it('alg: none', () => {
-    assert.throws(() => check(signNoneToken()), isInvalid);
-    assert.throws(() => check(`${signNoneToken()}gia`), isInvalid);
+  it('alg: none', async () => {
+    await assert.rejects(check(signNoneToken()), isInvalid);
+    await assert.rejects(check(`${signNoneToken()}gia`), isInvalid);
   });
 
-  it('alg: HS256 ký bằng public key', () => {
-    assert.throws(() => check(signHs256WithPublicKey(keys.publicPem)), isInvalid);
+  it('alg: HS256 ký bằng public key', async () => {
+    await assert.rejects(check(signHs256WithPublicKey(keys.publicPem)), isInvalid);
   });
 
-  it('kid lạ, không có kid, kid trùng thuộc tính có sẵn', () => {
-    for (const kid of ['la', null, '__proto__', 'constructor']) {
-      assert.throws(() => check(signTestToken(keys.privateKey, { kid })), isInvalid, String(kid));
+  it('ký đúng khoá nhưng thuật toán khác RS256: từ chối', async () => {
+    for (const alg of ['RS384', 'RS512', 'PS256'] as const) {
+      await assert.rejects(check(await signTestToken(keys.privateKey, { alg })), isInvalid, alg);
     }
   });
 
-  it('sai iss, sai aud', () => {
-    const wrongIss = signTestToken(keys.privateKey, { claims: { iss: 'khac' } });
-    const wrongAud = signTestToken(keys.privateKey, { claims: { aud: 'khac' } });
-    assert.throws(() => check(wrongIss), isInvalid);
-    assert.throws(() => check(wrongAud), isInvalid);
+  it('crit có phần mở rộng không hiểu: từ chối dù chữ ký đúng', async () => {
+    const token = await signTestToken(keys.privateKey, { unknownCrit: true });
+    await assert.rejects(check(token), isInvalid);
   });
 
-  it('aud dạng mảng có chứa audience thì nhận', () => {
+  it('kid lạ, không có kid, kid trùng thuộc tính có sẵn', async () => {
+    for (const kid of ['la', null, '__proto__', 'constructor']) {
+      await assert.rejects(
+        check(await signTestToken(keys.privateKey, { kid })),
+        isInvalid,
+        String(kid),
+      );
+    }
+  });
+
+  it('sai iss, sai aud', async () => {
+    const wrongIss = await signTestToken(keys.privateKey, { claims: { iss: 'khac' } });
+    const wrongAud = await signTestToken(keys.privateKey, { claims: { aud: 'khac' } });
+    await assert.rejects(check(wrongIss), isInvalid);
+    await assert.rejects(check(wrongAud), isInvalid);
+  });
+
+  it('aud dạng mảng có chứa audience thì nhận', async () => {
     const claims = { aud: ['khac', TEST_AUDIENCE] };
-    assert.ok(check(signTestToken(keys.privateKey, { claims })));
+    assert.ok(await check(await signTestToken(keys.privateKey, { claims })));
   });
 
-  it('thiếu exp, nbf trong tương lai, sub sai dạng, branches sai', () => {
+  it('thiếu exp, nbf trong tương lai, sub sai dạng, branches sai', async () => {
     const bad = [
       { exp: undefined },
       { nbf: now() + 120 },
@@ -152,27 +170,27 @@ describe('JwtGuard', () => {
       { branches: [{ branchId: BRANCH_A, role: 'VUA' }] },
     ];
     for (const claims of bad) {
-      const token = signTestToken(keys.privateKey, { claims: claims as never });
-      assert.throws(() => check(token), isInvalid, JSON.stringify(claims));
+      const token = await signTestToken(keys.privateKey, { claims: claims as never });
+      await assert.rejects(check(token), isInvalid, JSON.stringify(claims));
     }
   });
 
-  it('không có header, sai scheme, chuỗi rác', () => {
+  it('không có header, sai scheme, chuỗi rác', async () => {
     const noHeader = contextFor({ headers: {} });
-    assert.throws(() => guard.canActivate(noHeader), isInvalid);
+    await assert.rejects(guard.canActivate(noHeader), isInvalid);
     const basic = contextFor({ headers: { authorization: 'Basic abc' } });
-    assert.throws(() => guard.canActivate(basic), isInvalid);
+    await assert.rejects(guard.canActivate(basic), isInvalid);
     for (const token of ['a.b', 'a.b.c', 'a.b.c.d', '!!.!!.!!', 'x'.repeat(9000)]) {
-      assert.throws(() => check(token), isInvalid);
+      await assert.rejects(check(token), isInvalid);
     }
   });
 
-  it('@Public() bỏ qua kiểm tra', () => {
+  it('@Public() bỏ qua kiểm tra', async () => {
     const context = contextFor({ headers: {} }, { [IS_PUBLIC_KEY]: true });
-    assert.equal(guard.canActivate(context), true);
+    assert.equal(await guard.canActivate(context), true);
   });
 
-  it('hỗ trợ nhiều khoá cùng lúc khi đổi khoá', () => {
+  it('hỗ trợ nhiều khoá cùng lúc khi đổi khoá', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'jewelry-jwt-'));
     const oldKey = createTestKeys('cu');
     const newKey = createTestKeys('moi');

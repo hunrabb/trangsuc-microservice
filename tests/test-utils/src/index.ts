@@ -1,9 +1,10 @@
 // CHỈ dùng trong test. Package này chỉ nằm ở devDependencies nên không có trong bản `deploy --prod`,
 // và ESLint cấm import nó từ code chạy thật (xem eslint.config.mjs).
-import { createHmac, generateKeyPairSync, type KeyObject, randomUUID, sign } from 'node:crypto';
+import { createHmac, generateKeyPairSync, type KeyObject, randomUUID } from 'node:crypto';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { SignJWT } from 'jose';
 
 export const TEST_ISSUER = 'test-issuer';
 export const TEST_AUDIENCE = 'test-audience';
@@ -54,14 +55,24 @@ export interface SignOptions {
   /** `null` = không đặt `kid` trong header. */
   kid?: string | null;
   claims?: TestClaims;
+  /** Mặc định RS256. Đổi để thử token ký đúng khoá nhưng sai thuật toán. */
+  alg?: 'RS256' | 'RS384' | 'RS512' | 'PS256';
+  /** Thêm phần mở rộng `crit` mà bên kiểm tra không hiểu. */
+  unknownCrit?: boolean;
 }
 
 /** Ký token RS256 như auth-service sẽ ký (cùng header + claims theo docs/thiet-ke.md). */
-export function signTestToken(privateKey: KeyObject, options: SignOptions = {}): string {
+export function signTestToken(privateKey: KeyObject, options: SignOptions = {}): Promise<string> {
   const kid = options.kid === undefined ? TEST_KID : options.kid;
-  const header = { alg: 'RS256', typ: 'JWT', ...(kid === null ? {} : { kid }) };
-  const data = `${encode(header)}.${encode({ ...defaultClaims(), ...options.claims })}`;
-  return `${data}.${sign('sha256', Buffer.from(data), privateKey).toString('base64url')}`;
+  const header = {
+    alg: options.alg ?? 'RS256',
+    typ: 'JWT',
+    ...(kid === null ? {} : { kid }),
+    ...(options.unknownCrit ? { crit: ['x-la'], 'x-la': true } : {}),
+  };
+  return new SignJWT({ ...defaultClaims(), ...options.claims })
+    .setProtectedHeader(header)
+    .sign(privateKey, options.unknownCrit ? { crit: { 'x-la': true } } : undefined);
 }
 
 /** Token không có chữ ký, `alg: none`. */
