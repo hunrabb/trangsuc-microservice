@@ -22,6 +22,11 @@ import {
 import { errorResponseSchema } from './error-response';
 import {
   addReceiptLineRequestSchema,
+  createStockCountRequestSchema,
+  itemLabelSchema,
+  scanResultSchema,
+  scanStockCountRequestSchema,
+  stockCountSummarySchema,
   approveReceiptRequestSchema,
   categorySchema,
   createCategoryRequestSchema,
@@ -118,6 +123,11 @@ const INVENTORY_OPENAPI_SCHEMAS = {
   Item: itemSchema,
   ItemPage: itemPageSchema,
   ItemWithPrice: itemWithPriceSchema,
+  CreateStockCountRequest: createStockCountRequestSchema,
+  ScanStockCountRequest: scanStockCountRequestSchema,
+  ScanResult: scanResultSchema,
+  StockCountSummary: stockCountSummarySchema,
+  ItemLabel: itemLabelSchema,
 };
 
 export const inventoryOpenApiSchemas = (): Record<string, unknown> =>
