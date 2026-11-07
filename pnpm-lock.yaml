@@ -534,6 +534,12 @@ importers:
         specifier: workspace:*
         version: link:../test-utils
 
+  tests/inventory:
+    devDependencies:
+      '@jewelry/inventory':
+        specifier: workspace:*
+        version: link:../../apps/inventory
+
   tests/messaging:
     devDependencies:
       '@jewelry/common':

@@ -28,6 +28,10 @@
     "test:auth": {
       "dependsOn": ["^build", "db:generate"],
       "cache": false
+    },
+    "test:inventory": {
+      "dependsOn": ["^build", "db:generate"],
+      "cache": false
     }
   }
 }

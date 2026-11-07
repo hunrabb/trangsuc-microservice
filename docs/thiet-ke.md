@@ -166,6 +166,8 @@ Tổng cộng 8 module; mỗi module dưới đây liệt kê chức năng cho p
 
 ### 3.3 Sản phẩm (inventory-service)
 
+> **Quyết định 3A (thay phần quản lý theo số lượng bên dưới ở giai đoạn này):** chỉ vàng (nhiều tuổi) và bạc; mọi món theo tem, mỗi chiếc một `JewelryItem` (`IN_STOCK`, `RESERVED`, `SOLD`), tồn kho = số chiếc `IN_STOCK`. Giá = trọng lượng (chỉ) × giá bán ra hiện tại của kim loại + tiền công, làm tròn tới 1.000 đồng; giá hiện tại = dòng `MetalPrice` có `effectiveFrom` mới nhất `<= now()`, chưa có → `METAL_PRICE_NOT_SET`. Phiếu nhập: nháp → duyệt (MANAGER, ADMIN) trong một transaction tạo hàng, `StockMovement`, `AuditLog`; hai người duyệt cùng lúc chỉ một bên thắng nhờ UPDATE có điều kiện `version` + `status`. Kho tạo khi nhận `branch.created`. Chi tiết luồng: `apps/inventory/README.md`.
+
 - Danh mục dạng cây, thương hiệu, đơn vị tính.
 - Sản phẩm có nhiều biến thể (màu, size…); mỗi biến thể là một SKU có mã vạch riêng.
 - Giá bán mặc định + giá riêng theo chi nhánh; lịch sử thay đổi giá.

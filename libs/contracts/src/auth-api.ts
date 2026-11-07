@@ -49,7 +49,7 @@ export const paginationQuerySchema = z.object({
   pageSize: z.coerce.number().int().positive().max(PAGE_SIZE_MAX).default(PAGE_SIZE_DEFAULT),
 });
 
-const pageOf = <Item extends z.ZodType>(item: Item) =>
+export const pageOf = <Item extends z.ZodType>(item: Item) =>
   z.object({
     items: z.array(item),
     total: z.number().int().nonnegative().describe('Tổng số dòng khớp, không chỉ trang này'),

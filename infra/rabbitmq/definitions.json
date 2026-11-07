@@ -335,6 +335,14 @@
       "destination_type": "queue",
       "routing_key": "system.test",
       "arguments": {}
+    },
+    {
+      "source": "domain.events",
+      "vhost": "/",
+      "destination": "sales.events",
+      "destination_type": "queue",
+      "routing_key": "metal_price.changed",
+      "arguments": {}
     }
   ]
 }

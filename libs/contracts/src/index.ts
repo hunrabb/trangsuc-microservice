@@ -3,5 +3,6 @@ export * from './auth';
 export * from './error-codes';
 export * from './error-response';
 export * from './events';
+export * from './inventory-api';
 export * from './openapi';
 export * from './topology';

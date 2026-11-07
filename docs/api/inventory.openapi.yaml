@@ -1,0 +1,2093 @@
+openapi: 3.1.0
+info:
+  title: Inventory API
+  version: 1.0.0
+  description: 'API của inventory-service cho nhân viên. Mọi đường viết theo **đường ở gateway**.
+
+
+    - `x-roles`: vai trò được gọi.
+
+    - `x-audience`: `aud` access token phải có.
+
+    - Mọi lỗi theo `ErrorResponse`; `x-error-codes` liệt kê mã có thể trả.
+
+    - Tiền (đồng) và trọng lượng (chỉ) là chuỗi số thập phân.
+
+    - Thay đổi có `version` dùng khoá lạc quan: lệch → `409 VERSION_CONFLICT`.
+
+    - `components/schemas` sinh từ zod trong `libs/contracts` bằng `pnpm openapi:generate`, không sửa tay. Riêng
+    `paths` viết tay.'
+tags:
+- name: Kim loại và giá
+- name: Danh mục và sản phẩm
+- name: Phiếu nhập
+- name: Tồn kho
+paths:
+  /api/admin/inventory/metals:
+    get:
+      operationId: listMetals
+      tags:
+      - Kim loại và giá
+      summary: Danh sách kim loại
+      x-roles:
+      - ADMIN
+      - MANAGER
+      - STAFF
+      x-audience: store-backoffice
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Danh sách
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Metal'
+        '401':
+          description: 'Chưa xác thực: INVALID_TOKEN, TOKEN_EXPIRED'
+          x-error-codes:
+          - INVALID_TOKEN
+          - TOKEN_EXPIRED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      operationId: createMetal
+      tags:
+      - Kim loại và giá
+      summary: Tạo kim loại
+      description: '`code` trùng → `400 VALIDATION_FAILED`, `details.fields` nêu trường.'
+      x-roles:
+      - ADMIN
+      x-audience: store-backoffice
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMetalRequest'
+      responses:
+        '201':
+          description: Đã tạo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Metal'
+        '400':
+          description: 'Dữ liệu không hợp lệ: VALIDATION_FAILED'
+          x-error-codes:
+          - VALIDATION_FAILED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 'Chưa xác thực: INVALID_TOKEN, TOKEN_EXPIRED'
+          x-error-codes:
+          - INVALID_TOKEN
+          - TOKEN_EXPIRED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: 'Không có quyền: FORBIDDEN'
+          x-error-codes:
+          - FORBIDDEN
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 'Xung đột: INVALID_STATE'
+          x-error-codes:
+          - INVALID_STATE
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/admin/inventory/metals/{metalId}/price:
+    parameters:
+    - name: metalId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      operationId: getCurrentMetalPrice
+      tags:
+      - Kim loại và giá
+      summary: Giá hiện tại của kim loại
+      description: Chưa có giá nào có hiệu lực → `409 METAL_PRICE_NOT_SET`.
+      x-roles:
+      - ADMIN
+      - MANAGER
+      - STAFF
+      x-audience: store-backoffice
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Dòng có `effectiveFrom` mới nhất không quá thời điểm hiện tại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetalPrice'
+        '401':
+          description: 'Chưa xác thực: INVALID_TOKEN, TOKEN_EXPIRED'
+          x-error-codes:
+          - INVALID_TOKEN
+          - TOKEN_EXPIRED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 'Không tìm thấy: NOT_FOUND'
+          x-error-codes:
+          - NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 'Xung đột: METAL_PRICE_NOT_SET'
+          x-error-codes:
+          - METAL_PRICE_NOT_SET
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/admin/inventory/metals/{metalId}/prices:
+    parameters:
+    - name: metalId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      operationId: listMetalPrices
+      tags:
+      - Kim loại và giá
+      summary: Lịch sử giá kim loại
+      x-roles:
+      - ADMIN
+      - MANAGER
+      - STAFF
+      x-audience: store-backoffice
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: pageSize
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      responses:
+        '200':
+          description: Một trang, mới nhất trước
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetalPricePage'
+        '400':
+          description: 'Dữ liệu không hợp lệ: VALIDATION_FAILED'
+          x-error-codes:
+          - VALIDATION_FAILED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 'Chưa xác thực: INVALID_TOKEN, TOKEN_EXPIRED'
+          x-error-codes:
+          - INVALID_TOKEN
+          - TOKEN_EXPIRED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 'Không tìm thấy: NOT_FOUND'
+          x-error-codes:
+          - NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      operationId: createMetalPrice
+      tags:
+      - Kim loại và giá
+      summary: Nhập giá mới
+      description: Chỉ ghi thêm, không sửa giá cũ. Giá tính bằng đồng / chỉ. Ghi `AuditLog` và outbox cùng transaction.
+      x-roles:
+      - ADMIN
+      x-audience: store-backoffice
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMetalPriceRequest'
+      responses:
+        '201':
+          description: Đã ghi, phát `metal_price.changed`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetalPrice'
+        '400':
+          description: 'Dữ liệu không hợp lệ: VALIDATION_FAILED'
+          x-error-codes:
+          - VALIDATION_FAILED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 'Chưa xác thực: INVALID_TOKEN, TOKEN_EXPIRED'
+          x-error-codes:
+          - INVALID_TOKEN
+          - TOKEN_EXPIRED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: 'Không có quyền: FORBIDDEN'
+          x-error-codes:
+          - FORBIDDEN
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 'Không tìm thấy: NOT_FOUND'
+          x-error-codes:
+          - NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/admin/inventory/categories:
+    get:
+      operationId: listCategories
+      tags:
+      - Danh mục và sản phẩm
+      summary: Danh sách danh mục
+      x-roles:
+      - ADMIN
+      - MANAGER
+      - STAFF
+      x-audience: store-backoffice
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Danh sách
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+        '401':
+          description: 'Chưa xác thực: INVALID_TOKEN, TOKEN_EXPIRED'
+          x-error-codes:
+          - INVALID_TOKEN
+          - TOKEN_EXPIRED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      operationId: createCategory
+      tags:
+      - Danh mục và sản phẩm
+      summary: Tạo danh mục
+      x-roles:
+      - ADMIN
+      x-audience: store-backoffice
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCategoryRequest'
+      responses:
+        '201':
+          description: Đã tạo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '400':
+          description: 'Dữ liệu không hợp lệ: VALIDATION_FAILED'
+          x-error-codes:
+          - VALIDATION_FAILED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 'Chưa xác thực: INVALID_TOKEN, TOKEN_EXPIRED'
+          x-error-codes:
+          - INVALID_TOKEN
+          - TOKEN_EXPIRED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: 'Không có quyền: FORBIDDEN'
+          x-error-codes:
+          - FORBIDDEN
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/admin/inventory/categories/{categoryId}:
+    parameters:
+    - name: categoryId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    patch:
+      operationId: updateCategory
+      tags:
+      - Danh mục và sản phẩm
+      summary: Sửa danh mục
+      x-roles:
+      - ADMIN
+      x-audience: store-backoffice
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCategoryRequest'
+      responses:
+        '200':
+          description: Đã sửa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '400':
+          description: 'Dữ liệu không hợp lệ: VALIDATION_FAILED'
+          x-error-codes:
+          - VALIDATION_FAILED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 'Chưa xác thực: INVALID_TOKEN, TOKEN_EXPIRED'
+          x-error-codes:
+          - INVALID_TOKEN
+          - TOKEN_EXPIRED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: 'Không có quyền: FORBIDDEN'
+          x-error-codes:
+          - FORBIDDEN
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 'Không tìm thấy: NOT_FOUND'
+          x-error-codes:
+          - NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 'Xung đột: VERSION_CONFLICT'
+          x-error-codes:
+          - VERSION_CONFLICT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/admin/inventory/products:
+    get:
+      operationId: listProducts
+      tags:
+      - Danh mục và sản phẩm
+      summary: Danh sách mẫu
+      x-roles:
+      - ADMIN
+      - MANAGER
+      - STAFF
+      x-audience: store-backoffice
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: pageSize
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      - name: categoryId
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Một trang
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductPage'
+        '400':
+          description: 'Dữ liệu không hợp lệ: VALIDATION_FAILED'
+          x-error-codes:
+          - VALIDATION_FAILED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 'Chưa xác thực: INVALID_TOKEN, TOKEN_EXPIRED'
+          x-error-codes:
+          - INVALID_TOKEN
+          - TOKEN_EXPIRED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      operationId: createProduct
+      tags:
+      - Danh mục và sản phẩm
+      summary: Tạo mẫu
+      x-roles:
+      - ADMIN
+      x-audience: store-backoffice
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProductRequest'
+      responses:
+        '201':
+          description: Đã tạo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          description: 'Dữ liệu không hợp lệ: VALIDATION_FAILED'
+          x-error-codes:
+          - VALIDATION_FAILED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 'Chưa xác thực: INVALID_TOKEN, TOKEN_EXPIRED'
+          x-error-codes:
+          - INVALID_TOKEN
+          - TOKEN_EXPIRED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: 'Không có quyền: FORBIDDEN'
+          x-error-codes:
+          - FORBIDDEN
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/admin/inventory/products/{productId}:
+    parameters:
+    - name: productId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    patch:
+      operationId: updateProduct
+      tags:
+      - Danh mục và sản phẩm
+      summary: Sửa mẫu
+      x-roles:
+      - ADMIN
+      x-audience: store-backoffice
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProductRequest'
+      responses:
+        '200':
+          description: Đã sửa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          description: 'Dữ liệu không hợp lệ: VALIDATION_FAILED'
+          x-error-codes:
+          - VALIDATION_FAILED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 'Chưa xác thực: INVALID_TOKEN, TOKEN_EXPIRED'
+          x-error-codes:
+          - INVALID_TOKEN
+          - TOKEN_EXPIRED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: 'Không có quyền: FORBIDDEN'
+          x-error-codes:
+          - FORBIDDEN
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 'Không tìm thấy: NOT_FOUND'
+          x-error-codes:
+          - NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 'Xung đột: VERSION_CONFLICT'
+          x-error-codes:
+          - VERSION_CONFLICT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/admin/inventory/variants:
+    get:
+      operationId: listVariants
+      tags:
+      - Danh mục và sản phẩm
+      summary: Danh sách biến thể
+      x-roles:
+      - ADMIN
+      - MANAGER
+      - STAFF
+      x-audience: store-backoffice
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: pageSize
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      - name: productId
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Một trang
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VariantPage'
+        '400':
+          description: 'Dữ liệu không hợp lệ: VALIDATION_FAILED'
+          x-error-codes:
+          - VALIDATION_FAILED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 'Chưa xác thực: INVALID_TOKEN, TOKEN_EXPIRED'
+          x-error-codes:
+          - INVALID_TOKEN
+          - TOKEN_EXPIRED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      operationId: createVariant
+      tags:
+      - Danh mục và sản phẩm
+      summary: Tạo biến thể
+      description: '`sku` trùng, mẫu hoặc kim loại không tồn tại → `400 VALIDATION_FAILED`.'
+      x-roles:
+      - ADMIN
+      x-audience: store-backoffice
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateVariantRequest'
+      responses:
+        '201':
+          description: Đã tạo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Variant'
+        '400':
+          description: 'Dữ liệu không hợp lệ: VALIDATION_FAILED'
+          x-error-codes:
+          - VALIDATION_FAILED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 'Chưa xác thực: INVALID_TOKEN, TOKEN_EXPIRED'
+          x-error-codes:
+          - INVALID_TOKEN
+          - TOKEN_EXPIRED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: 'Không có quyền: FORBIDDEN'
+          x-error-codes:
+          - FORBIDDEN
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/admin/inventory/variants/{variantId}:
+    parameters:
+    - name: variantId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    patch:
+      operationId: updateVariant
+      tags:
+      - Danh mục và sản phẩm
+      summary: Sửa biến thể
+      x-roles:
+      - ADMIN
+      x-audience: store-backoffice
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateVariantRequest'
+      responses:
+        '200':
+          description: Đã sửa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Variant'
+        '400':
+          description: 'Dữ liệu không hợp lệ: VALIDATION_FAILED'
+          x-error-codes:
+          - VALIDATION_FAILED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 'Chưa xác thực: INVALID_TOKEN, TOKEN_EXPIRED'
+          x-error-codes:
+          - INVALID_TOKEN
+          - TOKEN_EXPIRED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: 'Không có quyền: FORBIDDEN'
+          x-error-codes:
+          - FORBIDDEN
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 'Không tìm thấy: NOT_FOUND'
+          x-error-codes:
+          - NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 'Xung đột: VERSION_CONFLICT'
+          x-error-codes:
+          - VERSION_CONFLICT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/admin/inventory/receipts:
+    get:
+      operationId: listReceipts
+      tags:
+      - Phiếu nhập
+      summary: Danh sách phiếu nhập
+      description: Người không phải ADMIN bắt buộc có `branchId` của chi nhánh mình.
+      x-roles:
+      - ADMIN
+      - MANAGER (chi nhánh của phiếu)
+      - STAFF (chi nhánh của phiếu)
+      x-audience: store-backoffice
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: pageSize
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      - name: branchId
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - DRAFT
+          - APPROVED
+      responses:
+        '200':
+          description: Một trang, mới nhất trước
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReceiptPage'
+        '400':
+          description: 'Dữ liệu không hợp lệ: VALIDATION_FAILED'
+          x-error-codes:
+          - VALIDATION_FAILED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 'Chưa xác thực: INVALID_TOKEN, TOKEN_EXPIRED'
+          x-error-codes:
+          - INVALID_TOKEN
+          - TOKEN_EXPIRED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: 'Không có quyền: FORBIDDEN'
+          x-error-codes:
+          - FORBIDDEN
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      operationId: createReceipt
+      tags:
+      - Phiếu nhập
+      summary: Tạo phiếu nhập nháp
+      description: Chi nhánh chưa có kho → `404 NOT_FOUND`; kho ngừng hoạt động → `409 INVALID_STATE`.
+      x-roles:
+      - ADMIN
+      - MANAGER (chi nhánh của phiếu)
+      - STAFF (chi nhánh của phiếu)
+      x-audience: store-backoffice
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateReceiptRequest'
+      responses:
+        '201':
+          description: Đã tạo, trạng thái `DRAFT`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Receipt'
+        '400':
+          description: 'Dữ liệu không hợp lệ: VALIDATION_FAILED'
+          x-error-codes:
+          - VALIDATION_FAILED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 'Chưa xác thực: INVALID_TOKEN, TOKEN_EXPIRED'
+          x-error-codes:
+          - INVALID_TOKEN
+          - TOKEN_EXPIRED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: 'Không có quyền: FORBIDDEN'
+          x-error-codes:
+          - FORBIDDEN
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 'Không tìm thấy: NOT_FOUND'
+          x-error-codes:
+          - NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 'Xung đột: INVALID_STATE'
+          x-error-codes:
+          - INVALID_STATE
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/admin/inventory/receipts/{receiptId}:
+    parameters:
+    - name: receiptId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      operationId: getReceipt
+      tags:
+      - Phiếu nhập
+      summary: Xem phiếu nhập
+      x-roles:
+      - ADMIN
+      - MANAGER (chi nhánh của phiếu)
+      - STAFF (chi nhánh của phiếu)
+      x-audience: store-backoffice
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Chi tiết kèm dòng
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Receipt'
+        '401':
+          description: 'Chưa xác thực: INVALID_TOKEN, TOKEN_EXPIRED'
+          x-error-codes:
+          - INVALID_TOKEN
+          - TOKEN_EXPIRED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: 'Không có quyền: FORBIDDEN'
+          x-error-codes:
+          - FORBIDDEN
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 'Không tìm thấy: NOT_FOUND'
+          x-error-codes:
+          - NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/admin/inventory/receipts/{receiptId}/lines:
+    parameters:
+    - name: receiptId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      operationId: addReceiptLine
+      tags:
+      - Phiếu nhập
+      summary: Thêm dòng (một chiếc) vào phiếu nháp
+      description: Chỉ phiếu `DRAFT`. Mã tem trùng trong phiếu → `400`. Mã tem trùng với hàng đã có được kiểm lúc
+        duyệt.
+      x-roles:
+      - ADMIN
+      - MANAGER (chi nhánh của phiếu)
+      - STAFF (chi nhánh của phiếu)
+      x-audience: store-backoffice
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddReceiptLineRequest'
+      responses:
+        '201':
+          description: Phiếu sau khi thêm, `version` tăng
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Receipt'
+        '400':
+          description: 'Dữ liệu không hợp lệ: VALIDATION_FAILED'
+          x-error-codes:
+          - VALIDATION_FAILED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 'Chưa xác thực: INVALID_TOKEN, TOKEN_EXPIRED'
+          x-error-codes:
+          - INVALID_TOKEN
+          - TOKEN_EXPIRED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: 'Không có quyền: FORBIDDEN'
+          x-error-codes:
+          - FORBIDDEN
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 'Không tìm thấy: NOT_FOUND'
+          x-error-codes:
+          - NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 'Xung đột: INVALID_STATE'
+          x-error-codes:
+          - INVALID_STATE
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/admin/inventory/receipts/{receiptId}/lines/{lineId}:
+    parameters:
+    - name: receiptId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: lineId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    delete:
+      operationId: removeReceiptLine
+      tags:
+      - Phiếu nhập
+      summary: Xoá dòng khỏi phiếu nháp
+      x-roles:
+      - ADMIN
+      - MANAGER (chi nhánh của phiếu)
+      - STAFF (chi nhánh của phiếu)
+      x-audience: store-backoffice
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Phiếu sau khi xoá, `version` tăng
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Receipt'
+        '401':
+          description: 'Chưa xác thực: INVALID_TOKEN, TOKEN_EXPIRED'
+          x-error-codes:
+          - INVALID_TOKEN
+          - TOKEN_EXPIRED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: 'Không có quyền: FORBIDDEN'
+          x-error-codes:
+          - FORBIDDEN
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 'Không tìm thấy: NOT_FOUND'
+          x-error-codes:
+          - NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 'Xung đột: INVALID_STATE'
+          x-error-codes:
+          - INVALID_STATE
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/admin/inventory/receipts/{receiptId}/approve:
+    parameters:
+    - name: receiptId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      operationId: approveReceipt
+      tags:
+      - Phiếu nhập
+      summary: Duyệt phiếu nhập
+      description: 'Điều kiện `version`: lệch → `409 VERSION_CONFLICT`. Phiếu đã duyệt (kể cả do người khác duyệt
+        cùng lúc) → `409 INVALID_STATE`. Phiếu rỗng hoặc mã tem trùng hàng đã có → `400 VALIDATION_FAILED`.'
+      x-roles:
+      - ADMIN
+      - MANAGER (chi nhánh của phiếu)
+      x-audience: store-backoffice
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApproveReceiptRequest'
+      responses:
+        '200':
+          description: 'Đã duyệt: tạo hàng `IN_STOCK`, `StockMovement`, `AuditLog` trong một transaction'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Receipt'
+        '400':
+          description: 'Dữ liệu không hợp lệ: VALIDATION_FAILED'
+          x-error-codes:
+          - VALIDATION_FAILED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 'Chưa xác thực: INVALID_TOKEN, TOKEN_EXPIRED'
+          x-error-codes:
+          - INVALID_TOKEN
+          - TOKEN_EXPIRED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: 'Không có quyền: FORBIDDEN'
+          x-error-codes:
+          - FORBIDDEN
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 'Không tìm thấy: NOT_FOUND'
+          x-error-codes:
+          - NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 'Xung đột: VERSION_CONFLICT, INVALID_STATE'
+          x-error-codes:
+          - VERSION_CONFLICT
+          - INVALID_STATE
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/admin/inventory/items:
+    get:
+      operationId: listItems
+      tags:
+      - Tồn kho
+      summary: 'Tồn kho: danh sách chiếc'
+      description: Người không phải ADMIN bắt buộc có `branchId` của chi nhánh mình. Giá vốn chỉ ADMIN và MANAGER
+        thấy.
+      x-roles:
+      - ADMIN
+      - MANAGER (chi nhánh của phiếu)
+      - STAFF (chi nhánh của phiếu)
+      x-audience: store-backoffice
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: pageSize
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+      - name: branchId
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
+      - name: variantId
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - IN_STOCK
+          - RESERVED
+          - SOLD
+      responses:
+        '200':
+          description: Một trang
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemPage'
+        '400':
+          description: 'Dữ liệu không hợp lệ: VALIDATION_FAILED'
+          x-error-codes:
+          - VALIDATION_FAILED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 'Chưa xác thực: INVALID_TOKEN, TOKEN_EXPIRED'
+          x-error-codes:
+          - INVALID_TOKEN
+          - TOKEN_EXPIRED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: 'Không có quyền: FORBIDDEN'
+          x-error-codes:
+          - FORBIDDEN
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/admin/inventory/items/by-tag/{tagCode}:
+    parameters:
+    - name: tagCode
+      in: path
+      required: true
+      schema:
+        type: string
+    get:
+      operationId: getItemByTag
+      tags:
+      - Tồn kho
+      summary: Tra theo mã tem, kèm giá hiện tại
+      description: Giá = trọng lượng (chỉ) × giá bán ra hiện tại của kim loại + tiền công, làm tròn tới 1.000 đồng.
+        Chưa có giá kim loại → `409 METAL_PRICE_NOT_SET`.
+      x-roles:
+      - ADMIN
+      - MANAGER (chi nhánh của phiếu)
+      - STAFF (chi nhánh của phiếu)
+      x-audience: store-backoffice
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Món hàng và giá
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemWithPrice'
+        '401':
+          description: 'Chưa xác thực: INVALID_TOKEN, TOKEN_EXPIRED'
+          x-error-codes:
+          - INVALID_TOKEN
+          - TOKEN_EXPIRED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: 'Không có quyền: FORBIDDEN'
+          x-error-codes:
+          - FORBIDDEN
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 'Không tìm thấy: NOT_FOUND'
+          x-error-codes:
+          - NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 'Xung đột: METAL_PRICE_NOT_SET'
+          x-error-codes:
+          - METAL_PRICE_NOT_SET
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    ErrorResponse:
+      type: "object"
+      properties:
+        code:
+          type: "string"
+          enum:
+            - "VALIDATION_FAILED"
+            - "INVALID_CREDENTIALS"
+            - "ACCOUNT_NOT_PROVISIONED"
+            - "SESSION_EXPIRED"
+            - "REFRESH_CONFLICT"
+            - "PASSWORD_TOO_WEAK"
+            - "INVALID_TOKEN"
+            - "TOKEN_EXPIRED"
+            - "FORBIDDEN"
+            - "NOT_FOUND"
+            - "METHOD_NOT_ALLOWED"
+            - "VERSION_CONFLICT"
+            - "INVALID_STATE"
+            - "LAST_ADMIN"
+            - "METAL_PRICE_NOT_SET"
+            - "ITEM_NOT_AVAILABLE"
+            - "INVALID_ITEM_STATE"
+            - "IDEMPOTENCY_KEY_REUSED"
+            - "PAYLOAD_TOO_LARGE"
+            - "RATE_LIMITED"
+            - "SERVICE_UNAVAILABLE"
+            - "INTERNAL_ERROR"
+        message:
+          type: "string"
+        details:
+          type: "object"
+          propertyNames:
+            type: "string"
+          additionalProperties: {}
+        correlationId:
+          type: "string"
+      required:
+        - "code"
+        - "message"
+        - "correlationId"
+      additionalProperties: false
+    Metal:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        code:
+          type: "string"
+        name:
+          type: "string"
+        kind:
+          type: "string"
+          enum:
+            - "GOLD"
+            - "SILVER"
+        isActive:
+          type: "boolean"
+        version:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
+      required:
+        - "id"
+        - "code"
+        - "name"
+        - "kind"
+        - "isActive"
+        - "version"
+      additionalProperties: false
+    CreateMetalRequest:
+      type: "object"
+      properties:
+        code:
+          type: "string"
+          minLength: 1
+        name:
+          type: "string"
+          minLength: 1
+        kind:
+          type: "string"
+          enum:
+            - "GOLD"
+            - "SILVER"
+      required:
+        - "code"
+        - "name"
+        - "kind"
+      additionalProperties: false
+    MetalPrice:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        metalId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        buyPrice:
+          type: "string"
+        sellPrice:
+          type: "string"
+        effectiveFrom:
+          type: "string"
+          format: "date-time"
+          pattern: "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+        createdBy:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+      required:
+        - "id"
+        - "metalId"
+        - "buyPrice"
+        - "sellPrice"
+        - "effectiveFrom"
+        - "createdBy"
+      additionalProperties: false
+    MetalPricePage:
+      type: "object"
+      properties:
+        items:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/MetalPrice"
+        total:
+          type: "integer"
+          minimum: 0
+          maximum: 9007199254740991
+          description: "Tổng số dòng khớp, không chỉ trang này"
+        page:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
+        pageSize:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
+      required:
+        - "items"
+        - "total"
+        - "page"
+        - "pageSize"
+      additionalProperties: false
+    CreateMetalPriceRequest:
+      type: "object"
+      properties:
+        buyPrice:
+          type: "string"
+          pattern: "^\\d{1,13}(\\.\\d{1,2})?$"
+          description: "Số tiền (đồng), chuỗi thập phân"
+        sellPrice:
+          type: "string"
+          pattern: "^\\d{1,13}(\\.\\d{1,2})?$"
+          description: "Số tiền (đồng), chuỗi thập phân"
+        effectiveFrom:
+          type: "string"
+          format: "date-time"
+          pattern: "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+      required:
+        - "buyPrice"
+        - "sellPrice"
+      additionalProperties: false
+    Category:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        name:
+          type: "string"
+        isActive:
+          type: "boolean"
+        version:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
+      required:
+        - "id"
+        - "name"
+        - "isActive"
+        - "version"
+      additionalProperties: false
+    CreateCategoryRequest:
+      type: "object"
+      properties:
+        name:
+          type: "string"
+          minLength: 1
+      required:
+        - "name"
+      additionalProperties: false
+    UpdateCategoryRequest:
+      type: "object"
+      properties:
+        version:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
+        name:
+          type: "string"
+          minLength: 1
+        isActive:
+          type: "boolean"
+      required:
+        - "version"
+      additionalProperties: false
+    Product:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        categoryId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        name:
+          type: "string"
+        description:
+          type:
+            - "string"
+            - "null"
+        isActive:
+          type: "boolean"
+        version:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
+      required:
+        - "id"
+        - "categoryId"
+        - "name"
+        - "description"
+        - "isActive"
+        - "version"
+      additionalProperties: false
+    ProductPage:
+      type: "object"
+      properties:
+        items:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/Product"
+        total:
+          type: "integer"
+          minimum: 0
+          maximum: 9007199254740991
+          description: "Tổng số dòng khớp, không chỉ trang này"
+        page:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
+        pageSize:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
+      required:
+        - "items"
+        - "total"
+        - "page"
+        - "pageSize"
+      additionalProperties: false
+    CreateProductRequest:
+      type: "object"
+      properties:
+        categoryId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        name:
+          type: "string"
+          minLength: 1
+        description:
+          type: "string"
+      required:
+        - "categoryId"
+        - "name"
+      additionalProperties: false
+    UpdateProductRequest:
+      type: "object"
+      properties:
+        version:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
+        categoryId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        name:
+          type: "string"
+          minLength: 1
+        description:
+          type:
+            - "string"
+            - "null"
+        isActive:
+          type: "boolean"
+      required:
+        - "version"
+      additionalProperties: false
+    Variant:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        productId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        metalId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        sku:
+          type: "string"
+        name:
+          type: "string"
+        defaultLaborFee:
+          type: "string"
+        isActive:
+          type: "boolean"
+        version:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
+      required:
+        - "id"
+        - "productId"
+        - "metalId"
+        - "sku"
+        - "name"
+        - "defaultLaborFee"
+        - "isActive"
+        - "version"
+      additionalProperties: false
+    VariantPage:
+      type: "object"
+      properties:
+        items:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/Variant"
+        total:
+          type: "integer"
+          minimum: 0
+          maximum: 9007199254740991
+          description: "Tổng số dòng khớp, không chỉ trang này"
+        page:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
+        pageSize:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
+      required:
+        - "items"
+        - "total"
+        - "page"
+        - "pageSize"
+      additionalProperties: false
+    CreateVariantRequest:
+      type: "object"
+      properties:
+        productId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        metalId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        sku:
+          type: "string"
+          minLength: 1
+        name:
+          type: "string"
+          minLength: 1
+        defaultLaborFee:
+          type: "string"
+          pattern: "^\\d{1,13}(\\.\\d{1,2})?$"
+          description: "Số tiền (đồng), chuỗi thập phân"
+      required:
+        - "productId"
+        - "metalId"
+        - "sku"
+        - "name"
+      additionalProperties: false
+    UpdateVariantRequest:
+      type: "object"
+      properties:
+        version:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
+        name:
+          type: "string"
+          minLength: 1
+        defaultLaborFee:
+          type: "string"
+          pattern: "^\\d{1,13}(\\.\\d{1,2})?$"
+          description: "Số tiền (đồng), chuỗi thập phân"
+        isActive:
+          type: "boolean"
+      required:
+        - "version"
+      additionalProperties: false
+    Receipt:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        code:
+          type: "string"
+        branchId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        status:
+          type: "string"
+          enum:
+            - "DRAFT"
+            - "APPROVED"
+        note:
+          type:
+            - "string"
+            - "null"
+        createdBy:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        approvedBy:
+          anyOf:
+            - type: "string"
+              format: "uuid"
+              pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            - type: "null"
+        approvedAt:
+          anyOf:
+            - type: "string"
+              format: "date-time"
+              pattern: "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+            - type: "null"
+        version:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
+        lines:
+          type: "array"
+          items:
+            type: "object"
+            properties:
+              id:
+                type: "string"
+                format: "uuid"
+                pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              variantId:
+                type: "string"
+                format: "uuid"
+                pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              tagCode:
+                type: "string"
+              weight:
+                type: "string"
+              laborFee:
+                type: "string"
+              costPrice:
+                type: "string"
+            required:
+              - "id"
+              - "variantId"
+              - "tagCode"
+              - "weight"
+              - "laborFee"
+              - "costPrice"
+            additionalProperties: false
+      required:
+        - "id"
+        - "code"
+        - "branchId"
+        - "status"
+        - "note"
+        - "createdBy"
+        - "approvedBy"
+        - "approvedAt"
+        - "version"
+        - "lines"
+      additionalProperties: false
+    ReceiptPage:
+      type: "object"
+      properties:
+        items:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/Receipt"
+        total:
+          type: "integer"
+          minimum: 0
+          maximum: 9007199254740991
+          description: "Tổng số dòng khớp, không chỉ trang này"
+        page:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
+        pageSize:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
+      required:
+        - "items"
+        - "total"
+        - "page"
+        - "pageSize"
+      additionalProperties: false
+    CreateReceiptRequest:
+      type: "object"
+      properties:
+        branchId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        note:
+          type: "string"
+      required:
+        - "branchId"
+      additionalProperties: false
+    AddReceiptLineRequest:
+      type: "object"
+      properties:
+        variantId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        tagCode:
+          type: "string"
+          minLength: 1
+          maxLength: 64
+        weight:
+          type: "string"
+          pattern: "^\\d{1,8}(\\.\\d{1,4})?$"
+          description: "Trọng lượng (chỉ), chuỗi thập phân"
+        laborFee:
+          type: "string"
+          pattern: "^\\d{1,13}(\\.\\d{1,2})?$"
+          description: "Số tiền (đồng), chuỗi thập phân"
+        costPrice:
+          type: "string"
+          pattern: "^\\d{1,13}(\\.\\d{1,2})?$"
+          description: "Số tiền (đồng), chuỗi thập phân"
+      required:
+        - "variantId"
+        - "tagCode"
+        - "weight"
+        - "costPrice"
+      additionalProperties: false
+    ApproveReceiptRequest:
+      type: "object"
+      properties:
+        version:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
+      required:
+        - "version"
+      additionalProperties: false
+    Item:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        tagCode:
+          type: "string"
+        branchId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        variantId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        sku:
+          type: "string"
+        productName:
+          type: "string"
+        variantName:
+          type: "string"
+        metalName:
+          type: "string"
+        weight:
+          type: "string"
+        laborFee:
+          type: "string"
+        costPrice:
+          description: "Chỉ ADMIN và MANAGER thấy giá vốn; người khác nhận null"
+          type:
+            - "string"
+            - "null"
+        status:
+          type: "string"
+          enum:
+            - "IN_STOCK"
+            - "RESERVED"
+            - "SOLD"
+        version:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
+      required:
+        - "id"
+        - "tagCode"
+        - "branchId"
+        - "variantId"
+        - "sku"
+        - "productName"
+        - "variantName"
+        - "metalName"
+        - "weight"
+        - "laborFee"
+        - "costPrice"
+        - "status"
+        - "version"
+      additionalProperties: false
+    ItemPage:
+      type: "object"
+      properties:
+        items:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/Item"
+        total:
+          type: "integer"
+          minimum: 0
+          maximum: 9007199254740991
+          description: "Tổng số dòng khớp, không chỉ trang này"
+        page:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
+        pageSize:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
+      required:
+        - "items"
+        - "total"
+        - "page"
+        - "pageSize"
+      additionalProperties: false
+    ItemWithPrice:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        tagCode:
+          type: "string"
+        branchId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        variantId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        sku:
+          type: "string"
+        productName:
+          type: "string"
+        variantName:
+          type: "string"
+        metalName:
+          type: "string"
+        weight:
+          type: "string"
+        laborFee:
+          type: "string"
+        costPrice:
+          description: "Chỉ ADMIN và MANAGER thấy giá vốn; người khác nhận null"
+          type:
+            - "string"
+            - "null"
+        status:
+          type: "string"
+          enum:
+            - "IN_STOCK"
+            - "RESERVED"
+            - "SOLD"
+        version:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
+        sellPricePerChi:
+          type: "string"
+        price:
+          type: "string"
+      required:
+        - "id"
+        - "tagCode"
+        - "branchId"
+        - "variantId"
+        - "sku"
+        - "productName"
+        - "variantName"
+        - "metalName"
+        - "weight"
+        - "laborFee"
+        - "costPrice"
+        - "status"
+        - "version"
+        - "sellPricePerChi"
+        - "price"
+      additionalProperties: false

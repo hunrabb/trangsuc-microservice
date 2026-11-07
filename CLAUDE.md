@@ -68,8 +68,9 @@ pnpm dev                                        # chạy mọi app ở chế đ�
 pnpm --filter @jewelry/<app> exec prisma migrate dev --name <ten>   # CHỈ máy dev; cần database shadow
 pnpm --filter @jewelry/<app> db:generate        # sinh Prisma client (turbo tự chạy trước build/typecheck/dev)
 pnpm test                                       # unit + tests/integration (chạy bản build thật của gateway, inventory; chưa cần Postgres)
-pnpm test:infra                                 # test:messaging + test:auth; cần postgres, rabbitmq, rabbitmq-setup; không chạy trong `pnpm test`
+pnpm test:infra                                 # test:messaging + test:auth + test:inventory; cần postgres, rabbitmq, rabbitmq-setup; không chạy trong `pnpm test`
 pnpm test:messaging                             # có dừng và bật RabbitMQ thật
+pnpm test:inventory                             # lõi inventory (duyệt phiếu song song, consumer chi nhánh) trên Postgres thật
 pnpm test:auth                                  # đăng nhập và quản trị trên Postgres thật, Google là server giả; dừng nếu DB có ADMIN ngoài dữ liệu test
 pnpm outbox:requeue -- --service <app> [--event-type <x>] [--id <uuid>] [--dry-run]   # gửi lại dòng outbox FAILED; cần pnpm build trước
 pnpm lint && pnpm typecheck
@@ -134,6 +135,7 @@ Chưa có (làm ở giai đoạn sau): `prisma db seed` (chưa có seed), `pnpm 
 
 ## 9. Nghiệp vụ trang sức
 
+- **Quyết định 3A (đang áp dụng):** chỉ vàng (nhiều tuổi) và bạc. **Mọi món theo tem**: mỗi chiếc một `JewelryItem`, không quản lý theo số lượng; tồn kho = số chiếc `IN_STOCK`. Trạng thái `IN_STOCK`, `RESERVED`, `SOLD`, mọi đổi trạng thái là UPDATE có điều kiện. Giá = trọng lượng (chỉ) × giá bán ra của kim loại + tiền công, làm tròn tới 1.000 đồng bằng MỘT hàm duy nhất (`apps/inventory/src/pricing/pricing.ts`). Phần `QUANTITY` bên dưới chưa dùng.
 - Hai cách quản lý hàng: `trackingType = SERIAL` (mỗi chiếc một `JewelryItem` có `tagCode`, trọng lượng, tiền công, giá vốn riêng) và `QUANTITY` (đếm bằng `InventoryItem.onHand`).
 - Giá hàng `METAL_RATE` = `metalWeight × sellPrice hiện tại của kim loại (theo chỉ) + laborFee + stoneFee`. Giá `FIXED` = giá cố định / giá theo chi nhánh.
 - `MetalPrice` chỉ ghi thêm; giá hiện tại = dòng có `effectiveFrom` mới nhất `<= now()`.
