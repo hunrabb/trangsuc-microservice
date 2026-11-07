@@ -70,7 +70,7 @@ pnpm --filter @jewelry/<app> db:generate        # sinh Prisma client (turbo tự
 pnpm test                                       # unit + tests/integration (chạy bản build thật của gateway, inventory; chưa cần Postgres)
 pnpm test:infra                                 # test:messaging + test:auth; cần postgres, rabbitmq, rabbitmq-setup; không chạy trong `pnpm test`
 pnpm test:messaging                             # có dừng và bật RabbitMQ thật
-pnpm test:auth                                  # phiên đăng nhập trên Postgres thật, Google là server giả
+pnpm test:auth                                  # đăng nhập và quản trị trên Postgres thật, Google là server giả; dừng nếu DB có ADMIN ngoài dữ liệu test
 pnpm outbox:requeue -- --service <app> [--event-type <x>] [--id <uuid>] [--dry-run]   # gửi lại dòng outbox FAILED; cần pnpm build trước
 pnpm lint && pnpm typecheck
 pnpm build
@@ -113,7 +113,7 @@ Chưa có (làm ở giai đoạn sau): `prisma db seed` (chưa có seed), `pnpm 
    - điều kiện đơn giản → **UPDATE có điều kiện** (`$queryRaw` với `WHERE … AND onHand - reserved >= qty RETURNING …`), kiểm tra số dòng bị ảnh hưởng;
    - cần đọc nhiều giá trị mới quyết định được (ví dụ giá vốn bình quân) → `SELECT … FOR UPDATE` rồi UPDATE.
 4. Khoá nhiều dòng → **sắp theo id** (`variantId`, `jewelryItemId`) trước; gộp dòng trùng.
-5. Lỗi deadlock `40P01` → chạy lại cả transaction tối đa 3 lần, nghỉ 20–60 ms. Đặt `SET LOCAL lock_timeout = '3s'`.
+5. Lỗi deadlock `40P01` → chạy lại cả transaction tối đa 3 lần, nghỉ 20–60 ms: `runWithLockRetry` trong `libs/common`; vẫn lỗi hoặc hết `lock_timeout` → `503`. Đặt `SET LOCAL lock_timeout = '3s'`.
 6. Chứng từ người dùng xem rồi mới sửa/duyệt → **khoá lạc quan**: client gửi `version`, `updateMany({ where: { id, version } })`, 0 dòng → `409 VERSION_CONFLICT`.
 7. Đổi trạng thái → `UPDATE … WHERE id = ? AND status IN (<trạng thái được phép>)`; 0 dòng → `409 INVALID_STATE`. Bảng chuyển trạng thái hợp lệ ở `docs/thiet-ke.md`.
 8. Hàng có tem: bán/giữ/thu bằng `UPDATE JewelryItem SET status = … WHERE id = ? AND status = 'IN_STOCK'`.
@@ -178,6 +178,8 @@ Chưa có (làm ở giai đoạn sau): `prisma db seed` (chưa có seed), `pnpm 
 - Hai loại token, cùng `iss`: `aud = store-backoffice` (nhân viên) và `store-shop` (khách). `JwtGuard` mặc định yêu cầu `aud` nhân viên; endpoint của khách đánh dấu `@Audience('shop')`.
 - Refresh token: chuỗi ngẫu nhiên, lưu **bản băm** SHA-256; hạn trượt 7 ngày, hạn tuyệt đối 30 ngày (`sessionStartedAt`); xoay vòng mỗi lần dùng bằng UPDATE có điều kiện; token vừa bị thay trong 10 giây → `409 REFRESH_CONFLICT` (hai tab), không thu hồi; token đã thu hồi lâu hơn thế bị dùng lại → thu hồi mọi phiên của user. Cookie `httpOnly; Secure; SameSite=Strict`: nhân viên `rt_bo`, `Path=/api/auth`; khách `rt_shop`, `Path=/api/shop/auth`.
 - Vai trò: `ADMIN` (toàn hệ thống, `branchId = null`), `MANAGER`, `STAFF` theo chi nhánh. Dùng `JwtGuard` + `RolesGuard` + `@Roles(...)` trong `libs/common`; mọi endpoint mặc định cần đăng nhập, ngoại lệ đánh dấu `@Public()`.
+- Vai trò ở chi nhánh đã ngừng hoạt động không vào token. API quản trị của auth kiểm quyền bằng một hàm `isAllowed` (`apps/auth/src/admin/policy.ts`), theo vai trò hiện tại trong DB chứ không theo token: người vừa bị khoá hoặc hạ vai trò không được dùng token còn hạn để tự khôi phục.
+- Hệ thống luôn còn ít nhất một ADMIN đang hoạt động (`ACTIVE`, có vai trò ADMIN, có mật khẩu hoặc Google); thao tác làm mất ADMIN cuối cùng → `409 LAST_ADMIN`.
 - Gateway xoá mọi header `x-user-*` từ client.
 - Đăng nhập nhân viên: MANAGER, STAFF **chỉ Google**; ADMIN Google hoặc mật khẩu. Ghép Google theo `sub` qua `AuthIdentity`, chỉ với email admin đã thêm trước.
 - Mật khẩu: bcrypt, tối thiểu 12 ký tự, `passwordHash` chỉ ADMIN có. Đăng nhập mật khẩu thất bại vì bất kỳ lý do gì → cùng `401 INVALID_CREDENTIALS`; rate limit ở gateway bằng `@nestjs/throttler`, đếm trong bộ nhớ. **Khi chạy từ 2 instance gateway trở lên phải chuyển sang bộ đếm dùng chung (Redis).**
@@ -192,8 +194,11 @@ Chưa có (làm ở giai đoạn sau): `prisma db seed` (chưa có seed), `pnpm 
 
 ## 13. Test
 
+- Test theo mức rủi ro: **kỹ** với tiền, kho, bảo mật và mọi tình huống đồng thời; **1 ca thành công + lỗi chính** với các endpoint còn lại; không liệt kê mọi tổ hợp kiểm tra dữ liệu.
+- `pnpm test:infra` chạy trên máy chỉ khi sửa phần liên quan tới DB/RabbitMQ; CI luôn chạy đầy đủ.
+- Không tự thêm test ngoài prompt, trừ tình huống đồng thời hoặc bảo mật quan trọng bị bỏ sót.
 - Unit: tính giá, chuyển trạng thái, phân loại lỗi.
-- Integration: Postgres thật (Testcontainers), không mock Prisma cho logic ghi dữ liệu. **Ngoại lệ:** outbox, consumer, retry, DLQ (`pnpm test:messaging`) và phiên đăng nhập (`pnpm test:auth`) chạy trên hạ tầng Docker Compose, vì cần đúng `definitions.json`, phải dừng và bật được broker, và chạy bản build thật qua gateway.
+- Integration: Postgres thật (Testcontainers), không mock Prisma cho logic ghi dữ liệu. **Ngoại lệ:** outbox, consumer, retry, DLQ (`pnpm test:messaging`) và auth (`pnpm test:auth`) chạy trên hạ tầng Docker Compose, vì cần đúng `definitions.json`, phải dừng và bật được broker, và chạy bản build thật qua gateway.
 - Test chạy trên hạ tầng dùng chung không được `deleteMany` cả bảng hay purge queue: chỉ xoá đúng dữ liệu của mình, thấy dữ liệu lạ mà test có thể đụng tới thì dừng và báo lỗi, chạy xong trạng thái phải y như trước.
 - **Đồng thời** — bắt buộc cho mọi chỗ ghi dữ liệu dùng chung. Bắn song song bằng `Promise.all`, kiểm tra kết quả cuối trong DB. Ví dụ: N request tranh một tem → đúng 1 thành công; trùng `Idempotency-Key` → 1 hoá đơn; thư trùng `eventId` → xử lý 1 lần.
 - Contract: payload sự kiện khớp zod schema trong `libs/contracts`.

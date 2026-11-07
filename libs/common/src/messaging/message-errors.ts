@@ -58,6 +58,23 @@ interface PrismaLikeError {
 const driverCause = (error: PrismaLikeError): DriverCause | undefined =>
   error.meta?.driverAdapterError?.cause;
 
+/** Deadlock: Postgres huỷ một bên, chạy lại cả transaction là được. */
+export function isDeadlock(error: unknown): boolean {
+  const prisma = (error ?? {}) as PrismaLikeError;
+  return prisma.code === 'P2034' || driverCause(prisma)?.originalCode === '40P01';
+}
+
+/** Hết `lock_timeout`: dòng bị giữ quá lâu. */
+export function isLockTimeout(error: unknown): boolean {
+  return driverCause((error ?? {}) as PrismaLikeError)?.originalCode === '55P03';
+}
+
+/** Tên unique index bị trùng khi lỗi là `P2002`, để biết đúng cột nào trùng; không phải thì `undefined`. */
+export function violatedUniqueIndex(error: unknown): string | undefined {
+  const prisma = (error ?? {}) as PrismaLikeError;
+  return prisma.code === 'P2002' ? driverCause(prisma)?.constraint?.index : undefined;
+}
+
 /** Phân loại lỗi của handler. Không nhận ra thì coi là vĩnh viễn: thà vào DLQ để người xem còn hơn thử mù. */
 export function classifyError(error: unknown): ErrorKind {
   if (error instanceof TransientError) {

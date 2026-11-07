@@ -10,6 +10,7 @@ import {
   RabbitConnection,
 } from '@jewelry/common';
 import { Module } from '@nestjs/common';
+import { AdminModule } from './admin/admin.module';
 import { DB_SCHEMA, envSchema, SERVICE_NAME } from './config/env';
 import { PrismaModule } from './prisma/prisma.module';
 import { PrismaService } from './prisma/prisma.service';
@@ -23,6 +24,7 @@ import { SessionModule } from './session/session.module';
     JwtAuthModule,
     PrismaModule,
     SessionModule,
+    AdminModule,
     MessagingModule.forRoot({
       service: SERVICE_NAME,
       dbSchema: DB_SCHEMA,

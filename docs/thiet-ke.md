@@ -54,6 +54,18 @@ Chỉ có 3 vai trò cố định (enum), gán theo chi nhánh; không có bản
 2. Decorator `@Roles('MANAGER')` kiểm tra vai trò trên chi nhánh trong request; `ADMIN` luôn qua.
 3. Service luôn thêm điều kiện `branchId IN (...)` vào truy vấn Prisma, không tin `branchId` gửi từ client.
 
+**API quản trị của auth** (`/api/admin/auth/*`, đặc tả ở `docs/api/auth.openapi.yaml`) dùng một hàm chính sách thay cho `@Roles`, vì `/users/{userId}` không có `branchId` trong request, chỉ biết chi nhánh sau khi đọc user:
+
+- ADMIN: mọi thao tác. Không ai được tự khoá chính mình.
+- MANAGER: xem danh sách đúng chi nhánh mình quản lý (`branchId` bắt buộc); tạo user chỉ vai trò STAFF ở chi nhánh mình; xem, sửa, khoá, mở khoá, gỡ Google chỉ khi user đó **chỉ có vai trò STAFF** và **mọi** chi nhánh của user đều do MANAGER này quản lý. Không gán vai trò, không đặt lại mật khẩu.
+- Vi phạm → `403 FORBIDDEN`.
+- Quyền đọc từ DB, không từ token: token sống tối đa 15 phút sau khi bị khoá hoặc hạ vai trò, nếu tin token thì ADMIN vừa bị khoá tự mở khoá được.
+- Vai trò ở chi nhánh đã ngừng hoạt động vẫn còn trong `UserBranch` nhưng không vào token, không có hiệu lực khi kiểm quyền.
+
+**ADMIN cuối cùng:** hệ thống phải luôn còn ít nhất một ADMIN đang hoạt động (`ACTIVE`, có vai trò ADMIN, có mật khẩu hoặc Google). Khoá ADMIN, bỏ vai trò ADMIN, gỡ Google của ADMIN không có mật khẩu chạy trong transaction: `SELECT ... FOR UPDATE` các dòng `User` của mọi ADMIN đang hoạt động và user bị thao tác (sắp theo id) **trước** khi đổi, rồi đếm lại **sau** khi đổi; bằng 0 → rollback, `409 LAST_ADMIN`.
+
+**Thứ tự khoá khi thu hồi phiên:** luôn là dòng `User` rồi mới tới `RefreshToken`. Thao tác quản trị giữ `FOR UPDATE`; đăng nhập và refresh giữ `FOR SHARE` trên user trước khi đọc trạng thái hoặc đụng vào token. Nhờ vậy phiên mở đúng lúc khoá user không sót lại, và refresh không deadlock với thao tác quản trị.
+
 ### Xác thực (token)
 
 |  | Access token | Refresh token |

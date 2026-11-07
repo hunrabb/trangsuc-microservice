@@ -16,6 +16,10 @@ info:
 
     - Thay đổi có `version` dùng khoá lạc quan: lệch → `409 VERSION_CONFLICT`.
 
+    - `/api/admin/auth/*` kiểm quyền theo vai trò hiện tại trong DB, không theo vai trò trong token.
+
+    - Thao tác sửa nhân viên có khoá dòng: chờ khoá quá 3 giây → `503 SERVICE_UNAVAILABLE`, client thử lại.
+
     - `components/schemas` sinh từ zod trong `libs/contracts` bằng `pnpm openapi:generate`, không sửa tay. Riêng
     `paths` viết tay.'
 tags:
@@ -363,20 +367,43 @@ paths:
       tags:
       - Chi nhánh
       summary: Danh sách chi nhánh
+      description: Phân trang, sắp theo `code`.
       x-roles:
       - ADMIN
       x-audience: store-backoffice
       security:
       - bearerAuth: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: pageSize
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
       responses:
         '200':
-          description: Danh sách
+          description: Một trang
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Branch'
+                $ref: '#/components/schemas/BranchPage'
+        '400':
+          description: 'Dữ liệu không hợp lệ: VALIDATION_FAILED'
+          x-error-codes:
+          - VALIDATION_FAILED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: 'Chưa xác thực: INVALID_TOKEN, TOKEN_EXPIRED'
           x-error-codes:
@@ -528,7 +555,8 @@ paths:
       tags:
       - Chi nhánh
       summary: Ngừng hoạt động chi nhánh
-      description: Chi nhánh đã ngừng rồi → `409 INVALID_STATE`.
+      description: Chi nhánh đã ngừng rồi → `409 INVALID_STATE`. Vai trò ở chi nhánh này không còn vào token từ
+        lần đăng nhập hoặc refresh kế tiếp.
       x-roles:
       - ADMIN
       x-audience: store-backoffice
@@ -580,6 +608,8 @@ paths:
       tags:
       - Nhân viên
       summary: Danh sách nhân viên
+      description: Phân trang, sắp theo `email`. MANAGER thiếu `branchId` hoặc gửi chi nhánh không do mình quản
+        lý → `403 FORBIDDEN`.
       x-roles:
       - ADMIN (mọi chi nhánh)
       - MANAGER (chỉ chi nhánh của mình, `branchId` bắt buộc)
@@ -587,6 +617,21 @@ paths:
       security:
       - bearerAuth: []
       parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: pageSize
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
       - name: branchId
         in: query
         required: false
@@ -595,13 +640,11 @@ paths:
           format: uuid
       responses:
         '200':
-          description: Danh sách
+          description: Một trang
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/User'
+                $ref: '#/components/schemas/UserPage'
         '400':
           description: 'Dữ liệu không hợp lệ: VALIDATION_FAILED'
           x-error-codes:
@@ -632,7 +675,8 @@ paths:
       tags:
       - Nhân viên
       summary: Tạo nhân viên
-      description: '`password` bắt buộc khi và chỉ khi có vai trò ADMIN. `email` trùng → `400 VALIDATION_FAILED`.'
+      description: '`password` bắt buộc khi và chỉ khi có vai trò ADMIN. `email` trùng hoặc chi nhánh không dùng
+        được → `400 VALIDATION_FAILED`. Email lưu chữ thường.'
       x-roles:
       - ADMIN
       - MANAGER (chỉ tạo STAFF ở chi nhánh của mình)
@@ -807,7 +851,8 @@ paths:
       tags:
       - Nhân viên
       summary: Khoá tài khoản
-      description: Thu hồi mọi phiên. Đã khoá rồi → `409 INVALID_STATE`.
+      description: Thu hồi mọi phiên. Đã khoá rồi → `409 INVALID_STATE`. Tự khoá chính mình → `403 FORBIDDEN`.
+        Không còn ADMIN đang hoạt động sau thao tác → `409 LAST_ADMIN`.
       x-roles:
       - ADMIN
       - MANAGER (chỉ STAFF ở chi nhánh của mình)
@@ -847,9 +892,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '409':
-          description: 'Xung đột: INVALID_STATE'
+          description: 'Xung đột: INVALID_STATE, LAST_ADMIN'
           x-error-codes:
           - INVALID_STATE
+          - LAST_ADMIN
           content:
             application/json:
               schema:
@@ -927,7 +973,8 @@ paths:
       tags:
       - Nhân viên
       summary: Gỡ liên kết Google
-      description: Thu hồi mọi phiên, ghi `AuditLog`. Chưa liên kết → `409 INVALID_STATE`.
+      description: Thu hồi mọi phiên, ghi `AuditLog`. Chưa liên kết → `409 INVALID_STATE`. ADMIN không có mật
+        khẩu mà không còn ADMIN đang hoạt động nào khác → `409 LAST_ADMIN`.
       x-roles:
       - ADMIN
       - MANAGER (chỉ STAFF ở chi nhánh của mình)
@@ -967,9 +1014,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '409':
-          description: 'Xung đột: INVALID_STATE'
+          description: 'Xung đột: INVALID_STATE, LAST_ADMIN'
           x-error-codes:
           - INVALID_STATE
+          - LAST_ADMIN
           content:
             application/json:
               schema:
@@ -987,7 +1035,7 @@ paths:
       tags:
       - Nhân viên
       summary: Đặt lại mật khẩu của một ADMIN
-      description: Chỉ cho user có vai trò ADMIN; user khác → `409 INVALID_STATE`.
+      description: Chỉ cho user có vai trò ADMIN; user khác → `409 INVALID_STATE`. Thu hồi mọi phiên của user đó.
       x-roles:
       - ADMIN
       x-audience: store-backoffice
@@ -1057,8 +1105,9 @@ paths:
       tags:
       - Nhân viên
       summary: Thay toàn bộ vai trò theo chi nhánh
-      description: Thêm vai trò ADMIN → phải kèm `password`. Bỏ vai trò ADMIN → xoá mật khẩu, thu hồi mọi phiên.
-        Ghi `AuditLog`.
+      description: Thêm vai trò ADMIN → phải kèm `password`; gửi `password` trong trường hợp khác → `400`. Bỏ vai
+        trò ADMIN → xoá mật khẩu. Bớt bất kỳ vai trò nào → thu hồi mọi phiên. Chi nhánh không tồn tại hoặc đã ngừng
+        hoạt động → `400`. Không còn ADMIN đang hoạt động sau thao tác → `409 LAST_ADMIN`. Ghi `AuditLog`.
       x-roles:
       - ADMIN
       x-audience: store-backoffice
@@ -1111,6 +1160,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 'Xung đột: LAST_ADMIN'
+          x-error-codes:
+          - LAST_ADMIN
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 components:
   securitySchemes:
     bearerAuth:
@@ -1141,6 +1198,7 @@ components:
             - "METHOD_NOT_ALLOWED"
             - "VERSION_CONFLICT"
             - "INVALID_STATE"
+            - "LAST_ADMIN"
             - "IDEMPOTENCY_KEY_REUSED"
             - "PAYLOAD_TOO_LARGE"
             - "RATE_LIMITED"
@@ -1329,6 +1387,32 @@ components:
         - "isActive"
         - "version"
       additionalProperties: false
+    BranchPage:
+      type: "object"
+      properties:
+        items:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/Branch"
+        total:
+          type: "integer"
+          minimum: 0
+          maximum: 9007199254740991
+          description: "Tổng số dòng khớp, không chỉ trang này"
+        page:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
+        pageSize:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
+      required:
+        - "items"
+        - "total"
+        - "page"
+        - "pageSize"
+      additionalProperties: false
     CreateBranchRequest:
       type: "object"
       properties:
@@ -1408,6 +1492,32 @@ components:
         - "googleLinked"
         - "branches"
         - "version"
+      additionalProperties: false
+    UserPage:
+      type: "object"
+      properties:
+        items:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/User"
+        total:
+          type: "integer"
+          minimum: 0
+          maximum: 9007199254740991
+          description: "Tổng số dòng khớp, không chỉ trang này"
+        page:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
+        pageSize:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
+      required:
+        - "items"
+        - "total"
+        - "page"
+        - "pageSize"
       additionalProperties: false
     CreateUserRequest:
       type: "object"

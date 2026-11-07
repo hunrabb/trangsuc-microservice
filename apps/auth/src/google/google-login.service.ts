@@ -52,8 +52,7 @@ export class GoogleLoginService {
     if (user === undefined || user.status !== 'ACTIVE' || user.branches.length === 0) {
       throw notProvisioned();
     }
-    const { id, email, fullName, branches } = user;
-    return this.sessions.open({ id, email, fullName, branches }, client);
+    return this.sessions.open(user.id, client, notProvisioned);
   }
 
   /** Lần đầu: ghép theo email với user đã được thêm trước. Không có user phù hợp thì không tạo gì. */

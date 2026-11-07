@@ -4,6 +4,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AccessTokenService } from './access-token.service';
+import { ACTIVE_ASSIGNMENTS } from './active-assignments';
 import {
   ACCESS_TOKEN_TTL_SECONDS,
   generateRefreshToken,
@@ -55,9 +56,7 @@ const sessionExpired = () =>
 
 type Tx = Prisma.TransactionClient;
 
-const USER_WITH_ROLES = {
-  include: { branches: { select: { branchId: true, role: true } } },
-} as const;
+const USER_WITH_ROLES = { include: { branches: ACTIVE_ASSIGNMENTS } };
 
 @Injectable()
 export class SessionService {
@@ -66,10 +65,29 @@ export class SessionService {
     private readonly accessTokens: AccessTokenService,
   ) {}
 
-  /** Mở phiên mới cho user đã được xác thực. Vai trò đọc lại ở nơi gọi, ngay trước khi phát token. */
-  async open(user: SessionUser, client: ClientInfo): Promise<OpenedSession> {
-    const now = new Date();
-    const { token, expiresAt } = await this.createToken(this.prisma, user.id, now, client);
+  /**
+   * Mở phiên mới cho user đã được xác thực. Không còn hợp lệ thì ném lỗi do nơi gọi chọn.
+   * Đồng thời: giữ `FOR SHARE` trên user rồi mới đọc trạng thái và vai trò. Nếu đọc trước, request có thể
+   * thấy `ACTIVE`, chờ admin khoá user xong rồi mới chèn token: token này không bị thu hồi. Có khoá thì
+   * hoặc thấy trạng thái mới, hoặc admin phải chờ token này commit rồi thu hồi luôn nó.
+   */
+  async open(
+    userId: string,
+    client: ClientInfo,
+    notAllowed: () => BusinessError,
+  ): Promise<OpenedSession> {
+    const { user, token, expiresAt } = await this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SET LOCAL lock_timeout = '3s'`;
+      await tx.$queryRaw`SELECT id FROM "auth"."User" WHERE id = ${userId}::uuid FOR SHARE`;
+      const active = await this.loadActiveUser(tx, userId);
+      if (active === undefined) {
+        throw notAllowed();
+      }
+      return {
+        user: active,
+        ...(await this.createToken(tx, active.id, new Date(), client)),
+      };
+    });
     return this.toOpenedSession(user, token, expiresAt);
   }
 
@@ -78,11 +96,18 @@ export class SessionService {
    * - Hết hạn, user bị khoá...: ném lỗi TRONG transaction để hoàn tác việc xoay vòng. Nếu commit, token hết hạn
    *   sẽ có `replacedAt`, và cookie cũ gửi lại sau 10 giây bị coi nhầm là đánh cắp, thu hồi oan mọi phiên.
    * - Phát hiện dùng lại: trả kết quả ra ngoài rồi mới ném lỗi, để việc thu hồi và `AuditLog` được commit.
+   * - Giữ `FOR SHARE` trên user TRƯỚC khi đụng vào token, cùng thứ tự với thao tác quản trị (user rồi token).
+   *   Ngược thứ tự thì refresh giữ token chờ user, admin giữ user chờ token: deadlock.
    */
   async refresh(rawToken: string, client: ClientInfo): Promise<OpenedSession> {
     const tokenHash = hashRefreshToken(rawToken);
     const outcome = await this.prisma.$transaction(async (tx): Promise<RefreshOutcome> => {
       await tx.$executeRaw`SET LOCAL lock_timeout = '3s'`;
+      await tx.$queryRaw`
+        SELECT u.id FROM "auth"."User" u
+        JOIN "auth"."RefreshToken" t ON t."userId" = u.id
+        WHERE t."tokenHash" = ${tokenHash}
+        FOR SHARE OF u`;
       // UPDATE có điều kiện là trọng tài: hai request song song, bên sau chờ khoá rồi thấy 0 dòng.
       const [rotated] = await tx.$queryRaw<RotatedRow[]>`
         UPDATE "auth"."RefreshToken"
@@ -168,7 +193,7 @@ export class SessionService {
   async currentUser(userId: string): Promise<CurrentUser> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      include: { ...USER_WITH_ROLES.include, identities: { select: { provider: true } } },
+      include: { branches: ACTIVE_ASSIGNMENTS, identities: { select: { provider: true } } },
     });
     if (user === null) {
       throw new BusinessError('INVALID_TOKEN', 'Token không hợp lệ', 401);
@@ -182,7 +207,10 @@ export class SessionService {
     };
   }
 
-  /** User còn được phép có phiên: tồn tại, `ACTIVE`, có ít nhất một vai trò. Không đạt trả `undefined`. */
+  /**
+   * User còn được phép có phiên: tồn tại, `ACTIVE`, còn ít nhất một vai trò hiệu lực (`ACTIVE_ASSIGNMENTS`).
+   * Không đạt trả `undefined`. Vai trò ở chi nhánh đã ngừng hoạt động không vào token.
+   */
   private async loadActiveUser(tx: Tx, userId: string): Promise<SessionUser | undefined> {
     const user = await tx.user.findUnique({ where: { id: userId }, ...USER_WITH_ROLES });
     if (user === null || user.status !== 'ACTIVE' || user.branches.length === 0) {

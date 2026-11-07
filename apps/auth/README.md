@@ -22,6 +22,12 @@ Quản lý nhân viên, phiên đăng nhập và phát token. File này dành ch
 | `src/google/google-login.service.ts`                   | Đăng nhập Google, ghép tài khoản             |
 | `src/password/password.service.ts`                     | Đăng nhập mật khẩu, đổi mật khẩu             |
 | `src/admin/create-admin.ts`, `src/cli/admin-create.ts` | Tạo ADMIN đầu tiên                           |
+| `src/admin/policy.ts`                                  | Chính sách quyền của API quản trị            |
+| `src/admin/last-admin.ts`                              | Quy tắc ADMIN cuối cùng                      |
+| `src/admin/branches.service.ts`                        | Quản lý chi nhánh                            |
+| `src/admin/users.service.ts`                           | Quản lý nhân viên                            |
+| `src/admin/audit.ts`                                   | Ghi `AuditLog` có `before`, `after`          |
+| `src/session/active-assignments.ts`                    | Vai trò còn hiệu lực                         |
 
 ## Tạo ADMIN đầu tiên
 
@@ -39,11 +45,11 @@ Quản lý nhân viên, phiên đăng nhập và phát token. File này dành ch
 2. Kiểm chữ ký bằng khoá công khai của Google, `iss`, `aud`, `exp`, `email_verified`: `verifyGoogleIdToken` trong `google-id-token.ts`. Sai → `401 INVALID_CREDENTIALS`. Không lấy được khoá của Google → `503`.
 3. Lần đầu đăng nhập, ghép với user admin đã thêm trước theo email: `linkIfFirstLogin` trong `google-login.service.ts`. User phải `ACTIVE`, có vai trò, chưa liên kết Google khác.
 4. Đọc lại liên kết theo `sub`, kiểm user còn hợp lệ, không đạt → `403 ACCOUNT_NOT_PROVISIONED`: `login` trong `google-login.service.ts`.
-5. Mở phiên, ký access token, đặt cookie: `open` trong `session.service.ts`, `withCookie` trong `auth.controller.ts`.
+5. Mở phiên, ký access token, đặt cookie: `open` trong `session.service.ts`, `withCookie` trong `auth.controller.ts`. `open` giữ `FOR SHARE` trên user rồi đọc lại trạng thái và vai trò, không còn hợp lệ thì trả cùng lỗi `403`.
 
 **Bảng ghi:** `AuthIdentity` và `AuditLog` (chỉ lần đầu), `RefreshToken`.
 
-**Đồng thời:** nhiều request đăng nhập đầu tiên cùng lúc. Unique `(provider, subject)` chỉ cho một bên ghép; bên thua bắt `P2002` rồi đọc lại. Request vừa tra chưa thấy liên kết nhưng ngay sau đó thấy user đã liên kết thì so `subject`: cùng `sub` là bên kia vừa ghép xong, coi như thành công.
+**Đồng thời:** user bị khoá đúng lúc đăng nhập: `FOR SHARE` trong `open` khiến request hoặc thấy `LOCKED`, hoặc khoá phải chờ phiên này commit rồi thu hồi luôn. Nhiều request đăng nhập đầu tiên cùng lúc: unique `(provider, subject)` chỉ cho một bên ghép; bên thua bắt `P2002` rồi đọc lại. Request vừa tra chưa thấy liên kết nhưng ngay sau đó thấy user đã liên kết thì so `subject`: cùng `sub` là bên kia vừa ghép xong, coi như thành công.
 
 ## Đăng nhập mật khẩu ADMIN
 
@@ -83,8 +89,8 @@ Gateway giới hạn 5 lần / 15 phút theo user, xem mục Rate limit.
 
 `POST /api/auth/refresh`, trong một transaction: `refresh` trong `session.service.ts`.
 
-1. Băm cookie, `SET LOCAL lock_timeout`, rồi xoay vòng bằng `UPDATE ... WHERE "tokenHash" = ? AND "revokedAt" IS NULL RETURNING ...`.
-2. **Có 1 dòng:** kiểm hạn trượt, hạn tuyệt đối, user `ACTIVE`, còn vai trò (`loadActiveUser`). Đạt thì tạo token mới giữ nguyên `sessionStartedAt` (`createToken`), rồi ký access token mới ngoài transaction.
+1. Băm cookie, `SET LOCAL lock_timeout`, giữ `FOR SHARE` trên user của token, rồi xoay vòng bằng `UPDATE ... WHERE "tokenHash" = ? AND "revokedAt" IS NULL RETURNING ...`.
+2. **Có 1 dòng:** kiểm hạn trượt, hạn tuyệt đối, user `ACTIVE`, còn vai trò hiệu lực (`loadActiveUser`, vai trò ở chi nhánh đã ngừng hoạt động không vào token). Đạt thì tạo token mới giữ nguyên `sessionStartedAt` (`createToken`), rồi ký access token mới ngoài transaction.
 3. **Có 0 dòng:** token không xoay vòng được, phân loại ở `handleStaleToken`.
 
 | Tình huống                          | Kết quả                                                   | Vì sao                                                                                   |
@@ -97,7 +103,7 @@ Gateway giới hạn 5 lần / 15 phút theo user, xem mục Rate limit.
 
 **Bảng ghi:** `RefreshToken`, `AuditLog` (khi phát hiện đánh cắp).
 
-**Đồng thời:** hai tab cùng cookie. `UPDATE` có điều kiện là trọng tài: bên sau chờ khoá dòng rồi thấy 0 dòng, đọc `replacedAt` và nhận `409`. Mọi so sánh thời gian dùng `now()` của Postgres. Lỗi hết hạn ném **trong** transaction để hoàn tác; phát hiện đánh cắp thì trả kết quả ra ngoài rồi mới ném, để việc thu hồi được commit.
+**Đồng thời:** thứ tự khoá luôn là user rồi tới token, giống thao tác quản trị, nên không deadlock; admin khoá user xong thì token đã thu hồi, refresh nhận `401`. Hai tab cùng cookie: `UPDATE` có điều kiện là trọng tài: bên sau chờ khoá dòng rồi thấy 0 dòng, đọc `replacedAt` và nhận `409`. Mọi so sánh thời gian dùng `now()` của Postgres. Lỗi hết hạn ném **trong** transaction để hoàn tác; phát hiện đánh cắp thì trả kết quả ra ngoài rồi mới ném, để việc thu hồi được commit.
 
 ## Đăng xuất
 
@@ -111,6 +117,73 @@ Gateway giới hạn 5 lần / 15 phút theo user, xem mục Rate limit.
 ## `GET /api/auth/me`
 
 Cần access token. Đọc user, vai trò và trạng thái liên kết Google từ DB: `currentUser` trong `session.service.ts`. Vai trò ở đây là mới nhất, có thể khác vai trò trong token. Chỉ đọc, không có tình huống đồng thời.
+
+## Chính sách quyền
+
+Mọi quyết định nằm ở một hàm: `isAllowed` trong `src/admin/policy.ts`. `assertAllowed` ném `403 FORBIDDEN` khi không đạt. Không dùng `@Roles`, vì `RolesGuard` đòi `branchId` trong request còn `/users/{userId}` chỉ biết chi nhánh sau khi đọc user.
+
+| Người thao tác | Được làm                                                                                                                                                                                         |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| ADMIN          | Mọi thao tác, trừ tự khoá chính mình                                                                                                                                                             |
+| MANAGER        | Danh sách user đúng chi nhánh mình quản lý (`branchId` bắt buộc); tạo user chỉ vai trò STAFF ở chi nhánh mình; `GET`, `PATCH`, `lock`, `unlock`, `unlink-google` theo `isStaffOfManagedBranches` |
+| STAFF          | Không có API quản trị                                                                                                                                                                            |
+
+`isStaffOfManagedBranches`: user bị thao tác **chỉ có vai trò STAFF** và **mọi** chi nhánh của họ đều do MANAGER này quản lý. Vì vậy STAFF làm ở cả chi nhánh khác thì MANAGER không thao tác được.
+
+Người thao tác đọc từ DB bằng `loadActor`, không từ token, chỉ tính vai trò còn hiệu lực. Token còn sống tối đa 15 phút sau khi bị khoá hoặc hạ vai trò: nếu tin token, ADMIN vừa bị khoá tự mở khoá được.
+
+## Quản lý chi nhánh
+
+Controller: `src/admin/branches.controller.ts`. Service: `src/admin/branches.service.ts`.
+
+- `list`: phân trang, sắp theo `code`.
+- `create`: tạo chi nhánh, outbox `branch.created`, `AuditLog` trong một transaction. Trùng `code` → `400`, `details.fields`.
+- `update`: khoá lạc quan theo `version`, lệch → `409 VERSION_CONFLICT`. Outbox `branch.updated`.
+- `deactivate`: UPDATE có điều kiện `isActive = true`, gọi lại → `409 INVALID_STATE`. Outbox `branch.updated` có `isActive = false`. Không xoá `UserBranch`: `ACTIVE_ASSIGNMENTS` bỏ vai trò này khi phát token. User không còn vai trò nào khác thì refresh trả `401`, đăng nhập Google trả `403`.
+
+**Bảng ghi:** `Branch`, `OutboxEvent`, `AuditLog`.
+
+**Đồng thời:** hai request cùng `code`: unique chặn một bên, bắt `P2002` đúng index `Branch_code_key`. Hai lần ngừng hoạt động: UPDATE có điều kiện nên chỉ một lần phát sự kiện. Sự kiện ghi cùng transaction nên rollback thì không có thư.
+
+## Quản lý nhân viên
+
+Controller: `src/admin/users.controller.ts`. Service: `src/admin/users.service.ts`. Mọi thao tác sửa một user đi qua `changeUser`, trong một transaction:
+
+1. `SET LOCAL lock_timeout`, khoá dòng user. Thao tác có thể bớt ADMIN khoá thêm mọi ADMIN (`lockAdminsAndUser`).
+2. Đọc user đã khoá, gọi `assertAllowed` trên dữ liệu đó.
+3. Thực hiện thay đổi, đọc lại, kiểm ADMIN cuối cùng nếu user là ADMIN (`assertAdminRemains`).
+4. Ghi `AuditLog` có `actorId`, `before`, `after` (`toAuditSnapshot`: chỉ ghi `hasPassword`, không ghi hash).
+
+| Thao tác                          | Hàm                  | Thu hồi mọi phiên          | Quy tắc ADMIN cuối cùng |
+| --------------------------------- | -------------------- | -------------------------- | ----------------------- |
+| Sửa (`version`)                   | `update`             | Không                      | Không                   |
+| Khoá                              | `lock`               | Có                         | Có                      |
+| Mở khoá                           | `unlock`             | Không                      | Không                   |
+| Gỡ Google                         | `unlinkGoogle`       | Có                         | Có                      |
+| Đặt lại mật khẩu (chỉ user ADMIN) | `resetPassword`      | Có                         | Không                   |
+| Thay vai trò                      | `replaceAssignments` | Khi bớt bất kỳ vai trò nào | Có                      |
+
+`create` không qua `changeUser` vì chưa có dòng để khoá: email lưu chữ thường, chi nhánh phải tồn tại và đang hoạt động (`assertBranchesUsable`), `password` bắt buộc khi và chỉ khi có vai trò ADMIN.
+
+**Mật khẩu đi theo vai trò ADMIN:** thêm ADMIN phải kèm `password`, gửi `password` trong trường hợp khác → `400`; bỏ ADMIN → xoá `passwordHash`. bcrypt luôn chạy ngoài transaction, sau khi đã kiểm quyền.
+
+**Bảng ghi:** `User`, `UserBranch`, `AuthIdentity`, `RefreshToken`, `AuditLog`.
+
+**Đồng thời:** hai request cùng email: unique chặn một bên, bắt `P2002` đúng index `User_email_key`. Refresh đúng lúc thu hồi: thứ tự khoá user rồi token nên `updateMany` thu hồi thấy cả token vừa xoay vòng. Deadlock còn sót lại do `runWithLockRetry` chạy lại tối đa 3 lần; vẫn lỗi hoặc chờ khoá quá 3 giây → `503`.
+
+## Quy tắc ADMIN cuối cùng
+
+File: `src/admin/last-admin.ts`. Áp dụng cho khoá, bỏ vai trò ADMIN, gỡ Google của ADMIN không có mật khẩu.
+
+**ADMIN đang hoạt động** = `ACTIVE`, có vai trò ADMIN, và có mật khẩu hoặc Google. ADMIN không còn cách đăng nhập thì không tính.
+
+1. `lockAdminsAndUser`, gọi **trước** mọi thay đổi: `SELECT ... FOR UPDATE` các dòng `User` của mọi ADMIN đang hoạt động và user bị thao tác, sắp theo id.
+2. Thực hiện thay đổi.
+3. `assertAdminRemains`, gọi **sau** thay đổi: đếm lại bằng câu lệnh mới; bằng 0 → `409 LAST_ADMIN`, cả transaction rollback.
+
+**Đồng thời:** hai ADMIN cùng hạ vai trò của nhau. Không khoá thì mỗi bên đếm khi chưa thấy thay đổi của bên kia, đều thấy còn 1 ADMIN, cả hai commit và hệ thống còn 0 ADMIN. Có khoá thì bên sau chờ bên trước commit; ở chế độ READ COMMITTED câu đếm sau đó thấy dữ liệu mới, nên nhận `409`. Danh sách khoá đọc từ snapshot cũ cũng không sao, vì việc đếm là câu lệnh riêng chạy sau khi đã có khoá. Sắp theo id để hai bên không khoá ngược thứ tự.
+
+Khi chạy `pnpm test:auth`, test dừng nếu DB có ADMIN ngoài dữ liệu test, vì quy tắc này đếm toàn hệ thống.
 
 ## Dọn token
 

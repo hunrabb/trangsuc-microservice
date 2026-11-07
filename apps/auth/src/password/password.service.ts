@@ -65,8 +65,7 @@ export class PasswordService implements OnModuleInit {
     if (!eligible || !matched) {
       throw invalidCredentials();
     }
-    const { id, fullName, branches } = user;
-    return this.sessions.open({ id, email: user.email, fullName, branches }, client);
+    return this.sessions.open(user.id, client, invalidCredentials);
   }
 
   /** Đổi mật khẩu và thu hồi mọi phiên khác trong một transaction; giữ phiên đang dùng. */

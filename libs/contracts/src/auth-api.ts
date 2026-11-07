@@ -29,7 +29,33 @@ const version = z.number().int().positive();
 const hasAdminRole = (assignments: readonly { role: string }[]): boolean =>
   assignments.some((assignment) => assignment.role === 'ADMIN');
 
-export const assignmentsSchema = z.array(branchRoleSchema).min(1);
+/** Mỗi chi nhánh một vai trò: `UserBranch` unique theo (userId, branchId). */
+export const assignmentsSchema = z
+  .array(branchRoleSchema)
+  .min(1)
+  .refine(
+    (assignments) =>
+      new Set(assignments.map((assignment) => assignment.branchId)).size === assignments.length,
+    { error: 'Mỗi chi nhánh chỉ có một vai trò' },
+  );
+
+// ---------------------------------------------------------------- Phân trang
+export const PAGE_SIZE_DEFAULT = 20;
+export const PAGE_SIZE_MAX = 100;
+
+/** Query string luôn là chuỗi nên phải `coerce`. */
+export const paginationQuerySchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  pageSize: z.coerce.number().int().positive().max(PAGE_SIZE_MAX).default(PAGE_SIZE_DEFAULT),
+});
+
+const pageOf = <Item extends z.ZodType>(item: Item) =>
+  z.object({
+    items: z.array(item),
+    total: z.number().int().nonnegative().describe('Tổng số dòng khớp, không chỉ trang này'),
+    page: z.number().int().positive(),
+    pageSize: z.number().int().positive(),
+  });
 
 // ---------------------------------------------------------------- Xác thực
 export const googleLoginRequestSchema = z.strictObject({
@@ -75,6 +101,8 @@ export const branchSchema = z.object({
   version,
 });
 
+export const branchPageSchema = pageOf(branchSchema);
+
 export const createBranchRequestSchema = z.strictObject({
   code: nonEmpty,
   name: nonEmpty,
@@ -103,7 +131,11 @@ export const userSchema = z.object({
   version,
 });
 
-export const listUsersQuerySchema = z.object({ branchId: z.uuid().optional() });
+export const userPageSchema = pageOf(userSchema);
+
+export const listUsersQuerySchema = paginationQuerySchema.extend({
+  branchId: z.uuid().optional(),
+});
 
 /** `password` bắt buộc khi và chỉ khi có vai trò ADMIN. */
 export const createUserRequestSchema = z
@@ -139,6 +171,10 @@ export const replaceAssignmentsRequestSchema = z
     error: 'password chỉ dùng khi có vai trò ADMIN',
   });
 
+export type PaginationQuery = z.infer<typeof paginationQuerySchema>;
+export type BranchPage = z.infer<typeof branchPageSchema>;
+export type UserPage = z.infer<typeof userPageSchema>;
+export type ListUsersQuery = z.infer<typeof listUsersQuerySchema>;
 export type GoogleLoginRequest = z.infer<typeof googleLoginRequestSchema>;
 export type PasswordLoginRequest = z.infer<typeof passwordLoginRequestSchema>;
 export type ChangePasswordRequest = z.infer<typeof changePasswordRequestSchema>;

@@ -3,6 +3,7 @@ import { branchRoleSchema, roleSchema } from './auth';
 import {
   authSessionSchema,
   authUserSchema,
+  branchPageSchema,
   branchSchema,
   changePasswordRequestSchema,
   createBranchRequestSchema,
@@ -14,6 +15,7 @@ import {
   resetPasswordRequestSchema,
   updateBranchRequestSchema,
   updateUserRequestSchema,
+  userPageSchema,
   userSchema,
 } from './auth-api';
 import { errorResponseSchema } from './error-response';
@@ -31,9 +33,11 @@ const AUTH_OPENAPI_SCHEMAS = {
   ChangePasswordRequest: changePasswordRequestSchema,
   ResetPasswordRequest: resetPasswordRequestSchema,
   Branch: branchSchema,
+  BranchPage: branchPageSchema,
   CreateBranchRequest: createBranchRequestSchema,
   UpdateBranchRequest: updateBranchRequestSchema,
   User: userSchema,
+  UserPage: userPageSchema,
   CreateUserRequest: createUserRequestSchema,
   UpdateUserRequest: updateUserRequestSchema,
   ReplaceAssignmentsRequest: replaceAssignmentsRequestSchema,

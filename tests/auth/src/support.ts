@@ -45,6 +45,8 @@ export interface TestUser {
 export interface TestDb {
   $disconnect(): Promise<void>;
   $executeRawUnsafe(query: string, ...values: unknown[]): Promise<number>;
+  $queryRawUnsafe(query: string, ...values: unknown[]): Promise<unknown>;
+  $transaction<T>(work: (tx: TestDb) => Promise<T>): Promise<T>;
   user: {
     create(args: unknown): Promise<TestUser>;
     findMany(args?: unknown): Promise<(TestUser & { passwordHash: string | null })[]>;
@@ -71,10 +73,13 @@ export interface TestDb {
         ip: string | null;
       }[]
     >;
+    create(args: unknown): Promise<unknown>;
+    updateMany(args: unknown): Promise<unknown>;
     deleteMany(args?: unknown): Promise<unknown>;
     count(args?: unknown): Promise<number>;
   };
   authIdentity: {
+    create(args: unknown): Promise<unknown>;
     findMany(args?: unknown): Promise<{ subject: string; userId: string }[]>;
     deleteMany(args?: unknown): Promise<unknown>;
     count(args?: unknown): Promise<number>;
@@ -84,7 +89,17 @@ export interface TestDb {
     deleteMany(args?: unknown): Promise<unknown>;
     count(args?: unknown): Promise<number>;
   };
-  outboxEvent: { count(args?: unknown): Promise<number> };
+  outboxEvent: {
+    count(args?: unknown): Promise<number>;
+    findMany(args?: unknown): Promise<{ eventType: string; payload: unknown }[]>;
+    deleteMany(args?: unknown): Promise<unknown>;
+  };
+  branch: {
+    create(args: unknown): Promise<{ id: string; code: string; version: number }>;
+    findMany(args?: unknown): Promise<{ id: string }[]>;
+    deleteMany(args?: unknown): Promise<unknown>;
+    count(args?: unknown): Promise<number>;
+  };
 }
 
 export function createDb(): TestDb {

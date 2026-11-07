@@ -11,6 +11,7 @@ export * from './config/env-fields';
 export * from './config/parse-env';
 export * from './correlation/correlation-id';
 export * from './correlation/correlation.module';
+export * from './database/run-with-lock-retry';
 export * from './errors/business-error';
 export * from './errors/global-exception.filter';
 export * from './health/health.module';
