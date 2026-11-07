@@ -1,4 +1,5 @@
 const MINUTE_MS = 60_000;
+const CHANGE_PASSWORD_PATH = '/auth/change-password';
 
 export interface RateLimit {
   key: string;
@@ -31,12 +32,21 @@ function emailOf(body: Buffer | undefined): string {
   }
 }
 
+/**
+ * Đường này giới hạn theo user, nên gateway phải kiểm token trước khi đếm. Lấy `sub` từ token chưa kiểm chữ ký
+ * là không được: kẻ tấn công sẽ tự đặt `sub` để khoá người khác, hoặc đổi `sub` liên tục để không bị giới hạn.
+ */
+export function isLimitedByUser(method: string, servicePath: string): boolean {
+  return method === 'POST' && normalizePath(servicePath) === CHANGE_PASSWORD_PATH;
+}
+
 /** Các giới hạn áp dụng cho một request tới service, theo đường đã viết lại. */
 export function rateLimitsFor(
   method: string,
   servicePath: string,
   clientIp: string,
   body: Buffer | undefined,
+  userId?: string,
 ): RateLimit[] {
   if (method !== 'POST') {
     return [];
@@ -49,6 +59,11 @@ export function rateLimitsFor(
       ];
     case '/auth/google':
       return [{ key: `google:ip:${clientIp}`, limit: 20, ttlMs: MINUTE_MS }];
+    case CHANGE_PASSWORD_PATH:
+      return [
+        { key: `change-password:user:${userId}`, limit: 5, ttlMs: 15 * MINUTE_MS },
+        { key: `change-password:ip:${clientIp}`, limit: 20, ttlMs: MINUTE_MS },
+      ];
     case '/auth/refresh':
       return [{ key: `refresh:ip:${clientIp}`, limit: 60, ttlMs: MINUTE_MS }];
     default:

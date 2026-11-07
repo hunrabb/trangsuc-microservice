@@ -5,6 +5,7 @@ import { All, Controller, Logger, Req, Res } from '@nestjs/common';
 import type { Env } from '../config/env';
 import { forwardRequestHeaders, forwardResponseHeaders } from './headers';
 import { resolveClientIp, parseTrustedProxies } from './client-ip';
+import { isLimitedByUser } from './rate-limit-rules';
 import { RateLimitService } from './rate-limit.service';
 import { BodyTooLargeError, MAX_BODY_BYTES, readBody } from './read-body';
 import { resolveRoute, type UpstreamService } from './routes';
@@ -59,8 +60,11 @@ export class ProxyController {
       req.headers['x-forwarded-for'],
       this.trustedProxies,
     );
+    const userId = isLimitedByUser(req.method, route.path)
+      ? (await this.jwtGuard.authenticate(req)).id
+      : undefined;
     // Sau khi đọc body: giới hạn đăng nhập tính theo cả email.
-    await this.rateLimits.enforce(req.method, route.path, clientIp ?? '', body, res);
+    await this.rateLimits.enforce(req.method, route.path, clientIp ?? '', body, userId, res);
 
     let upstream: Response;
     let payload: Buffer;

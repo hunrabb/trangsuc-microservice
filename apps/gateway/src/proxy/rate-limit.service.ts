@@ -16,11 +16,18 @@ export class RateLimitService {
     servicePath: string,
     clientIp: string,
     body: Buffer | undefined,
+    userId: string | undefined,
     response: { setHeader(name: string, value: string): unknown },
   ): Promise<void> {
     let retryAfter = 0;
     // Tăng mọi bộ đếm, kể cả khi bộ đầu đã vượt: lần bị chặn vẫn phải tính vào giới hạn theo IP.
-    for (const { key, limit, ttlMs } of rateLimitsFor(method, servicePath, clientIp, body)) {
+    for (const { key, limit, ttlMs } of rateLimitsFor(
+      method,
+      servicePath,
+      clientIp,
+      body,
+      userId,
+    )) {
       const record = await this.storage.increment(key, ttlMs, limit, ttlMs, key);
       if (record.isBlocked) {
         retryAfter = Math.max(retryAfter, record.timeToBlockExpire, 1);

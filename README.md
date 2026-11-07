@@ -113,11 +113,12 @@ Bảng định tuyến nằm ở [apps/gateway/src/proxy/routes.ts](apps/gateway
 
 ### Rate limit và IP thật
 
-| Đường                    | Giới hạn                                            |
-| ------------------------ | --------------------------------------------------- |
-| `POST /api/auth/login`   | 5 lần / phút theo IP + email, 20 lần / phút theo IP |
-| `POST /api/auth/google`  | 20 lần / phút theo IP                               |
-| `POST /api/auth/refresh` | 60 lần / phút theo IP                               |
+| Đường                            | Giới hạn                                            |
+| -------------------------------- | --------------------------------------------------- |
+| `POST /api/auth/login`           | 5 lần / phút theo IP + email, 20 lần / phút theo IP |
+| `POST /api/auth/google`          | 20 lần / phút theo IP                               |
+| `POST /api/auth/refresh`         | 60 lần / phút theo IP                               |
+| `POST /api/auth/change-password` | 5 lần / 15 phút theo user, 20 lần / phút theo IP    |
 
 Vượt → `429 RATE_LIMITED` kèm `Retry-After`. Bộ đếm nằm trong bộ nhớ gateway, chỉ đúng với một instance.
 

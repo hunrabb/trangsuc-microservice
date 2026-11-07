@@ -271,7 +271,8 @@ paths:
       - Xác thực
       summary: Đổi mật khẩu của chính mình
       description: '`currentPassword` sai → `401 INVALID_CREDENTIALS`. Mật khẩu mới không đạt hoặc trùng mật khẩu
-        cũ → `400 PASSWORD_TOO_WEAK`. Thu hồi mọi phiên khác, giữ phiên của cookie `rt_bo` đang gửi.'
+        cũ → `400 PASSWORD_TOO_WEAK`. Thu hồi mọi phiên khác, giữ phiên của cookie `rt_bo` đang gửi. Tối đa 5 lần
+        mỗi 15 phút theo user và 20 lần mỗi phút theo IP; gateway kiểm access token trước khi đếm.'
       x-roles:
       - ADMIN
       x-audience: store-backoffice
@@ -313,6 +314,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: 'Quá số lần thử: RATE_LIMITED'
+          x-error-codes:
+          - RATE_LIMITED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          headers:
+            Retry-After:
+              description: Số giây phải chờ trước khi thử lại
+              schema:
+                type: integer
   /api/auth/logout-all:
     post:
       operationId: logoutAll

@@ -66,6 +66,8 @@ Quản lý nhân viên, phiên đăng nhập và phát token. File này dành ch
 
 **Bảng ghi:** `User`, `RefreshToken`, `AuditLog`.
 
+Gateway giới hạn 5 lần / 15 phút theo user, xem mục Rate limit.
+
 **Đồng thời:** hai lần đổi cùng lúc. `UPDATE` có điều kiện `passwordHash = <hash cũ>` nên chỉ một bên thắng; bên kia thấy 0 dòng và nhận `401`.
 
 ## Gọi API với access token
@@ -131,14 +133,15 @@ Hai việc này ở gateway, auth chỉ đọc kết quả.
 **Rate limit:**
 
 1. Sau khi đọc body, gateway gọi `RateLimitService.enforce` trong `rate-limit.service.ts`, trước khi chuyển tiếp.
-2. `rateLimitsFor` trong `rate-limit-rules.ts` chọn giới hạn theo đường đã chuẩn hoá, để `/auth/LOGIN/` không lách được.
+2. `rateLimitsFor` trong `rate-limit-rules.ts` chọn giới hạn theo đường đã chuẩn hoá, để `/auth/LOGIN/` không lách được. Riêng đổi mật khẩu giới hạn theo user, nên gateway kiểm access token trước khi đếm (`isLimitedByUser`), để không ai tự khai `sub` của người khác.
 3. Vượt → `429 RATE_LIMITED` có `Retry-After`, request không tới auth.
 
-| Đường                    | Giới hạn                                            |
-| ------------------------ | --------------------------------------------------- |
-| `POST /api/auth/login`   | 5 lần / phút theo IP + email, 20 lần / phút theo IP |
-| `POST /api/auth/google`  | 20 lần / phút theo IP                               |
-| `POST /api/auth/refresh` | 60 lần / phút theo IP                               |
+| Đường                            | Giới hạn                                            |
+| -------------------------------- | --------------------------------------------------- |
+| `POST /api/auth/login`           | 5 lần / phút theo IP + email, 20 lần / phút theo IP |
+| `POST /api/auth/google`          | 20 lần / phút theo IP                               |
+| `POST /api/auth/refresh`         | 60 lần / phút theo IP                               |
+| `POST /api/auth/change-password` | 5 lần / 15 phút theo user, 20 lần / phút theo IP    |
 
 **Bảng ghi:** không có, bộ đếm nằm trong bộ nhớ gateway.
 

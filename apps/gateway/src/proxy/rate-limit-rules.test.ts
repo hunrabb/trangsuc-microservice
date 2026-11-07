@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { rateLimitsFor } from './rate-limit-rules.ts';
+import { isLimitedByUser, rateLimitsFor } from './rate-limit-rules.ts';
 
 const login = (email: unknown) => Buffer.from(JSON.stringify({ email, password: 'x' }));
 const limits = (path: string, body?: Buffer) =>
@@ -18,6 +18,25 @@ describe('rateLimitsFor', () => {
     assert.deepEqual(limits('/auth/google'), [['google:ip:1.2.3.4', 20]]);
     assert.deepEqual(limits('/auth/refresh'), [['refresh:ip:1.2.3.4', 60]]);
     assert.equal(rateLimitsFor('POST', '/auth/google', 'x', undefined)[0]?.ttlMs, 60_000);
+  });
+
+  it('change-password: 5 lần / 15 phút theo user, 20 lần / phút theo IP', () => {
+    assert.deepEqual(rateLimitsFor('POST', '/auth/change-password', '1.2.3.4', undefined, 'u1'), [
+      { key: 'change-password:user:u1', limit: 5, ttlMs: 900_000 },
+      { key: 'change-password:ip:1.2.3.4', limit: 20, ttlMs: 60_000 },
+    ]);
+  });
+
+  it('chỉ change-password cần biết user, và không lách được bằng cách viết đường dẫn khác', () => {
+    for (const path of [
+      '/auth/change-password',
+      '/auth/CHANGE-password/',
+      '/auth/change-password?x=1',
+    ]) {
+      assert.equal(isLimitedByUser('POST', path), true, path);
+    }
+    assert.equal(isLimitedByUser('GET', '/auth/change-password'), false);
+    assert.equal(isLimitedByUser('POST', '/auth/login'), false);
   });
 
   it('không lách được bằng cách viết đường dẫn khác', () => {

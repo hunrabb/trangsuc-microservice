@@ -7,7 +7,7 @@ import type { Server } from 'node:http';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { after, afterEach, before, describe, it } from 'node:test';
-import { signTestToken } from '@jewelry/test-utils';
+import { createTestKeys, signTestToken } from '@jewelry/test-utils';
 import {
   authServiceEnv,
   createDb,
@@ -585,6 +585,95 @@ describe('đăng nhập mật khẩu, đổi mật khẩu, rate limit', () => {
         assert.equal(reply.status, 401, `lần ${attempt}`);
       }
       assert.equal((await postFrom(gateway.url, '/api/auth/refresh', ip, {})).status, 429);
+    });
+
+    describe('đổi mật khẩu', () => {
+      const attempt = (ip: string, token: string, currentPassword = 'sai-mat-khau-hoan-toan') =>
+        postFrom(
+          gateway.url,
+          '/api/auth/change-password',
+          ip,
+          { currentPassword, newPassword: NEW_PASSWORD },
+          { authorization: `Bearer ${token}` },
+        );
+
+      it('sai lần thứ 6 trong 15 phút: 429, kể cả đổi IP; user khác không ảnh hưởng', async () => {
+        const user = await createAdmin();
+        const other = await createAdmin();
+        const { accessToken } = await loginOk(user);
+        const ip = freshIp();
+
+        for (let time = 1; time <= 5; time += 1) {
+          assert.equal((await attempt(ip, accessToken)).status, 401, `lần ${time}`);
+        }
+        const blocked = await attempt(ip, accessToken);
+
+        assert.equal(blocked.status, 429);
+        assert.equal(blocked.body.code, 'RATE_LIMITED');
+        const retryAfter = Number(blocked.headers['retry-after']);
+        assert.ok(retryAfter > 60 && retryAfter <= 900, `Retry-After = ${retryAfter}`);
+        assert.equal((await attempt(freshIp(), accessToken)).status, 429, 'đổi IP không lách được');
+
+        const session = await loginOk(other);
+        assert.equal((await attempt(freshIp(), session.accessToken)).status, 401);
+      });
+
+      it('lần bị chặn không tới auth: mật khẩu đúng cũng không đổi được', async () => {
+        const user = await createAdmin();
+        const { accessToken } = await loginOk(user);
+        const ip = freshIp();
+        for (let time = 1; time <= 5; time += 1) {
+          await attempt(ip, accessToken);
+        }
+        assert.equal((await attempt(ip, accessToken, PASSWORD)).status, 429);
+        const stored = await db.user.findUnique({ where: { id: user.id } });
+        assert.equal(stored?.passwordHash, passwordHash);
+      });
+
+      it('không lách được bằng cách viết đường dẫn khác', async () => {
+        const user = await createAdmin();
+        const { accessToken } = await loginOk(user);
+        const ip = freshIp();
+        for (const path of [
+          '/api/auth/change-password',
+          '/api/auth/CHANGE-PASSWORD',
+          '/api/auth/change-password/',
+          '/api/auth/Change-Password/',
+          '/api/auth/change-password',
+        ]) {
+          const reply = await postFrom(
+            gateway.url,
+            path,
+            ip,
+            { currentPassword: 'sai-mat-khau-hoan-toan', newPassword: NEW_PASSWORD },
+            { authorization: `Bearer ${accessToken}` },
+          );
+          assert.equal(reply.status, 401, path);
+        }
+        assert.equal((await attempt(ip, accessToken)).status, 429);
+      });
+
+      it('token giả không khoá được user khác: 401 ở gateway, không tính vào bộ đếm', async () => {
+        const victim = await createAdmin();
+        const { accessToken } = await loginOk(victim);
+        const stranger = createTestKeys();
+        const forged = await signTestToken(stranger.privateKey, { claims: { sub: victim.id } });
+        const ip = freshIp();
+        for (let time = 1; time <= 8; time += 1) {
+          assert.equal((await attempt(ip, forged)).status, 401);
+        }
+        assert.equal((await attempt(freshIp(), accessToken)).status, 401, 'vẫn chưa bị chặn');
+      });
+
+      it('20 lần mỗi phút theo IP, dù đổi user', async () => {
+        const ip = freshIp();
+        const token = (sub: string) => signTestToken(keys.privateKey, { claims: { sub } });
+        for (let time = 1; time <= 20; time += 1) {
+          const reply = await attempt(ip, await token(randomUUID()));
+          assert.equal(reply.status, 401, `lần ${time}`);
+        }
+        assert.equal((await attempt(ip, await token(randomUUID()))).status, 429);
+      });
     });
 
     it('proxy tin cậy: X-Forwarded-For được dùng, phần client giả ở đầu chuỗi bị bỏ qua', async () => {
