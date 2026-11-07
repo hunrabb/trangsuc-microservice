@@ -1,43 +1,38 @@
-import { useEffect, useState } from 'react';
+import { Route, Routes } from 'react-router';
+import { RequireAuth, RequireRole } from './auth/require-auth.tsx';
+import { canChangeOwnPassword, canManageBranches, canManageUsers } from './auth/permissions.ts';
+import { AppLayout } from './layout/app-shell.tsx';
+import { BranchesPage } from './pages/branches-page.tsx';
+import { ChangePasswordPage } from './pages/change-password-page.tsx';
+import { HomePage } from './pages/home-page.tsx';
+import { LoginPage } from './pages/login-page.tsx';
+import { NotFoundPage } from './pages/not-found-page.tsx';
+import { UsersPage } from './pages/users-page.tsx';
 
-const APP_NAME = 'Backoffice';
-const APP_DESCRIPTION = 'Quản trị, bán tại quầy (POS) và xử lý đơn online';
-
-type PingState =
-  { status: 'loading' } | { status: 'ok'; body: unknown } | { status: 'error'; message: string };
-
+/** Đường dẫn và quyền vào từng trang. Quyền thật vẫn do server kiểm; ở đây chỉ để không hiện nhầm trang. */
 export function App() {
-  const [ping, setPing] = useState<PingState>({ status: 'loading' });
-
-  useEffect(() => {
-    const controller = new AbortController();
-
-    fetch('/api/ping', { signal: controller.signal })
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-        setPing({ status: 'ok', body: await response.json() });
-      })
-      .catch((error: unknown) => {
-        if (!controller.signal.aborted) {
-          setPing({ status: 'error', message: String(error) });
-        }
-      });
-
-    return () => controller.abort();
-  }, []);
-
   return (
-    <main>
-      <h1>{APP_NAME}</h1>
-      <p>{APP_DESCRIPTION}</p>
-      <h2>
-        <code>GET /api/ping</code>
-      </h2>
-      {ping.status === 'loading' && <p>Đang gọi…</p>}
-      {ping.status === 'ok' && <pre data-testid="ping-result">{JSON.stringify(ping.body)}</pre>}
-      {ping.status === 'error' && <pre data-testid="ping-error">Lỗi: {ping.message}</pre>}
-    </main>
+    <Routes>
+      <Route path="/dang-nhap" element={<LoginPage />} />
+      <Route
+        element={
+          <RequireAuth>
+            <AppLayout />
+          </RequireAuth>
+        }
+      >
+        <Route index element={<HomePage />} />
+        <Route element={<RequireRole allow={canManageBranches} />}>
+          <Route path="/chi-nhanh" element={<BranchesPage />} />
+        </Route>
+        <Route element={<RequireRole allow={canManageUsers} />}>
+          <Route path="/nhan-vien" element={<UsersPage />} />
+        </Route>
+        <Route element={<RequireRole allow={canChangeOwnPassword} />}>
+          <Route path="/doi-mat-khau" element={<ChangePasswordPage />} />
+        </Route>
+        <Route path="*" element={<NotFoundPage />} />
+      </Route>
+    </Routes>
   );
 }

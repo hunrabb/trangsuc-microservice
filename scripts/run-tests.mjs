@@ -1,15 +1,13 @@
 #!/usr/bin/env node
 // Chạy test của một package: node ../../scripts/run-tests.mjs "src/**/*.test.ts"
-// Khác `node --test`: THẤT BẠI khi số test chạy được bằng 0 (sai đường dẫn, glob bị bỏ qua, mọi test bị skip).
-// Đếm bằng `test:summary` theo từng file: `test:pass` tính cả file rỗng (là một "test") và test bị skip.
+// Thất bại nếu không có test nào pass (glob sai, file rỗng hoặc toàn bộ test bị skip).
 import { globSync } from 'node:fs';
-import { run } from 'node:test';
-import { spec } from 'node:test/reporters';
+import { spawnSync } from 'node:child_process';
 
-// --sequential: chạy từng file một. Dùng khi mỗi file dựng nhiều service thật: 8 service khởi động cùng lúc mất
-// hơn 20 giây trên máy 4 CPU (1 service mất khoảng 2 giây), vượt thời gian chờ và tốn RAM.
+// Chạy từng file tuần tự để không dồn nhiều service/test worker lên máy ít RAM.
+// Chạy file trực tiếp để các suite `node:test` trong TypeScript được đăng ký và đếm đúng trên Node 24.
+// Giữ `--sequential` để không làm hỏng các caller cũ; mọi file hiện đều chạy tuần tự.
 const args = process.argv.slice(2);
-const sequential = args.includes('--sequential');
 const patterns = args.filter((arg) => arg !== '--sequential');
 const files = patterns.flatMap((pattern) => globSync(pattern)).sort();
 
@@ -21,27 +19,36 @@ if (files.length === 0) {
 let passed = 0;
 let failed = 0;
 
-const stream = run({
-  files,
-  concurrency: sequential ? 1 : true,
-  execArgv: ['--disable-warning=MODULE_TYPELESS_PACKAGE_JSON'],
-});
+for (const file of files) {
+  const result = spawnSync(
+    process.execPath,
+    ['--disable-warning=MODULE_TYPELESS_PACKAGE_JSON', file],
+    { encoding: 'utf8', maxBuffer: 20 * 1024 * 1024 },
+  );
+  const output = `${result.stdout ?? ''}${result.stderr ?? ''}`;
+  process.stdout.write(output);
 
-stream.on('test:summary', (event) => {
-  if (event.file !== undefined) {
-    passed += event.counts.passed;
+  if (result.error !== undefined) {
+    console.error(`Không chạy được ${file}: ${result.error.message}`);
+    failed += 1;
+    continue;
   }
-});
-stream.on('test:fail', () => {
-  failed += 1;
-});
-stream.on('end', () => {
-  if (failed === 0 && passed === 0) {
+  if (result.status !== 0) {
+    failed += 1;
+  }
+
+  const summary = output.match(/ℹ pass (\d+)/);
+  if (summary === null) {
+    console.error(`Không đọc được số test trong kết quả của ${file}`);
+    failed += 1;
+  } else {
+    passed += Number(summary[1]);
+  }
+}
+
+if (failed > 0 || passed === 0) {
+  if (passed === 0) {
     console.error(`LỖI: 0 test chạy được trong ${files.length} file: ${files.join(', ')}`);
-    process.exitCode = 1;
-  } else if (failed > 0) {
-    process.exitCode = 1;
   }
-});
-
-stream.compose(spec).pipe(process.stdout);
+  process.exitCode = 1;
+}

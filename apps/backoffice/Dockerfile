@@ -15,6 +15,10 @@ WORKDIR /app
 COPY pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm fetch
 
+# Client ID của Google (công khai, nhúng vào bản build). Thiếu thì trang đăng nhập báo rõ chứ không hỏng.
+ARG VITE_GOOGLE_CLIENT_ID=
+ENV VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
+
 COPY . .
 RUN pnpm install --offline --frozen-lockfile --filter "@jewelry/backoffice..." --filter "."
 RUN pnpm --filter @jewelry/backoffice build

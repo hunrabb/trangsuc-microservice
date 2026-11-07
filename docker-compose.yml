@@ -321,6 +321,8 @@ services:
     build:
       context: .
       dockerfile: apps/backoffice/Dockerfile
+      args:
+        VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
     image: jewelry/backoffice:dev
     restart: unless-stopped
     networks:
