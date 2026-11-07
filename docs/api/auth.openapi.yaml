@@ -30,7 +30,8 @@ paths:
       - Xác thực
       summary: Đăng nhập nhân viên bằng Google
       description: ID token sai → 401. Email chưa được cấp quyền, tài khoản bị khoá hoặc không có vai trò → 403,
-        không tạo gì. Lần đầu ghép Google ghi `AuditLog`. Không lấy được khoá của Google → 503.
+        không tạo gì. Lần đầu ghép Google ghi `AuditLog`. Không lấy được khoá của Google → 503. Tối đa 20 lần mỗi
+        phút theo IP.
       x-roles:
       - công khai
       x-audience: không yêu cầu token
@@ -77,6 +78,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: 'Quá số lần thử: RATE_LIMITED'
+          x-error-codes:
+          - RATE_LIMITED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          headers:
+            Retry-After:
+              description: Số giây phải chờ trước khi thử lại
+              schema:
+                type: integer
         '503':
           description: 'Tạm thời không sẵn sàng: SERVICE_UNAVAILABLE'
           x-error-codes:
@@ -92,7 +106,8 @@ paths:
       - Xác thực
       summary: Đăng nhập bằng mật khẩu, chỉ ADMIN
       description: Mọi trường hợp không thành công (sai email, sai mật khẩu, không phải ADMIN, bị khoá) trả cùng
-        `401 INVALID_CREDENTIALS`. Tối đa 5 lần thử mỗi phút mỗi IP.
+        `401 INVALID_CREDENTIALS`. Tối đa 5 lần mỗi phút theo IP + email và 20 lần mỗi phút theo IP. Ghi `AuditLog`
+        cho cả thành công và thất bại.
       x-roles:
       - công khai
       x-audience: không yêu cầu token
@@ -139,6 +154,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+          headers:
+            Retry-After:
+              description: Số giây phải chờ trước khi thử lại
+              schema:
+                type: integer
   /api/auth/refresh:
     post:
       operationId: refreshSession
@@ -148,6 +168,7 @@ paths:
       description: Hết hạn trượt 7 ngày hoặc hạn tuyệt đối 30 ngày, hoặc không có cookie → 401, xoá cookie. Token
         vừa bị thay trong 10 giây gần đây (hai tab refresh cùng lúc) → 409, không thu hồi phiên, client gửi lại
         là được. Token đã thu hồi lâu hơn thế bị dùng lại → coi là bị đánh cắp, thu hồi mọi phiên của user, 401.
+        Tối đa 60 lần mỗi phút theo IP.
       x-roles:
       - công khai
       x-audience: không yêu cầu access token
@@ -181,6 +202,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: 'Quá số lần thử: RATE_LIMITED'
+          x-error-codes:
+          - RATE_LIMITED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          headers:
+            Retry-After:
+              description: Số giây phải chờ trước khi thử lại
+              schema:
+                type: integer
   /api/auth/logout:
     post:
       operationId: logout
@@ -236,7 +270,8 @@ paths:
       tags:
       - Xác thực
       summary: Đổi mật khẩu của chính mình
-      description: '`currentPassword` sai → `401 INVALID_CREDENTIALS`.'
+      description: '`currentPassword` sai → `401 INVALID_CREDENTIALS`. Mật khẩu mới không đạt hoặc trùng mật khẩu
+        cũ → `400 PASSWORD_TOO_WEAK`. Thu hồi mọi phiên khác, giữ phiên của cookie `rt_bo` đang gửi.'
       x-roles:
       - ADMIN
       x-audience: store-backoffice

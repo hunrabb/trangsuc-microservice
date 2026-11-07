@@ -1,4 +1,5 @@
 import { accessSync, constants, statSync } from 'node:fs';
+import { isIP } from 'node:net';
 import { z } from 'zod';
 
 /** Khối dựng schema cấu hình. Schema của từng app vẫn nằm trong app đó (`src/config/env.ts`). */
@@ -25,6 +26,28 @@ export const postgresUrlField = (dbSchema: string) =>
       (value) => new URL(value).searchParams.get('schema') === dbSchema,
       `URL phải có ?schema=${dbSchema}`,
     );
+
+function isIpOrCidr(entry: string): boolean {
+  const [address = '', prefix, extra] = entry.split('/');
+  const family = isIP(address);
+  if (family === 0 || extra !== undefined) {
+    return false;
+  }
+  return (
+    prefix === undefined || (/^\d+$/.test(prefix) && Number(prefix) <= (family === 4 ? 32 : 128))
+  );
+}
+
+/** Danh sách IP hoặc CIDR, phân cách bằng dấu phẩy; được phép rỗng. */
+export const ipListField = z.string().refine(
+  (value) =>
+    value
+      .split(',')
+      .map((entry) => entry.trim())
+      .filter((entry) => entry !== '')
+      .every(isIpOrCidr),
+  'phải là danh sách IP hoặc CIDR, phân cách bằng dấu phẩy',
+);
 
 /** Số kết nối Postgres tối đa của một service. */
 export const databasePoolMaxField = requiredEnv('số nguyên')

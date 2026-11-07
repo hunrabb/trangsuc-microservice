@@ -307,6 +307,7 @@ services:
       INVENTORY_URL: http://inventory:3000
       SALES_URL: http://sales:3000
       REPORT_URL: http://report:3000
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-172.30.0.16/31}
     ports:
       - '${GATEWAY_PORT:-3000}:3000'
     volumes:
@@ -323,6 +324,9 @@ services:
       dockerfile: apps/backoffice/Dockerfile
     image: jewelry/backoffice:dev
     restart: unless-stopped
+    networks:
+      default:
+        ipv4_address: 172.30.0.16
     ports:
       - '${BACKOFFICE_PORT:-8080}:8080'
     depends_on:
@@ -337,6 +341,9 @@ services:
       dockerfile: apps/storefront/Dockerfile
     image: jewelry/storefront:dev
     restart: unless-stopped
+    networks:
+      default:
+        ipv4_address: 172.30.0.17
     ports:
       - '${STOREFRONT_PORT:-8081}:8080'
     depends_on:
@@ -344,6 +351,17 @@ services:
         condition: service_healthy
     healthcheck: *static-healthcheck
     logging: *logging
+
+# Mạng cố định để gán IP tĩnh cho hai nginx: gateway chỉ tin X-Forwarded-For từ đúng hai địa chỉ đó (TRUSTED_PROXIES).
+# Không tin cả mạng, vì kết nối từ ngoài qua cổng đã mở của gateway có thể mang địa chỉ bridge 172.30.0.1.
+# Các container khác nhận IP trong ip_range, nên không trùng hai địa chỉ này.
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+          gateway: 172.30.0.1
+          ip_range: 172.30.0.128/25
 
 volumes:
   pg_data:

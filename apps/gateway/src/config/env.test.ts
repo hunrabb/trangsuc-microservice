@@ -50,6 +50,20 @@ describe('parseEnv (gateway)', () => {
     assert.equal(parseEnv({ ...valid, INVENTORY_URL: 'ftp://inventory' }).ok, false);
   });
 
+  it('TRUSTED_PROXIES có mặc định, nhận IP và CIDR, từ chối giá trị sai', () => {
+    const standard = parseEnv(valid);
+    assert.ok(standard.ok);
+    assert.equal(standard.env.TRUSTED_PROXIES, '172.30.0.16/31');
+    assert.equal(
+      parseEnv({ ...valid, TRUSTED_PROXIES: '10.0.0.1, 192.168.0.0/16, fd00::/8' }).ok,
+      true,
+    );
+    assert.equal(parseEnv({ ...valid, TRUSTED_PROXIES: '' }).ok, true);
+    for (const value of ['khong-phai-ip', '10.0.0.0/33', '10.0.0.1/abc']) {
+      assert.equal(parseEnv({ ...valid, TRUSTED_PROXIES: value }).ok, false, value);
+    }
+  });
+
   it('từ chối PORT không phải số', () => {
     assert.equal(parseEnv({ ...valid, PORT: 'abc' }).ok, false);
   });

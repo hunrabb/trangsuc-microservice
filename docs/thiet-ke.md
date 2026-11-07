@@ -109,7 +109,22 @@ Mọi so sánh thời gian dùng `now()` của Postgres. Trả `401 SESSION_EXPI
 - **MANAGER, STAFF: chỉ Google.** Không có mật khẩu.
 - **ADMIN: Google hoặc mật khẩu.** Mật khẩu là đường vào dự phòng khi Google lỗi; tối thiểu 12 ký tự, bcrypt.
 - Đăng nhập bằng mật khẩu chỉ thành công với user đang có vai trò ADMIN. Mọi trường hợp khác (sai email, sai mật khẩu, không phải ADMIN, bị khoá) trả **cùng** `401 INVALID_CREDENTIALS`.
-- Tối đa 5 lần thử mỗi phút mỗi IP (thư viện @nestjs/throttler, đếm trong bộ nhớ gateway; chỉ chạy 1 instance gateway, khi nào chạy từ 2 instance mới thêm Redis).
+- Mọi trường hợp thất bại tốn cùng thời gian: không có user phù hợp vẫn chạy một lần bcrypt với hash giả, để không dò được email nào tồn tại. Ghi `AuditLog` cho cả lần thành công và thất bại (email đã nhập, IP; không ghi mật khẩu).
+- Đổi mật khẩu (chỉ ADMIN): kiểm mật khẩu hiện tại, mật khẩu mới phải khác mật khẩu cũ; đổi + thu hồi mọi phiên khác + `AuditLog` trong một transaction, giữ phiên đang dùng.
+
+**Rate limit ở gateway** (thư viện @nestjs/throttler, đếm trong bộ nhớ, chỉ đúng với 1 instance gateway; từ 2 instance phải chuyển sang bộ đếm dùng chung bằng Redis):
+
+| Đường | Giới hạn |
+| --- | --- |
+| `POST /api/auth/login` | 5 lần / phút theo IP + email, và 20 lần / phút theo IP |
+| `POST /api/auth/google` | 20 lần / phút theo IP |
+| `POST /api/auth/refresh` | 60 lần / phút theo IP |
+
+Vượt → `429 RATE_LIMITED`, có header `Retry-After`.
+
+**IP thật của người dùng:** nginx của backoffice và storefront thêm địa chỉ kết nối vào cuối `X-Forwarded-For`. Gateway chỉ tin header này khi kết nối tới từ địa chỉ trong `TRUSTED_PROXIES`, đọc từ phải sang trái và lấy địa chỉ đầu tiên không phải proxy tin cậy; ngược lại dùng địa chỉ kết nối. Mặc định chỉ tin hai nginx (IP tĩnh trong mạng Compose), không tin cả mạng, vì kết nối từ ngoài qua cổng đã mở của gateway có thể mang địa chỉ bridge trong mạng đó. Gateway đặt lại `x-forwarded-for` khi chuyển tiếp, auth đọc từ đó để ghi `RefreshToken.ip` và `AuditLog`.
+
+**Dọn `RefreshToken`:** job chạy mỗi giờ trong auth, xoá token đã thu hồi hoặc đã hết hạn quá 30 ngày.
 - ADMIN đầu tiên tạo bằng lệnh CLI chạy trên server: email và mật khẩu lấy từ biến môi trường hoặc stdin, không qua tham số dòng lệnh. ADMIN mới do ADMIN khác tạo, bắt buộc đặt mật khẩu.
 - Hạ vai trò khỏi ADMIN → xoá `passwordHash`, thu hồi mọi phiên. Nâng lên ADMIN → bắt buộc đặt mật khẩu trong cùng thao tác.
 - Rủi ro chấp nhận: Google lỗi thì chỉ ADMIN đăng nhập được.

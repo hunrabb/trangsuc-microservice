@@ -111,6 +111,18 @@ Bảng định tuyến nằm ở [apps/gateway/src/proxy/routes.ts](apps/gateway
 - Xoá header `x-user-*` và hop-by-hop; giữ các header khác (`Authorization`, `Content-Type`, `Cookie`...); gắn `x-correlation-id`.
 - Body đi nguyên byte, tối đa 1 MB (vượt → `413 PAYLOAD_TOO_LARGE`). Timeout 10 giây. Gateway không tự retry. Service không trả lời → `503 SERVICE_UNAVAILABLE`.
 
+### Rate limit và IP thật
+
+| Đường                    | Giới hạn                                            |
+| ------------------------ | --------------------------------------------------- |
+| `POST /api/auth/login`   | 5 lần / phút theo IP + email, 20 lần / phút theo IP |
+| `POST /api/auth/google`  | 20 lần / phút theo IP                               |
+| `POST /api/auth/refresh` | 60 lần / phút theo IP                               |
+
+Vượt → `429 RATE_LIMITED` kèm `Retry-After`. Bộ đếm nằm trong bộ nhớ gateway, chỉ đúng với một instance.
+
+Gateway chỉ tin `X-Forwarded-For` từ `TRUSTED_PROXIES` (mặc định hai nginx, `172.30.0.16/31`). Compose cố định mạng `172.30.0.0/24` để gán IP tĩnh cho nginx. Nếu đang có mạng cũ, chạy `docker compose down` (không có `-v`, volume giữ nguyên) trước khi `up`. Nếu `172.30.0.0/24` trùng mạng trên máy chủ, đổi đồng thời subnet, hai IP tĩnh trong `docker-compose.yml` và `TRUSTED_PROXIES`.
+
 ### Khoá JWT
 
 ```bash

@@ -180,7 +180,8 @@ Chưa có (làm ở giai đoạn sau): `prisma db seed` (chưa có seed), `pnpm 
 - Vai trò: `ADMIN` (toàn hệ thống, `branchId = null`), `MANAGER`, `STAFF` theo chi nhánh. Dùng `JwtGuard` + `RolesGuard` + `@Roles(...)` trong `libs/common`; mọi endpoint mặc định cần đăng nhập, ngoại lệ đánh dấu `@Public()`.
 - Gateway xoá mọi header `x-user-*` từ client.
 - Đăng nhập nhân viên: MANAGER, STAFF **chỉ Google**; ADMIN Google hoặc mật khẩu. Ghép Google theo `sub` qua `AuthIdentity`, chỉ với email admin đã thêm trước.
-- Mật khẩu: bcrypt, tối thiểu 12 ký tự, `passwordHash` chỉ ADMIN có. Đăng nhập mật khẩu thất bại vì bất kỳ lý do gì → cùng `401 INVALID_CREDENTIALS`; rate limit bằng `@nestjs/throttler`.
+- Mật khẩu: bcrypt, tối thiểu 12 ký tự, `passwordHash` chỉ ADMIN có. Đăng nhập mật khẩu thất bại vì bất kỳ lý do gì → cùng `401 INVALID_CREDENTIALS`; rate limit ở gateway bằng `@nestjs/throttler`, đếm trong bộ nhớ. **Khi chạy từ 2 instance gateway trở lên phải chuyển sang bộ đếm dùng chung (Redis).**
+- IP thật: gateway chỉ tin `X-Forwarded-For` từ `TRUSTED_PROXIES`, đọc từ phải sang trái. Không đặt cả mạng Compose vào danh sách này: kết nối từ ngoài qua cổng đã mở có thể mang địa chỉ bridge trong mạng đó.
 
 ## 12. Cấu hình, log, health
 

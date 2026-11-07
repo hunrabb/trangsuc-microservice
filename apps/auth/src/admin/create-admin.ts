@@ -1,8 +1,7 @@
 import { isAcceptablePassword, PASSWORD_MIN_LENGTH, PASSWORD_MAX_BYTES } from '@jewelry/contracts';
 import { hash } from 'bcryptjs';
 import { z } from 'zod';
-
-const BCRYPT_ROUNDS = 12;
+import { BCRYPT_ROUNDS } from '../password/hashing';
 
 export class CreateAdminError extends Error {}
 

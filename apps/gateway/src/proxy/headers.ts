@@ -15,7 +15,7 @@ const HOP_BY_HOP = [
 
 /**
  * `host`, `content-length`, `expect` do fetch tự đặt; `x-correlation-id` được gắn lại bằng mã của request.
- * `x-forwarded-for` của client không đáng tin: gateway đặt lại theo địa chỉ thật của kết nối.
+ * `x-forwarded-for`, `x-real-ip` không đáng tin: gateway đặt lại theo IP thật đã xác định (client-ip.ts).
  */
 const REQUEST_DROPPED = new Set([
   ...HOP_BY_HOP,
@@ -23,6 +23,7 @@ const REQUEST_DROPPED = new Set([
   'content-length',
   'expect',
   'x-forwarded-for',
+  'x-real-ip',
 ]);
 
 /** fetch đã giải nén body nên `content-encoding`, `content-length` của service không còn đúng. */

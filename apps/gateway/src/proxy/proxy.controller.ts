@@ -1,8 +1,11 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import type { BlockList } from 'node:net';
 import { BusinessError, ConfigService, getCorrelationId, JwtGuard, Public } from '@jewelry/common';
 import { All, Controller, Logger, Req, Res } from '@nestjs/common';
 import type { Env } from '../config/env';
 import { forwardRequestHeaders, forwardResponseHeaders } from './headers';
+import { resolveClientIp, parseTrustedProxies } from './client-ip';
+import { RateLimitService } from './rate-limit.service';
 import { BodyTooLargeError, MAX_BODY_BYTES, readBody } from './read-body';
 import { resolveRoute, type UpstreamService } from './routes';
 
@@ -23,11 +26,14 @@ type ProxyRequest = IncomingMessage & { originalUrl: string; method: string };
 export class ProxyController {
   private readonly logger = new Logger(ProxyController.name);
   private readonly upstreams: Record<UpstreamService, string>;
+  private readonly trustedProxies: BlockList;
 
   constructor(
     config: ConfigService<Env, true>,
     private readonly jwtGuard: JwtGuard,
+    private readonly rateLimits: RateLimitService,
   ) {
+    this.trustedProxies = parseTrustedProxies(config.get('TRUSTED_PROXIES', { infer: true }));
     const origin = (key: 'AUTH_URL' | 'INVENTORY_URL' | 'SALES_URL' | 'REPORT_URL') =>
       new URL(config.get(key, { infer: true })).origin;
     this.upstreams = {
@@ -48,6 +54,13 @@ export class ProxyController {
       await this.jwtGuard.authenticate(req, route.audience);
     }
     const body = await this.readRequestBody(req, res);
+    const clientIp = resolveClientIp(
+      req.socket.remoteAddress,
+      req.headers['x-forwarded-for'],
+      this.trustedProxies,
+    );
+    // Sau khi đọc body: giới hạn đăng nhập tính theo cả email.
+    await this.rateLimits.enforce(req.method, route.path, clientIp ?? '', body, res);
 
     let upstream: Response;
     let payload: Buffer;
@@ -55,11 +68,7 @@ export class ProxyController {
       // Ghép chuỗi, không dùng new URL(path, base): route.path đã được kiểm tra và không được đổi host.
       upstream = await fetch(`${this.upstreams[route.service]}${route.path}`, {
         method: req.method,
-        headers: forwardRequestHeaders(
-          req.headers,
-          getCorrelationId() ?? '',
-          req.socket.remoteAddress,
-        ),
+        headers: forwardRequestHeaders(req.headers, getCorrelationId() ?? '', clientIp),
         body,
         redirect: 'manual',
         signal: AbortSignal.timeout(PROXY_TIMEOUT_MS),

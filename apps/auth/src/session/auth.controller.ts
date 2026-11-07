@@ -3,16 +3,22 @@ import {
   BusinessError,
   CurrentUser,
   Public,
+  Roles,
   ZodValidationPipe,
 } from '@jewelry/common';
 import {
   type AuthSession,
+  type ChangePasswordRequest,
+  changePasswordRequestSchema,
   type CurrentUser as CurrentUserResponse,
   type GoogleLoginRequest,
   googleLoginRequestSchema,
+  type PasswordLoginRequest,
+  passwordLoginRequestSchema,
 } from '@jewelry/contracts';
 import { Body, Controller, Get, HttpCode, Post, Req, Res } from '@nestjs/common';
 import { GoogleLoginService } from '../google/google-login.service';
+import { PasswordService } from '../password/password.service';
 import { type ClientInfo, type OpenedSession, SessionService } from './session.service';
 import { clearedRefreshCookie, readRefreshCookie, refreshCookie } from './tokens';
 
@@ -44,6 +50,7 @@ function withCookie(response: HttpResponse, opened: OpenedSession): AuthSession 
 export class AuthController {
   constructor(
     private readonly google: GoogleLoginService,
+    private readonly passwords: PasswordService,
     private readonly sessions: SessionService,
   ) {}
 
@@ -56,6 +63,29 @@ export class AuthController {
     @Res({ passthrough: true }) response: HttpResponse,
   ): Promise<AuthSession> {
     return withCookie(response, await this.google.login(body.credential, clientInfo(request)));
+  }
+
+  @Public()
+  @Post('login')
+  @HttpCode(200)
+  async loginWithPassword(
+    @Body(new ZodValidationPipe(passwordLoginRequestSchema)) body: PasswordLoginRequest,
+    @Req() request: HttpRequest,
+    @Res({ passthrough: true }) response: HttpResponse,
+  ): Promise<AuthSession> {
+    const opened = await this.passwords.login(body.email, body.password, clientInfo(request));
+    return withCookie(response, opened);
+  }
+
+  @Roles('ADMIN')
+  @Post('change-password')
+  @HttpCode(204)
+  changePassword(
+    @CurrentUser() user: TokenUser,
+    @Body(new ZodValidationPipe(changePasswordRequestSchema)) body: ChangePasswordRequest,
+    @Req() request: HttpRequest,
+  ): Promise<void> {
+    return this.passwords.change(user.id, body, refreshTokenOf(request), clientInfo(request));
   }
 
   @Public()
