@@ -10,7 +10,7 @@ const valid = {
   DATABASE_URL: 'postgresql://report_user:s3cret@postgres:5432/jewelry?schema=report',
   DATABASE_POOL_MAX: '20',
   RABBITMQ_URL: 'amqp://jewelry_app:s3cret@rabbitmq:5672',
-  JWT_PUBLIC_KEYS_DIR: '/run/secrets/jwt-public',
+  JWT_PUBLIC_KEY_PATH: '/run/secrets/jwt-public.pem',
   JWT_ISSUER: 'auth-service',
   JWT_AUDIENCE_BACKOFFICE: 'store-backoffice',
   JWT_AUDIENCE_SHOP: 'store-shop',
@@ -36,7 +36,7 @@ describe('parseEnv (report)', () => {
         'JWT_AUDIENCE_BACKOFFICE',
         'JWT_AUDIENCE_SHOP',
         'JWT_ISSUER',
-        'JWT_PUBLIC_KEYS_DIR',
+        'JWT_PUBLIC_KEY_PATH',
         'PORT',
         'RABBITMQ_URL',
       ]);

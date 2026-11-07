@@ -26,7 +26,7 @@ export const testKeys: TestKeys = createTestKeys();
 
 /** Khoá tạm cho mỗi lần chạy, không dùng secrets/: test không phụ thuộc khoá thật. */
 export const JWT_ENV = {
-  JWT_PUBLIC_KEYS_DIR: testKeys.publicKeysDir,
+  JWT_PUBLIC_KEY_PATH: testKeys.publicKeyPath,
   JWT_ISSUER: TEST_ISSUER,
   JWT_AUDIENCE_BACKOFFICE: TEST_AUDIENCE_BACKOFFICE,
   JWT_AUDIENCE_SHOP: TEST_AUDIENCE_SHOP,

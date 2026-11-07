@@ -136,7 +136,7 @@ export interface RunningService {
 }
 
 const JWT_ENV = {
-  JWT_PUBLIC_KEYS_DIR: keys.publicKeysDir,
+  JWT_PUBLIC_KEY_PATH: keys.publicKeyPath,
   JWT_ISSUER: TEST_ISSUER,
   JWT_AUDIENCE_BACKOFFICE: TEST_AUDIENCE_BACKOFFICE,
   JWT_AUDIENCE_SHOP: TEST_AUDIENCE_SHOP,
@@ -179,7 +179,6 @@ export const authServiceEnv = (jwksUrl: string): Record<string, string> => ({
   DATABASE_POOL_MAX: '20',
   RABBITMQ_URL: NO_RABBIT,
   JWT_PRIVATE_KEY_PATH: keys.privateKeyPath,
-  JWT_ACTIVE_KID: keys.kid,
   GOOGLE_CLIENT_ID,
   GOOGLE_JWKS_URL: jwksUrl,
 });

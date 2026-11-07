@@ -117,7 +117,7 @@ Mục tiêu: `docker compose up` là cả hệ thống lên, một request đi x
 
 - [ ] Job đối soát mỗi đêm: `reserved` khớp lượt giữ, sổ kho khớp tồn, lượt giữ của đơn đã huỷ, đơn kẹt.
 - [ ] Thử tải giờ cao điểm: 3.000 đơn online trong 2 phút + 3 quầy bán liên tục; theo dõi độ dài queue, thời gian phản hồi POS, số lỗi.
-- [ ] Rà soát bảo mật: chỉ gateway mở port; mỗi schema một user DB; `secrets/jwt/private/<kid>.private.pem` chỉ mount vào auth, các service chỉ có `secrets/jwt/public/`; rate limit đăng nhập; webhook ngân hàng có chữ ký; không lộ stack trace; HTTPS.
+- [ ] Rà soát bảo mật: chỉ gateway mở port; mỗi schema một user DB; `secrets/jwt/private.pem` chỉ mount vào auth, các service chỉ có `secrets/jwt/public.pem`; rate limit đăng nhập; webhook ngân hàng có chữ ký; không lộ stack trace; HTTPS.
 - [ ] Sao lưu Postgres mỗi ngày (`pg_dump` ra nơi khác máy chủ) và **thử khôi phục thật** một lần.
 - [ ] Giám sát tối thiểu: cảnh báo khi DLQ có thư, service `ready` đỏ quá 1 phút, queue dài bất thường, đối soát có chỗ lệch.
 - [ ] Runbook: xử lý thư trong DLQ, khôi phục backup, đổi khoá JWT, khoá tài khoản nhân viên nghỉ việc.

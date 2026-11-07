@@ -125,14 +125,15 @@ Gateway chỉ tin `X-Forwarded-For` từ `TRUSTED_PROXIES` (mặc định hai ng
 
 ### Khoá JWT
 
+Hệ thống dùng một cặp khoá RS256.
+
 ```bash
-pnpm keys:generate        # tạo kid mặc định k1; đã có thì giữ nguyên
-pnpm keys:generate k2     # đổi khoá: thêm kid mới
+pnpm keys:generate        # tạo secrets/jwt/private.pem và public.pem; đã có thì giữ nguyên
 ```
 
-- `secrets/jwt/private/<kid>.private.pem`: chỉ `auth` được mount, và chỉ đúng file của `JWT_ACTIVE_KID`.
-- `secrets/jwt/public/<kid>.public.pem`: gateway và 4 service mount cả thư mục, read-only. Hai thư mục tách riêng để mount public không thể kéo theo private.
-- Mọi service nạp `*.public.pem` lúc khởi động, `kid` là tên file; thêm khoá mới phải khởi động lại.
+- `secrets/jwt/private.pem`: chỉ `auth` được mount.
+- `secrets/jwt/public.pem`: gateway và 4 service mount read-only.
+- Mọi service nạp khoá lúc khởi động. Auth kiểm private và public là một cặp, khác cặp thì không bật.
 - Container chạy bằng uid 1000: file private phải đọc được với uid đó, nếu không `auth` không bật.
 
 ### Khoá JWT trên server thật
@@ -140,31 +141,18 @@ pnpm keys:generate k2     # đổi khoá: thêm kid mới
 - Private key thuộc uid 1000 (user `node` trong container), quyền `600`, và chỉ mount vào `auth`:
 
   ```bash
-  sudo chown 1000:1000 secrets/jwt/private/<kid>.private.pem
-  sudo chmod 600 secrets/jwt/private/<kid>.private.pem
+  sudo chown 1000:1000 secrets/jwt/private.pem
+  sudo chmod 600 secrets/jwt/private.pem
   ```
 
 - Không dùng `chmod 644` như CI: khoá trong CI dùng một lần, khoá thật thì không.
-- Đổi khoá, theo đúng thứ tự:
-  1. Thêm khoá mới: `pnpm keys:generate k2`, đặt quyền file private như trên.
-  2. Restart gateway và các service để chúng nạp public key mới. Lúc này mọi service tin cả hai khoá, `auth` vẫn ký bằng khoá cũ.
-  3. Đổi `JWT_ACTIVE_KID=k2` rồi restart `auth`: token mới được ký bằng khoá mới.
-  4. Sau 15 phút (hạn của access token) gỡ khoá cũ khỏi `public/` và `private/`, rồi restart các service.
-- Bỏ qua bước 2 thì token ký bằng khoá mới sẽ bị từ chối cho tới khi các service restart.
+- **Đổi khoá:** chuyển hai file cũ ra chỗ khác, chạy `pnpm keys:generate`, đặt quyền file private như trên, rồi restart gateway và mọi service **cùng lúc**.
+- Mọi access token cũ lập tức bị từ chối (`401 INVALID_TOKEN`), nên **mọi người phải đăng nhập lại**. Không có giai đoạn chuyển tiếp hai khoá.
+- Refresh token là chuỗi ngẫu nhiên trong DB, không ký bằng cặp khoá này. Nếu đổi vì **lộ khoá**, thu hồi thêm mọi phiên cho chắc:
 
-### Outbox và consumer
-
-- Ghi sự kiện: `await outbox.add(tx, { eventType, aggregateType, aggregateId, payload })` trong `prisma.$transaction`. Worker gửi đi, chi tiết ở `docs/thiet-ke.md` mục 7.2.
-- Nhận sự kiện: khai báo `consumer: { queue, handlers }` trong `MessagingModule.forRoot`. Handler nhận `(payload, { tx, envelope })`; ném `TransientError` để thử lại, `PermanentError` để vào DLQ; kết quả nghiệp vụ thì ghi outbox, không ném lỗi.
-- `system.test` (bind vào `report.events`) là sự kiện kỹ thuật, chỉ để kiểm thử đường đi outbox → consumer, không có ý nghĩa nghiệp vụ. Mục đích này cũng ghi trong `_comment` của `definitions.json`.
-- Queue `*.retry.*` không có consumer: thư nằm đó tới hết TTL rồi tự quay lại queue chính.
-
-```bash
-docker compose up -d postgres rabbitmq rabbitmq-setup
-pnpm test:infra        # test:messaging (khoảng 3 phút, có dừng và bật RabbitMQ thật) + test:auth
-```
-
-`pnpm test:messaging` chạy được trên hạ tầng đang có dữ liệu: chỉ xoá đúng dữ liệu của mình. Nếu `report.events`, queue chờ hoặc DLQ của nó có thư không phải của test, có consumer đang chạy (tắt `pnpm dev` trước), hoặc bảng outbox có dòng thật mà worker hay job dọn sẽ đụng tới, test dừng và báo lỗi. Chạy xong, trạng thái phải y như trước.
+  ```sql
+  UPDATE auth."RefreshToken" SET "revokedAt" = now() WHERE "revokedAt" IS NULL;
+  ```
 
 ### ADMIN đầu tiên
 

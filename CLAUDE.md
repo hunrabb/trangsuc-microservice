@@ -47,7 +47,7 @@ tests/
   auth/            test phiên đăng nhập trên Postgres thật (`pnpm test:auth`)
   test-utils/      chỉ cho test (signTestToken...); nằm ở devDependencies, ESLint cấm import từ code chạy thật
 scripts/           run-tests.mjs (chạy test, đỏ khi 0 test), generate-jwt-keys.mjs, outbox-requeue.mjs
-secrets/jwt/       (gitignore) private/<kid>.private.pem (chỉ auth), public/<kid>.public.pem (mọi service, read-only)
+secrets/jwt/       (gitignore) private.pem (chỉ auth), public.pem (mọi service, read-only)
 docs/
   api/             OpenAPI của từng service, đường viết theo đường ở gateway
 docker-compose.yml, docker-compose.override.yml (chỉ dev), .env.example
@@ -60,7 +60,7 @@ docker-compose.yml, docker-compose.override.yml (chỉ dev), .env.example
 
 ```bash
 pnpm install
-pnpm keys:generate [kid]                        # sinh khoá JWT vào secrets/jwt/ (mặc định kid = k1); không ghi đè khoá đã có
+pnpm keys:generate                              # sinh cặp khoá JWT vào secrets/jwt/; không ghi đè khoá đã có
 cp .env.example .env                            # lần đầu: điền mật khẩu (cho Docker Compose)
 cp apps/<app>/.env.example apps/<app>/.env      # lần đầu, cho gateway/auth/inventory/sales/report (cho pnpm dev)
 docker compose up -d postgres rabbitmq rabbitmq-setup   # hạ tầng cho dev (override mở 127.0.0.1:5432, :5672 và :15672)
@@ -174,7 +174,7 @@ Chưa có (làm ở giai đoạn sau): `prisma db seed` (chưa có seed), `pnpm 
 
 ## 11. Xác thực
 
-- Access token: JWT **RS256**, 15 phút; chỉ `auth` giữ private key, các service khác chỉ có public key. Kiểm tra luôn ép `algorithms: ['RS256']`, `issuer`, `audience`, chọn key theo `kid`.
+- Access token: JWT **RS256**, 15 phút; chỉ `auth` giữ private key, các service khác chỉ có public key. Hệ thống dùng **một cặp khoá** (`JWT_PRIVATE_KEY_PATH` chỉ auth, `JWT_PUBLIC_KEY_PATH` mọi service). Kiểm tra luôn ép `algorithms: ['RS256']`, `issuer`, `audience`, `exp`. Đổi khoá = tạo cặp mới, thay ở mọi service cùng lúc, mọi người phải đăng nhập lại.
 - Hai loại token, cùng `iss`: `aud = store-backoffice` (nhân viên) và `store-shop` (khách). `JwtGuard` mặc định yêu cầu `aud` nhân viên; endpoint của khách đánh dấu `@Audience('shop')`.
 - Refresh token: chuỗi ngẫu nhiên, lưu **bản băm** SHA-256; hạn trượt 7 ngày, hạn tuyệt đối 30 ngày (`sessionStartedAt`); xoay vòng mỗi lần dùng bằng UPDATE có điều kiện; token vừa bị thay trong 10 giây → `409 REFRESH_CONFLICT` (hai tab), không thu hồi; token đã thu hồi lâu hơn thế bị dùng lại → thu hồi mọi phiên của user. Cookie `httpOnly; Secure; SameSite=Strict`: nhân viên `rt_bo`, `Path=/api/auth`; khách `rt_shop`, `Path=/api/shop/auth`.
 - Vai trò: `ADMIN` (toàn hệ thống, `branchId = null`), `MANAGER`, `STAFF` theo chi nhánh. Dùng `JwtGuard` + `RolesGuard` + `@Roles(...)` trong `libs/common`; mọi endpoint mặc định cần đăng nhập, ngoại lệ đánh dấu `@Public()`.

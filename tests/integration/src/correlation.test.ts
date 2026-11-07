@@ -4,6 +4,7 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { after, before, describe, it } from 'node:test';
+import { createTestKeyFiles } from '@jewelry/test-utils';
 import {
   freePort,
   type RunningService,
@@ -86,6 +87,20 @@ describe('correlationId đi xuyên gateway → inventory', () => {
 });
 
 describe('kiểm tra cấu hình lúc khởi động', () => {
+  it('auth có private key và public key khác cặp: log rõ lý do và thoát mã 1', async () => {
+    const other = createTestKeyFiles();
+    const service = startService('auth', {
+      PORT: String(await freePort()),
+      DATABASE_URL: 'postgresql://test:test@127.0.0.1:1/test?schema=auth',
+      JWT_PRIVATE_KEY_PATH: other.privateKeyPath,
+      GOOGLE_CLIENT_ID: 'test',
+    });
+    const code = await new Promise((done) => service.child.once('close', done));
+
+    assert.equal(code, 1);
+    assert.ok(service.logs.some((line) => /không phải một cặp/.test(line.msg ?? '')));
+  });
+
   const smallPoolEnv = (service: string, port: number) => ({
     PORT: String(port),
     DATABASE_URL: `postgresql://test:test@127.0.0.1:1/test?schema=${service}`,

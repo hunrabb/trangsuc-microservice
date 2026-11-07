@@ -21,7 +21,7 @@ import {
 
 type LoggedRequest = LogLine & { req?: { url?: string } };
 
-const token = (claims = {}) => signTestToken(testKeys.privateKey, { kid: testKeys.kid, claims });
+const token = (claims = {}) => signTestToken(testKeys.privateKey, { claims });
 const NO_REQUEST_GRACE_MS = 300;
 
 describe('gateway kiểm tra token trước khi chuyển tiếp', () => {
@@ -105,10 +105,9 @@ describe('gateway kiểm tra token trước khi chuyển tiếp', () => {
   it('alg: none, HS256 ký bằng public key, khoá lạ: 401, không chuyển tiếp', async () => {
     const stranger = createTestKeys();
     const forged = [
-      signNoneToken(testKeys.kid),
-      signHs256WithPublicKey(testKeys.publicPem, testKeys.kid),
-      await signTestToken(stranger.privateKey, { kid: testKeys.kid }),
-      await signTestToken(testKeys.privateKey, { kid: 'la' }),
+      signNoneToken(),
+      signHs256WithPublicKey(testKeys.publicPem),
+      await signTestToken(stranger.privateKey),
     ];
     for (const value of forged) {
       await expectRejected(`Bearer ${value}`, 401, 'INVALID_TOKEN');
@@ -117,7 +116,6 @@ describe('gateway kiểm tra token trước khi chuyển tiếp', () => {
 
   it('token aud = shop gọi đường của nhân viên: 401 ở gateway, không chuyển tiếp', async () => {
     const shopToken = await signTestToken(testKeys.privateKey, {
-      kid: testKeys.kid,
       audience: TEST_AUDIENCE_SHOP,
       claims: { branches: [] },
     });

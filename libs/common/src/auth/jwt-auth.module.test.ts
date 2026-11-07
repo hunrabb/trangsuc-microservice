@@ -55,7 +55,7 @@ class ProbeController {
       ignoreEnvFile: true,
       load: [
         () => ({
-          JWT_PUBLIC_KEYS_DIR: keys.publicKeysDir,
+          JWT_PUBLIC_KEY_PATH: keys.publicKeyPath,
           JWT_ISSUER: TEST_ISSUER,
           JWT_AUDIENCE_BACKOFFICE: TEST_AUDIENCE_BACKOFFICE,
           JWT_AUDIENCE_SHOP: TEST_AUDIENCE_SHOP,

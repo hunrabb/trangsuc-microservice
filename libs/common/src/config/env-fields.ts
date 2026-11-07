@@ -77,9 +77,9 @@ export const readableFileField = nonEmptyEnv('đường dẫn').refine(
   'không đọc được file',
 );
 
-/** Kiểm tra token: mọi service. `JWT_PUBLIC_KEYS_DIR` chứa `<kid>.public.pem`, được nạp khi khởi động. */
+/** Kiểm tra token: mọi service. Public key được nạp khi khởi động. */
 export const jwtEnvFields = {
-  JWT_PUBLIC_KEYS_DIR: nonEmptyEnv('đường dẫn'),
+  JWT_PUBLIC_KEY_PATH: nonEmptyEnv('đường dẫn'),
   JWT_ISSUER: nonEmptyEnv('chuỗi'),
   JWT_AUDIENCE_BACKOFFICE: nonEmptyEnv('chuỗi'),
   JWT_AUDIENCE_SHOP: nonEmptyEnv('chuỗi'),
@@ -88,5 +88,4 @@ export const jwtEnvFields = {
 /** Ký token: chỉ auth. */
 export const jwtSigningEnvFields = {
   JWT_PRIVATE_KEY_PATH: readableFileField,
-  JWT_ACTIVE_KID: nonEmptyEnv('chuỗi'),
 };

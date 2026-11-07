@@ -415,7 +415,6 @@ describe('đăng nhập mật khẩu, đổi mật khẩu, rate limit', () => {
     it('không phải ADMIN: 403 FORBIDDEN; không có token: 401', async () => {
       const staff = await createStaff();
       const token = await signTestToken(keys.privateKey, {
-        kid: keys.kid,
         claims: { sub: staff.id, branches: [{ branchId, role: 'STAFF' }] },
       });
       secrets.add(token);

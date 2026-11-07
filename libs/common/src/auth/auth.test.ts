@@ -19,7 +19,7 @@ import {
 } from '@jewelry/test-utils';
 import { BusinessError } from '../errors/business-error.ts';
 import { AUDIENCE_KEY, IS_PUBLIC_KEY, ROLES_KEY } from './decorators.ts';
-import { type AuthUser, type JwtVerification, loadPublicKeys } from './jwt-verifier.ts';
+import { type AuthUser, type JwtVerification, loadPublicKey } from './jwt-verifier.ts';
 import { JwtGuard } from './jwt.guard.ts';
 import { resolveBranchId, RolesGuard } from './roles.guard.ts';
 
@@ -55,7 +55,7 @@ describe('JwtGuard', () => {
   before(() => {
     keys = createTestKeys();
     const verification: JwtVerification = {
-      keys: loadPublicKeys(keys.publicKeysDir),
+      publicKey: loadPublicKey(keys.publicKeyPath),
       issuer: TEST_ISSUER,
       audiences: { backoffice: TEST_AUDIENCE_BACKOFFICE, shop: TEST_AUDIENCE_SHOP },
     };
@@ -138,14 +138,9 @@ describe('JwtGuard', () => {
     await assert.rejects(check(token), isInvalid);
   });
 
-  it('kid lạ, không có kid, kid trùng thuộc tính có sẵn', async () => {
-    for (const kid of ['la', null, '__proto__', 'constructor']) {
-      await assert.rejects(
-        check(await signTestToken(keys.privateKey, { kid })),
-        isInvalid,
-        String(kid),
-      );
-    }
+  it('token ký bằng cặp khoá khác bị từ chối', async () => {
+    const other = createTestKeys();
+    await assert.rejects(check(await signTestToken(other.privateKey)), isInvalid);
   });
 
   it('sai iss, sai aud', async () => {
@@ -217,42 +212,28 @@ describe('JwtGuard', () => {
     const context = contextFor({ headers: {} }, { [IS_PUBLIC_KEY]: true });
     assert.equal(await guard.canActivate(context), true);
   });
-
-  it('hỗ trợ nhiều khoá cùng lúc khi đổi khoá', async () => {
-    const dir = mkdtempSync(join(tmpdir(), 'jewelry-jwt-'));
-    const oldKey = createTestKeys('cu');
-    const newKey = createTestKeys('moi');
-    writeFileSync(join(dir, 'cu.public.pem'), oldKey.publicPem);
-    writeFileSync(join(dir, 'moi.public.pem'), newKey.publicPem);
-    const loaded = loadPublicKeys(dir);
-    assert.deepEqual([...loaded.keys()].sort(), ['cu', 'moi']);
-  });
 });
 
-describe('loadPublicKeys', () => {
-  const dirWith = (files: Record<string, string>) => {
-    const dir = mkdtempSync(join(tmpdir(), 'jewelry-jwt-'));
-    for (const [name, content] of Object.entries(files)) {
-      writeFileSync(join(dir, name), content);
-    }
-    return dir;
+describe('loadPublicKey', () => {
+  const fileWith = (content: string) => {
+    const path = join(mkdtempSync(join(tmpdir(), 'jewelry-jwt-')), 'public.pem');
+    writeFileSync(path, content);
+    return path;
   };
 
-  it('kid = tên file, bỏ qua file khác', () => {
-    const { publicPem } = createTestKeys();
-    const keys = loadPublicKeys(dirWith({ 'k9.public.pem': publicPem, 'ghi-chu.txt': 'x' }));
-    assert.deepEqual([...keys.keys()], ['k9']);
+  it('nạp được public key hợp lệ', () => {
+    const { publicKey, publicPem } = createTestKeys();
+    assert.equal(loadPublicKey(fileWith(publicPem)).equals(publicKey), true);
   });
 
-  it('thư mục trống hoặc không tồn tại: báo lỗi', () => {
-    assert.throws(() => loadPublicKeys(dirWith({})), /Không có file/);
-    assert.throws(() => loadPublicKeys('/khong/ton/tai'), /ENOENT/);
+  it('file không tồn tại: báo lỗi', () => {
+    assert.throws(() => loadPublicKey('/khong/ton/tai'), /ENOENT/);
   });
 
-  it('từ chối private key đặt nhầm vào thư mục public', () => {
+  it('từ chối private key đặt nhầm vào chỗ public key', () => {
     const { privateKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
     const pem = privateKey.export({ type: 'pkcs8', format: 'pem' }).toString();
-    assert.throws(() => loadPublicKeys(dirWith({ 'k.public.pem': pem })), /private key/);
+    assert.throws(() => loadPublicKey(fileWith(pem)), /private key/);
   });
 
   it('từ chối khoá yếu hoặc không phải RSA', () => {
@@ -260,7 +241,7 @@ describe('loadPublicKeys', () => {
     const ec = generateKeyPairSync('ec', { namedCurve: 'P-256' }).publicKey;
     for (const key of [weak, ec]) {
       const pem = key.export({ type: 'spki', format: 'pem' }).toString();
-      assert.throws(() => loadPublicKeys(dirWith({ 'k.public.pem': pem })), /RSA/);
+      assert.throws(() => loadPublicKey(fileWith(pem)), /RSA/);
     }
   });
 });

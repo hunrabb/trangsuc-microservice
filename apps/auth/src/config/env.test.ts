@@ -10,13 +10,12 @@ const valid = {
   DATABASE_URL: 'postgresql://auth_user:s3cret@postgres:5432/jewelry?schema=auth',
   DATABASE_POOL_MAX: '20',
   RABBITMQ_URL: 'amqp://jewelry_app:s3cret@rabbitmq:5672',
-  JWT_PUBLIC_KEYS_DIR: '/run/secrets/jwt-public',
+  JWT_PUBLIC_KEY_PATH: '/run/secrets/jwt-public.pem',
   JWT_ISSUER: 'auth-service',
   JWT_AUDIENCE_BACKOFFICE: 'store-backoffice',
   JWT_AUDIENCE_SHOP: 'store-shop',
   // Chỉ cần một file đọc được.
   JWT_PRIVATE_KEY_PATH: process.execPath,
-  JWT_ACTIVE_KID: 'k1',
   GOOGLE_CLIENT_ID: 'client-test',
 };
 
@@ -38,12 +37,11 @@ describe('parseEnv (auth)', () => {
         'DATABASE_POOL_MAX',
         'DATABASE_URL',
         'GOOGLE_CLIENT_ID',
-        'JWT_ACTIVE_KID',
         'JWT_AUDIENCE_BACKOFFICE',
         'JWT_AUDIENCE_SHOP',
         'JWT_ISSUER',
         'JWT_PRIVATE_KEY_PATH',
-        'JWT_PUBLIC_KEYS_DIR',
+        'JWT_PUBLIC_KEY_PATH',
         'PORT',
         'RABBITMQ_URL',
       ]);

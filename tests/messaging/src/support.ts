@@ -308,7 +308,7 @@ export async function startService(service: 'inventory' | 'report'): Promise<Run
       DATABASE_URL: databaseUrl(service),
       RABBITMQ_URL: RABBIT_URL,
       DATABASE_POOL_MAX: '20',
-      JWT_PUBLIC_KEYS_DIR: keys.publicKeysDir,
+      JWT_PUBLIC_KEY_PATH: keys.publicKeyPath,
       JWT_ISSUER: TEST_ISSUER,
       JWT_AUDIENCE_BACKOFFICE: TEST_AUDIENCE_BACKOFFICE,
       JWT_AUDIENCE_SHOP: TEST_AUDIENCE_SHOP,

@@ -25,8 +25,7 @@ interface Seen {
   size: number;
 }
 
-const bearer = async () =>
-  `Bearer ${await signTestToken(testKeys.privateKey, { kid: testKeys.kid })}`;
+const bearer = async () => `Bearer ${await signTestToken(testKeys.privateKey)}`;
 
 type LoggedRequest = LogLine & { req?: { headers?: Record<string, string> } };
 
