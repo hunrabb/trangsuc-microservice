@@ -614,7 +614,7 @@ describe('phiên đăng nhập trên Postgres thật', () => {
         id: user.id,
         email: user.email,
         fullName: 'Người Thử',
-        branches: [{ branchId: null, role: 'ADMIN' }],
+        branches: [{ branchId: null, role: 'ADMIN', branchName: null }],
         googleLinked: true,
       });
 
