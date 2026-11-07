@@ -17,6 +17,8 @@ export const ROUTING_KEYS = {
   SYSTEM_TEST: 'system.test',
   BRANCH_CREATED: 'branch.created',
   BRANCH_UPDATED: 'branch.updated',
+  METAL_PRICE_CHANGED: 'metal_price.changed',
+  STOCK_CHANGED: 'stock.changed',
 } as const;
 
 export const systemTestPayloadSchema = z.object({ message: z.string().max(200) });
@@ -38,11 +40,37 @@ export const branchUpdatedPayloadSchema = branchCreatedPayloadSchema.extend({
 
 export type BranchUpdatedPayload = z.infer<typeof branchUpdatedPayloadSchema>;
 
+/** Giá kim loại mới (đồng / chỉ, chuỗi số thập phân). `effectiveFrom` có thể ở tương lai. */
+export const metalPriceChangedPayloadSchema = z.object({
+  metalId: z.uuid(),
+  metalCode: z.string().min(1),
+  buyPrice: z.string().min(1),
+  sellPrice: z.string().min(1),
+  effectiveFrom: z.iso.datetime(),
+});
+
+export type MetalPriceChangedPayload = z.infer<typeof metalPriceChangedPayloadSchema>;
+
+/**
+ * Tồn kho đổi do một đơn: `SOLD` khi trừ kho, `RELEASED` khi trả hàng về kho. Mỗi lần xử lý một đơn phát ĐÚNG MỘT
+ * sự kiện; gọi lại trùng không phát thêm.
+ */
+export const stockChangedPayloadSchema = z.object({
+  orderId: z.uuid(),
+  branchId: z.uuid(),
+  reason: z.enum(['SOLD', 'RELEASED']),
+  tagCodes: z.array(z.string().min(1)).min(1),
+});
+
+export type StockChangedPayload = z.infer<typeof stockChangedPayloadSchema>;
+
 /** Sự kiện nào có schema payload nào. Thêm sự kiện mới = thêm một dòng ở đây. */
 export const EVENT_PAYLOAD_SCHEMAS = {
   [ROUTING_KEYS.SYSTEM_TEST]: systemTestPayloadSchema,
   [ROUTING_KEYS.BRANCH_CREATED]: branchCreatedPayloadSchema,
   [ROUTING_KEYS.BRANCH_UPDATED]: branchUpdatedPayloadSchema,
+  [ROUTING_KEYS.METAL_PRICE_CHANGED]: metalPriceChangedPayloadSchema,
+  [ROUTING_KEYS.STOCK_CHANGED]: stockChangedPayloadSchema,
 } as const;
 
 export type EventType = keyof typeof EVENT_PAYLOAD_SCHEMAS;
