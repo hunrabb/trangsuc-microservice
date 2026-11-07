@@ -5,6 +5,7 @@ import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AccessTokenService } from './access-token.service';
 import { ACTIVE_ASSIGNMENTS } from './active-assignments';
+import { toCurrentUserBranches } from './current-user';
 import {
   ACCESS_TOKEN_TTL_SECONDS,
   generateRefreshToken,
@@ -193,7 +194,13 @@ export class SessionService {
   async currentUser(userId: string): Promise<CurrentUser> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      include: { branches: ACTIVE_ASSIGNMENTS, identities: { select: { provider: true } } },
+      include: {
+        branches: {
+          ...ACTIVE_ASSIGNMENTS,
+          select: { ...ACTIVE_ASSIGNMENTS.select, branch: { select: { name: true } } },
+        },
+        identities: { select: { provider: true } },
+      },
     });
     if (user === null) {
       throw new BusinessError('INVALID_TOKEN', 'Token không hợp lệ', 401);
@@ -202,7 +209,7 @@ export class SessionService {
       id: user.id,
       email: user.email,
       fullName: user.fullName,
-      branches: user.branches,
+      branches: toCurrentUserBranches(user.branches),
       googleLinked: user.identities.some((identity) => identity.provider === 'GOOGLE'),
     };
   }

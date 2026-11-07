@@ -5,6 +5,7 @@ import {
   Group,
   Modal,
   Pagination,
+  Paper,
   Stack,
   Table,
   Text,
@@ -19,6 +20,7 @@ import { authApi } from '../api/endpoints.ts';
 import { describeError } from '../api/messages.ts';
 import { queryKeys, useBranchPage } from '../api/queries.ts';
 import { boundFieldErrors, ErrorAlert } from '../components/error-alert.tsx';
+import { PlusIcon } from '../components/icons.tsx';
 import { ConfirmDialog } from '../components/confirm-dialog.tsx';
 
 const PAGE_SIZE = 20;
@@ -58,66 +60,74 @@ export function BranchesPage() {
     <Stack>
       <Group justify="space-between">
         <Title order={2}>Chi nhánh</Title>
-        <Button onClick={() => setEditing('new')}>Thêm chi nhánh</Button>
+        <Button leftSection={<PlusIcon size={16} />} onClick={() => setEditing('new')}>
+          Thêm chi nhánh
+        </Button>
       </Group>
       {branches.isError && (
         <ErrorAlert error={branches.error} onReload={() => void branches.refetch()} />
       )}
-      <Table.ScrollContainer minWidth={640}>
-        <Table highlightOnHover>
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>Mã</Table.Th>
-              <Table.Th>Tên</Table.Th>
-              <Table.Th>Địa chỉ</Table.Th>
-              <Table.Th>Điện thoại</Table.Th>
-              <Table.Th>Trạng thái</Table.Th>
-              <Table.Th />
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {branches.data?.items.map((branch) => (
-              <Table.Tr key={branch.id}>
-                <Table.Td>{branch.code}</Table.Td>
-                <Table.Td>{branch.name}</Table.Td>
-                <Table.Td>{branch.address ?? ''}</Table.Td>
-                <Table.Td>{branch.phone ?? ''}</Table.Td>
-                <Table.Td>
-                  <Badge color={branch.isActive ? 'green' : 'gray'}>
-                    {branch.isActive ? 'Đang hoạt động' : 'Đã ngừng'}
-                  </Badge>
-                </Table.Td>
-                <Table.Td>
-                  <Group gap="xs" justify="flex-end" wrap="nowrap">
-                    <Button size="compact-sm" variant="default" onClick={() => setEditing(branch)}>
-                      Sửa
-                    </Button>
-                    {branch.isActive ? (
-                      <Button
-                        size="compact-sm"
-                        color="red"
-                        variant="light"
-                        onClick={() => setToggling(branch)}
-                      >
-                        Ngừng hoạt động
-                      </Button>
-                    ) : (
-                      <Button
-                        size="compact-sm"
-                        variant="light"
-                        loading={toggle.isPending && toggle.variables.id === branch.id}
-                        onClick={() => toggle.mutate(branch)}
-                      >
-                        Mở lại
-                      </Button>
-                    )}
-                  </Group>
-                </Table.Td>
+      <Paper withBorder radius="md" bg="white">
+        <Table.ScrollContainer minWidth={640}>
+          <Table highlightOnHover verticalSpacing="sm" horizontalSpacing="md">
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Mã</Table.Th>
+                <Table.Th>Tên</Table.Th>
+                <Table.Th>Địa chỉ</Table.Th>
+                <Table.Th>Điện thoại</Table.Th>
+                <Table.Th>Trạng thái</Table.Th>
+                <Table.Th />
               </Table.Tr>
-            ))}
-          </Table.Tbody>
-        </Table>
-      </Table.ScrollContainer>
+            </Table.Thead>
+            <Table.Tbody>
+              {branches.data?.items.map((branch) => (
+                <Table.Tr key={branch.id}>
+                  <Table.Td>{branch.code}</Table.Td>
+                  <Table.Td>{branch.name}</Table.Td>
+                  <Table.Td>{branch.address ?? ''}</Table.Td>
+                  <Table.Td>{branch.phone ?? ''}</Table.Td>
+                  <Table.Td>
+                    <Badge color={branch.isActive ? 'green' : 'gray'}>
+                      {branch.isActive ? 'Đang hoạt động' : 'Đã ngừng'}
+                    </Badge>
+                  </Table.Td>
+                  <Table.Td>
+                    <Group gap="xs" justify="flex-end" wrap="nowrap">
+                      <Button
+                        size="compact-sm"
+                        variant="default"
+                        onClick={() => setEditing(branch)}
+                      >
+                        Sửa
+                      </Button>
+                      {branch.isActive ? (
+                        <Button
+                          size="compact-sm"
+                          color="red"
+                          variant="light"
+                          onClick={() => setToggling(branch)}
+                        >
+                          Ngừng hoạt động
+                        </Button>
+                      ) : (
+                        <Button
+                          size="compact-sm"
+                          variant="light"
+                          loading={toggle.isPending && toggle.variables.id === branch.id}
+                          onClick={() => toggle.mutate(branch)}
+                        >
+                          Mở lại
+                        </Button>
+                      )}
+                    </Group>
+                  </Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+        </Table.ScrollContainer>
+      </Paper>
       {branches.data?.items.length === 0 && <Text c="dimmed">Chưa có chi nhánh nào.</Text>}
       {totalPages > 1 && <Pagination total={totalPages} value={page} onChange={setPage} />}
 

@@ -5,6 +5,7 @@ import {
   Group,
   Menu,
   Pagination,
+  Paper,
   Select,
   Stack,
   Table,
@@ -28,6 +29,7 @@ import {
   ROLE_LABELS,
 } from '../auth/permissions.ts';
 import { useSession } from '../auth/session-context.tsx';
+import { PlusIcon } from '../components/icons.tsx';
 import { ConfirmDialog } from '../components/confirm-dialog.tsx';
 import { ErrorAlert } from '../components/error-alert.tsx';
 import {
@@ -118,7 +120,9 @@ export function UsersPage() {
     <Stack>
       <Group justify="space-between">
         <Title order={2}>Nhân viên</Title>
-        <Button onClick={() => setDialog({ kind: 'create' })}>Thêm nhân viên</Button>
+        <Button leftSection={<PlusIcon size={16} />} onClick={() => setDialog({ kind: 'create' })}>
+          Thêm nhân viên
+        </Button>
       </Group>
       <Select
         label="Chi nhánh"
@@ -134,66 +138,68 @@ export function UsersPage() {
         }}
       />
       {users.isError && <ErrorAlert error={users.error} onReload={() => void users.refetch()} />}
-      <Table.ScrollContainer minWidth={760}>
-        <Table highlightOnHover>
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>Nhân viên</Table.Th>
-              <Table.Th>Vai trò</Table.Th>
-              <Table.Th>Trạng thái</Table.Th>
-              <Table.Th>Google</Table.Th>
-              <Table.Th />
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {users.data?.items.map((user) => (
-              <Table.Tr key={user.id}>
-                <Table.Td>
-                  <Text size="sm" fw={500}>
-                    {user.fullName}
-                  </Text>
-                  <Text size="xs" c="dimmed">
-                    {user.email}
-                  </Text>
-                </Table.Td>
-                <Table.Td>
-                  <Group gap={4}>
-                    {user.branches.map(({ role, branchId: id }) => (
-                      <Badge key={`${role}:${id}`} variant="light">
-                        {role === 'ADMIN'
-                          ? ROLE_LABELS.ADMIN
-                          : `${ROLE_LABELS[role]} · ${branchLabel(id)}`}
-                      </Badge>
-                    ))}
-                  </Group>
-                </Table.Td>
-                <Table.Td>
-                  <Badge color={user.status === 'ACTIVE' ? 'green' : 'red'}>
-                    {user.status === 'ACTIVE' ? 'Hoạt động' : 'Đã khoá'}
-                  </Badge>
-                </Table.Td>
-                <Table.Td>
-                  <Badge color={user.googleLinked ? 'green' : 'gray'} variant="outline">
-                    {user.googleLinked ? 'Đã liên kết' : 'Chưa'}
-                  </Badge>
-                </Table.Td>
-                <Table.Td>
-                  <RowActions
-                    user={user}
-                    onChoose={(kind) => {
-                      if (kind === 'unlock') {
-                        act.mutate({ kind, user });
-                      } else {
-                        setDialog({ kind, user });
-                      }
-                    }}
-                  />
-                </Table.Td>
+      <Paper withBorder radius="md" bg="white">
+        <Table.ScrollContainer minWidth={760}>
+          <Table highlightOnHover verticalSpacing="sm" horizontalSpacing="md">
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Nhân viên</Table.Th>
+                <Table.Th>Vai trò</Table.Th>
+                <Table.Th>Trạng thái</Table.Th>
+                <Table.Th>Google</Table.Th>
+                <Table.Th />
               </Table.Tr>
-            ))}
-          </Table.Tbody>
-        </Table>
-      </Table.ScrollContainer>
+            </Table.Thead>
+            <Table.Tbody>
+              {users.data?.items.map((user) => (
+                <Table.Tr key={user.id}>
+                  <Table.Td>
+                    <Text size="sm" fw={500}>
+                      {user.fullName}
+                    </Text>
+                    <Text size="xs" c="dimmed">
+                      {user.email}
+                    </Text>
+                  </Table.Td>
+                  <Table.Td>
+                    <Group gap={4}>
+                      {user.branches.map(({ role, branchId: id }) => (
+                        <Badge key={`${role}:${id}`} variant="light">
+                          {role === 'ADMIN'
+                            ? ROLE_LABELS.ADMIN
+                            : `${ROLE_LABELS[role]} · ${branchLabel(id)}`}
+                        </Badge>
+                      ))}
+                    </Group>
+                  </Table.Td>
+                  <Table.Td>
+                    <Badge color={user.status === 'ACTIVE' ? 'green' : 'red'}>
+                      {user.status === 'ACTIVE' ? 'Hoạt động' : 'Đã khoá'}
+                    </Badge>
+                  </Table.Td>
+                  <Table.Td>
+                    <Badge color={user.googleLinked ? 'green' : 'gray'} variant="outline">
+                      {user.googleLinked ? 'Đã liên kết' : 'Chưa'}
+                    </Badge>
+                  </Table.Td>
+                  <Table.Td>
+                    <RowActions
+                      user={user}
+                      onChoose={(kind) => {
+                        if (kind === 'unlock') {
+                          act.mutate({ kind, user });
+                        } else {
+                          setDialog({ kind, user });
+                        }
+                      }}
+                    />
+                  </Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+        </Table.ScrollContainer>
+      </Paper>
       {users.data?.items.length === 0 && <Text c="dimmed">Không có nhân viên nào.</Text>}
       {totalPages > 1 && <Pagination total={totalPages} value={page} onChange={setPage} />}
 

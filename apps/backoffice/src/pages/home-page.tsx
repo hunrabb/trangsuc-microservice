@@ -14,7 +14,7 @@ export function HomePage() {
   return (
     <Stack>
       <Title order={2}>Trang chủ</Title>
-      <Card withBorder>
+      <Card withBorder radius="md" padding="lg">
         <Title order={4} mb="sm">
           Tài khoản
         </Title>
@@ -40,7 +40,7 @@ export function HomePage() {
           )}
         </Stack>
       </Card>
-      <Card withBorder>
+      <Card withBorder radius="md" padding="lg">
         <Title order={4} mb="sm">
           Vai trò
         </Title>

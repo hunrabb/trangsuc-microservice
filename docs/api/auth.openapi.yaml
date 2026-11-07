@@ -245,6 +245,8 @@ paths:
       tags:
       - Xác thực
       summary: Thông tin người dùng hiện tại
+      description: Mỗi vai trò kèm `branchName` (tên chi nhánh, `null` với ADMIN toàn hệ thống) để giao diện hiện
+        tên thay vì id. Chỉ gồm vai trò còn hiệu lực.
       x-roles:
       - ADMIN
       - MANAGER
@@ -1323,6 +1325,26 @@ components:
         - "fullName"
         - "branches"
       additionalProperties: false
+    CurrentUserAssignment:
+      type: "object"
+      properties:
+        branchId:
+          anyOf:
+            - type: "string"
+              format: "uuid"
+              pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            - type: "null"
+        role:
+          $ref: "#/components/schemas/Role"
+        branchName:
+          type:
+            - "string"
+            - "null"
+      required:
+        - "branchId"
+        - "role"
+        - "branchName"
+      additionalProperties: false
     CurrentUser:
       type: "object"
       properties:
@@ -1339,7 +1361,7 @@ components:
         branches:
           type: "array"
           items:
-            $ref: "#/components/schemas/Assignment"
+            $ref: "#/components/schemas/CurrentUserAssignment"
         googleLinked:
           type: "boolean"
       required:

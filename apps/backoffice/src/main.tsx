@@ -1,6 +1,6 @@
 import '@mantine/core/styles.css';
 import '@mantine/notifications/styles.css';
-import { MantineProvider } from '@mantine/core';
+import { createTheme, MantineProvider } from '@mantine/core';
 import { Notifications } from '@mantine/notifications';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StrictMode } from 'react';
@@ -9,6 +9,13 @@ import { BrowserRouter } from 'react-router';
 import { isApiError } from './api/api-error.ts';
 import { App } from './App';
 import { SessionProvider } from './auth/session-context.tsx';
+
+/** Màu chủ đạo và bo góc dùng chung; mọi nút chính (`filled`) lấy màu này. */
+const theme = createTheme({
+  primaryColor: 'indigo',
+  defaultRadius: 'md',
+  headings: { fontWeight: '600' },
+});
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -28,7 +35,7 @@ if (!root) {
 
 createRoot(root).render(
   <StrictMode>
-    <MantineProvider defaultColorScheme="light">
+    <MantineProvider theme={theme} defaultColorScheme="light">
       <Notifications position="top-right" />
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { branchRoleSchema } from './auth';
+import { branchRoleSchema, roleSchema } from './auth';
 
 /**
  * Schema body/response của auth API, dùng chung cho auth và backoffice. Đặc tả: docs/api/auth.openapi.yaml.
@@ -82,7 +82,27 @@ export const authUserSchema = z.object({
   branches: z.array(branchRoleSchema),
 });
 
-export const currentUserSchema = authUserSchema.extend({ googleLinked: z.boolean() });
+/**
+ * Vai trò trong `/me`, kèm tên chi nhánh để giao diện hiện tên thay vì id. ADMIN toàn hệ thống không có chi nhánh
+ * nên `branchName = null`. Không đưa vào token: tên đổi được, còn token sống 15 phút.
+ */
+export const currentUserAssignmentSchema = z
+  .object({
+    branchId: z.uuid().nullable(),
+    role: roleSchema,
+    branchName: z.string().nullable(),
+  })
+  .refine((value) => (value.role === 'ADMIN') === (value.branchId === null), {
+    error: 'ADMIN có branchId = null, vai trò khác phải có branchId',
+  });
+
+export const currentUserSchema = z.object({
+  id: z.uuid(),
+  email,
+  fullName: z.string(),
+  branches: z.array(currentUserAssignmentSchema),
+  googleLinked: z.boolean(),
+});
 
 export const authSessionSchema = z.object({
   accessToken: z.string(),
@@ -180,6 +200,7 @@ export type PasswordLoginRequest = z.infer<typeof passwordLoginRequestSchema>;
 export type ChangePasswordRequest = z.infer<typeof changePasswordRequestSchema>;
 export type ResetPasswordRequest = z.infer<typeof resetPasswordRequestSchema>;
 export type AuthUser = z.infer<typeof authUserSchema>;
+export type CurrentUserAssignment = z.infer<typeof currentUserAssignmentSchema>;
 export type CurrentUser = z.infer<typeof currentUserSchema>;
 export type AuthSession = z.infer<typeof authSessionSchema>;
 export type Branch = z.infer<typeof branchSchema>;

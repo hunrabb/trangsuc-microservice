@@ -10,6 +10,7 @@ import {
   Stack,
   Text,
   TextInput,
+  ThemeIcon,
   Title,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
@@ -18,6 +19,7 @@ import { useState } from 'react';
 import { Navigate, useLocation } from 'react-router';
 import { describeError } from '../api/messages.ts';
 import { GoogleButton } from '../auth/google-button.tsx';
+import { GemIcon } from '../components/icons.tsx';
 import { useSession } from '../auth/session-context.tsx';
 
 /** Trang mà người dùng đang xem khi bị đưa về đây (do `RequireAuth` ghi vào `state.from`). */
@@ -57,15 +59,25 @@ export function LoginPage() {
   };
 
   return (
-    <Center mih="100vh" p="md">
-      <Paper withBorder shadow="sm" p="xl" radius="md" w={380} maw="100%">
+    <Center mih="100vh" p="md" bg="gray.0">
+      <Paper withBorder shadow="md" p="xl" radius="lg" w={400} maw="100%">
         <Stack>
-          <Title order={2} ta="center">
-            Đăng nhập
-          </Title>
-          <Text c="dimmed" size="sm" ta="center">
-            Hệ thống quản lý chuỗi cửa hàng trang sức
-          </Text>
+          <Stack align="center" gap="xs">
+            <ThemeIcon
+              size={52}
+              radius="lg"
+              variant="gradient"
+              gradient={{ from: 'indigo', to: 'violet' }}
+            >
+              <GemIcon size={30} />
+            </ThemeIcon>
+            <Title order={3} ta="center">
+              Quản lý trang sức
+            </Title>
+            <Text c="dimmed" size="sm" ta="center">
+              Đăng nhập để vào hệ thống quản lý chuỗi cửa hàng
+            </Text>
+          </Stack>
           {error !== null && <Alert color="red">{error}</Alert>}
           {status === 'loading' ? null : (
             <GoogleButton

@@ -20,6 +20,7 @@ còn trong Docker nginx chuyển tiếp request đó.
 | `src/auth/require-auth.tsx`                   | Chặn trang riêng tư, giữ đường dẫn trở về và hiển thị trang không có quyền.               |
 | `src/auth/active-branch.tsx`                  | Chi nhánh đang làm việc; chỉ lưu ID chi nhánh trong `localStorage`.                       |
 | `src/auth/google-button.tsx`, `src/config.ts` | Tải Google Identity Services và đọc Client ID đã được Vite nhúng vào build.               |
+| `src/components/icons.tsx`                    | Biểu tượng SVG dùng cho menu và nút (không dùng thư viện biểu tượng).                     |
 | `src/layout/app-shell.tsx`                    | Sidebar, topbar, chọn chi nhánh và menu tài khoản.                                        |
 | `src/pages/`                                  | Trang đăng nhập, trang chủ, chi nhánh, nhân viên, đổi mật khẩu và trang lỗi.              |
 | `src/components/`                             | Thành phần dùng chung như hộp thoại xác nhận, editor vai trò và thông báo lỗi.            |

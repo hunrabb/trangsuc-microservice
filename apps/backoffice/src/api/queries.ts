@@ -24,7 +24,7 @@ export const useBranchPage = (page: number, pageSize: number) =>
 
 /**
  * Toàn bộ chi nhánh (tối đa một trang lớn nhất) để lấy tên và để chọn. Chỉ ADMIN gọi được: các vai trò
- * khác không có quyền xem danh sách chi nhánh nên không có tên, xem `useBranchLabel`.
+ * khác không có quyền xem danh sách chi nhánh, xem `useBranchLabel`.
  */
 export function useBranchOptions() {
   const { me } = useSession();
@@ -35,8 +35,14 @@ export function useBranchOptions() {
   });
 }
 
-/** Tên chi nhánh theo id. Không biết tên (không phải ADMIN) thì hiện mã rút gọn của id. */
+/**
+ * Tên chi nhánh theo id. Nguồn theo thứ tự:
+ * 1. `branchName` trong `/me` (mọi vai trò đều có tên các chi nhánh của mình);
+ * 2. danh sách chi nhánh (chỉ ADMIN gọi được), để hiện tên chi nhánh của người khác;
+ * 3. không biết thì hiện "Chi nhánh khác" (không để lộ id thô ra giao diện).
+ */
 export function useBranchLabel(): (branchId: string | null) => string {
+  const { me } = useSession();
   const options = useBranchOptions();
   const items = options.data?.items;
   return useCallback(
@@ -44,9 +50,12 @@ export function useBranchLabel(): (branchId: string | null) => string {
       if (branchId === null) {
         return 'Toàn hệ thống';
       }
-      const found = items?.find((branch) => branch.id === branchId);
-      return found === undefined ? `Chi nhánh …${branchId.slice(0, 8)}` : found.name;
+      const own = me?.branches.find((entry) => entry.branchId === branchId)?.branchName;
+      if (own !== undefined && own !== null) {
+        return own;
+      }
+      return items?.find((branch) => branch.id === branchId)?.name ?? 'Chi nhánh khác';
     },
-    [items],
+    [me, items],
   );
 }

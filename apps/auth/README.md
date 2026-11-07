@@ -116,7 +116,7 @@ Gateway giới hạn 5 lần / 15 phút theo user, xem mục Rate limit.
 
 ## `GET /api/auth/me`
 
-Cần access token. Đọc user, vai trò và trạng thái liên kết Google từ DB: `currentUser` trong `session.service.ts`. Vai trò ở đây là mới nhất, có thể khác vai trò trong token. Chỉ đọc, không có tình huống đồng thời.
+Cần access token. Đọc user, vai trò và trạng thái liên kết Google từ DB: `currentUser` trong `session.service.ts`. Mỗi vai trò kèm `branchName` (`toCurrentUserBranches` trong `src/session/current-user.ts`); tên không nằm trong token vì có thể đổi. Vai trò ở đây là mới nhất, có thể khác vai trò trong token. Chỉ đọc, không có tình huống đồng thời.
 
 ## Chính sách quyền
 
