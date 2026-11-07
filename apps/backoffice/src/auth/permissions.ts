@@ -56,6 +56,23 @@ export const canLockUser = (actor: Actor, target: Pick<User, 'id' | 'branches'>)
 export const canResetPassword = (actor: Actor, target: Pick<User, 'id' | 'branches'>): boolean =>
   isAdmin(actor.branches) && target.id !== actor.id && hasAdminRole(target);
 
+/** Có quyền `roles` ở chi nhánh `branchId` (ADMIN có quyền ở mọi chi nhánh). */
+export const hasRoleAtBranch = (
+  branches: readonly BranchRole[],
+  branchId: string | null,
+  roles: readonly BranchRole['role'][],
+): boolean =>
+  isAdmin(branches) ||
+  (branchId !== null &&
+    branches.some((entry) => entry.branchId === branchId && roles.includes(entry.role)));
+
+/** Trang kho theo chi nhánh (nhập hàng, tồn kho, kiểm kê): ADMIN, hoặc người có vai trò ở một chi nhánh. */
+export const canBranchStockAccess = (branches: readonly BranchRole[]): boolean =>
+  isAdmin(branches) || branches.some((entry) => entry.branchId !== null);
+
+/** Trang giá kim loại và sản phẩm: chỉ ADMIN ghi. */
+export const canManageCatalog = (branches: readonly BranchRole[]): boolean => isAdmin(branches);
+
 export const ROLE_LABELS: Record<BranchRole['role'], string> = {
   ADMIN: 'Quản trị viên',
   MANAGER: 'Quản lý',

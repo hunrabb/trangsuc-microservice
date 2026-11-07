@@ -25,10 +25,10 @@ export function ErrorAlert({
     return null;
   }
   if (isApiError(error) && error.code === 'VALIDATION_FAILED') {
-    const unbound = Object.entries(error.fieldErrors()).filter(
-      ([field]) => !boundFields.includes(fieldKey(field)),
-    );
-    const noFields = Object.keys(error.fieldErrors()).length === 0;
+    const unbound = error
+      .fieldErrorList()
+      .filter(({ field }) => !boundFields.includes(fieldKey(field)));
+    const noFields = error.fieldErrorList().length === 0;
     if (!noFields && unbound.length === 0) {
       return null;
     }
@@ -36,8 +36,8 @@ export function ErrorAlert({
       <Alert color="red" mb="md">
         {describeError(error)}
         <List size="sm" mt="xs">
-          {unbound.map(([field, message]) => (
-            <List.Item key={field}>{message}</List.Item>
+          {unbound.map(({ field, message }, position) => (
+            <List.Item key={`${field}:${position}`}>{message}</List.Item>
           ))}
         </List>
       </Alert>

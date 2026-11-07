@@ -20,18 +20,25 @@ import { describeError } from '../api/messages.ts';
 import { useBranchLabel } from '../api/queries.ts';
 import { useActiveBranch } from '../auth/active-branch.tsx';
 import {
+  canBranchStockAccess,
   canChangeOwnPassword,
   canManageBranches,
+  canManageCatalog,
   canManageUsers,
   isAdmin,
 } from '../auth/permissions.ts';
 import { useSession } from '../auth/session-context.tsx';
 import {
+  BoxIcon,
+  ChecklistIcon,
   GemIcon,
   HomeIcon,
   KeyIcon,
   LogoutIcon,
+  ReceiptIcon,
+  StockIcon,
   StoreIcon,
+  TagIcon,
   UsersIcon,
 } from '../components/icons.tsx';
 
@@ -77,6 +84,36 @@ export function AppLayout() {
       label: 'Nhân viên',
       icon: <UsersIcon />,
       visible: canManageUsers(branches),
+    },
+    {
+      to: '/gia-kim-loai',
+      label: 'Giá kim loại',
+      icon: <TagIcon />,
+      visible: canManageCatalog(branches),
+    },
+    {
+      to: '/san-pham',
+      label: 'Sản phẩm',
+      icon: <BoxIcon />,
+      visible: canManageCatalog(branches),
+    },
+    {
+      to: '/nhap-hang',
+      label: 'Nhập hàng',
+      icon: <ReceiptIcon />,
+      visible: canBranchStockAccess(branches),
+    },
+    {
+      to: '/ton-kho',
+      label: 'Tồn kho',
+      icon: <StockIcon />,
+      visible: canBranchStockAccess(branches),
+    },
+    {
+      to: '/kiem-ke',
+      label: 'Kiểm kê',
+      icon: <ChecklistIcon />,
+      visible: canBranchStockAccess(branches),
     },
     {
       to: '/doi-mat-khau',

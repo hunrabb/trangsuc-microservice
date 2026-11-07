@@ -28,6 +28,19 @@ export class ApiError extends Error {
     this.retryAfterSeconds = init.retryAfterSeconds;
   }
 
+  /** Mọi lỗi theo trường của `VALIDATION_FAILED`, giữ cả các trường trùng tên (ví dụ nhiều mã tem trùng). */
+  fieldErrorList(): { field: string; message: string }[] {
+    const fields = this.details?.fields;
+    if (!Array.isArray(fields)) {
+      return [];
+    }
+    return (fields as { field?: unknown; message?: unknown }[]).flatMap((item) =>
+      typeof item.field === 'string' && typeof item.message === 'string'
+        ? [{ field: item.field, message: item.message }]
+        : [],
+    );
+  }
+
   /** Lỗi theo từng trường của `VALIDATION_FAILED`: `{ tên trường: thông báo }`. */
   fieldErrors(): Record<string, string> {
     const fields = this.details?.fields;

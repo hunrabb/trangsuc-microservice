@@ -7,6 +7,7 @@ export function ConfirmDialog({
   title,
   children,
   confirmLabel,
+  confirmColor = 'red',
   loading = false,
   onConfirm,
   onCancel,
@@ -15,6 +16,8 @@ export function ConfirmDialog({
   title: string;
   children: ReactNode;
   confirmLabel: string;
+  /** Màu nút xác nhận: đỏ cho thao tác nguy hiểm (mặc định), màu chính cho thao tác thường. */
+  confirmColor?: string;
   loading?: boolean;
   onConfirm(): void;
   onCancel(): void;
@@ -26,7 +29,7 @@ export function ConfirmDialog({
         <Button variant="default" onClick={onCancel} disabled={loading}>
           Huỷ
         </Button>
-        <Button color="red" onClick={onConfirm} loading={loading}>
+        <Button color={confirmColor} onClick={onConfirm} loading={loading}>
           {confirmLabel}
         </Button>
       </Group>

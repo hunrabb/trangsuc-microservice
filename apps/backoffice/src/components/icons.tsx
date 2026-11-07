@@ -85,3 +85,53 @@ export const GemIcon = icon(
     <path d="M9 4l-1.5 5L12 20l4.5-11L15 4" />
   </>,
 );
+
+export const TagIcon = icon(
+  <>
+    <path d="M3 12V4h8l9 9-8 8z" />
+    <circle cx="7.5" cy="8.5" r="1.2" />
+  </>,
+);
+
+export const BoxIcon = icon(
+  <>
+    <path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z" />
+    <path d="M4 7.5l8 4.5 8-4.5" />
+    <path d="M12 12v9" />
+  </>,
+);
+
+export const ReceiptIcon = icon(
+  <>
+    <path d="M6 3h12v18l-3-2-3 2-3-2-3 2z" />
+    <path d="M9 8h6" />
+    <path d="M9 12h6" />
+  </>,
+);
+
+export const StockIcon = icon(
+  <>
+    <rect x="3" y="4" width="18" height="5" rx="1" />
+    <rect x="3" y="11" width="18" height="5" rx="1" />
+    <path d="M6 19h12" />
+  </>,
+);
+
+export const ChecklistIcon = icon(
+  <>
+    <path d="M9 6h11" />
+    <path d="M9 12h11" />
+    <path d="M9 18h11" />
+    <path d="M4 6l1 1 2-2" />
+    <path d="M4 12l1 1 2-2" />
+    <path d="M4 18l1 1 2-2" />
+  </>,
+);
+
+export const PrinterIcon = icon(
+  <>
+    <path d="M7 9V3h10v6" />
+    <rect x="4" y="9" width="16" height="8" rx="1" />
+    <path d="M7 14h10v7H7z" />
+  </>,
+);
