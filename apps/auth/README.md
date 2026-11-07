@@ -124,7 +124,7 @@ Mọi quyết định nằm ở một hàm: `isAllowed` trong `src/admin/policy.
 
 | Người thao tác | Được làm                                                                                                                                                                                         |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| ADMIN          | Mọi thao tác, trừ tự khoá chính mình                                                                                                                                                             |
+| ADMIN          | Mọi thao tác, trừ tự khoá và tự đặt lại mật khẩu                                                                                                                                                 |
 | MANAGER        | Danh sách user đúng chi nhánh mình quản lý (`branchId` bắt buộc); tạo user chỉ vai trò STAFF ở chi nhánh mình; `GET`, `PATCH`, `lock`, `unlock`, `unlink-google` theo `isStaffOfManagedBranches` |
 | STAFF          | Không có API quản trị                                                                                                                                                                            |
 
@@ -140,6 +140,7 @@ Controller: `src/admin/branches.controller.ts`. Service: `src/admin/branches.ser
 - `create`: tạo chi nhánh, outbox `branch.created`, `AuditLog` trong một transaction. Trùng `code` → `400`, `details.fields`.
 - `update`: khoá lạc quan theo `version`, lệch → `409 VERSION_CONFLICT`. Outbox `branch.updated`.
 - `deactivate`: UPDATE có điều kiện `isActive = true`, gọi lại → `409 INVALID_STATE`. Outbox `branch.updated` có `isActive = false`. Không xoá `UserBranch`: `ACTIVE_ASSIGNMENTS` bỏ vai trò này khi phát token. User không còn vai trò nào khác thì refresh trả `401`, đăng nhập Google trả `403`.
+- `activate`: mở lại, UPDATE có điều kiện `isActive = false`, đang hoạt động → `409 INVALID_STATE`. Outbox `branch.updated` có `isActive = true`; vai trò cũ có hiệu lực trở lại ở lần đăng nhập hoặc refresh kế tiếp.
 
 **Bảng ghi:** `Branch`, `OutboxEvent`, `AuditLog`.
 

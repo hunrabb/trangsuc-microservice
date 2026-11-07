@@ -534,6 +534,22 @@ describe('quản lý chi nhánh và nhân viên', () => {
       assertError(stale, 409, 'VERSION_CONFLICT');
     });
 
+    it('mở lại: phát branch.updated có isActive = true; đang hoạt động: 409; MANAGER: 403', async () => {
+      const admin = await createAdmin();
+      const branch = await createBranch();
+      await call(admin, 'POST', `/branches/${branch.id}/deactivate`);
+      const path = `/branches/${branch.id}/activate`;
+      const result = await call(admin, 'POST', path);
+      assert.equal(result.status, 200);
+      assert.equal(result.body.isActive, true);
+      const events = await eventsOf(branch.id);
+      assert.equal(events.length, 2);
+      assert.equal((events[1]?.payload as { isActive: boolean }).isActive, true);
+      await auditOf(branch.id, 'branch.activated');
+      assertError(await call(admin, 'POST', path), 409, 'INVALID_STATE');
+      assertError(await call(await manager(), 'POST', path), 403, 'FORBIDDEN');
+    });
+
     it('ngừng hoạt động: phát branch.updated có isActive = false; gọi lại: 409', async () => {
       const admin = await createAdmin();
       const branch = await createBranch();
@@ -654,6 +670,19 @@ describe('quản lý chi nhánh và nhân viên', () => {
         409,
         'INVALID_STATE',
       );
+    });
+
+    it('tự đặt lại mật khẩu của chính mình: 403, mật khẩu và phiên giữ nguyên', async () => {
+      const admin = await createAdmin();
+      await createAdmin();
+      await openSession(admin);
+      const result = await call(admin, 'POST', `/users/${admin.id}/reset-password`, {
+        newPassword: PASSWORD,
+      });
+      assertError(result, 403, 'FORBIDDEN');
+      const row = await db.user.findUnique({ where: { id: admin.id } });
+      assert.equal(row?.passwordHash, FAKE_HASH);
+      assert.equal(await liveSessions(admin), 1);
     });
 
     it('gán vai trò: thêm ADMIN phải kèm mật khẩu; bỏ ADMIN xoá hash và thu hồi phiên', async () => {

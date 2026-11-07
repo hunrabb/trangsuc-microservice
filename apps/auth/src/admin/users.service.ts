@@ -251,7 +251,8 @@ export class UsersService {
     { newPassword }: ResetPasswordRequest,
   ): Promise<void> {
     const actor = await loadActor(this.prisma, actorId);
-    assertAllowed(actor, { kind: 'user.reset-password' });
+    // Truyền `target` ngay để chặn tự đặt lại trước khi chạy bcrypt; chỉ ADMIN qua được bước này.
+    assertAllowed(actor, { kind: 'user.reset-password', target: { id: userId, branches: [] } });
     const passwordHash = await hashNewPassword(newPassword);
     await this.changeUser(actor, userId, {
       kind: 'user.reset-password',

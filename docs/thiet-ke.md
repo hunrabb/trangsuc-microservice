@@ -56,7 +56,7 @@ Chỉ có 3 vai trò cố định (enum), gán theo chi nhánh; không có bản
 
 **API quản trị của auth** (`/api/admin/auth/*`, đặc tả ở `docs/api/auth.openapi.yaml`) dùng một hàm chính sách thay cho `@Roles`, vì `/users/{userId}` không có `branchId` trong request, chỉ biết chi nhánh sau khi đọc user:
 
-- ADMIN: mọi thao tác. Không ai được tự khoá chính mình.
+- ADMIN: mọi thao tác. Không ai được tự khoá chính mình hay tự đặt lại mật khẩu (tự đổi dùng `change-password`).
 - MANAGER: xem danh sách đúng chi nhánh mình quản lý (`branchId` bắt buộc); tạo user chỉ vai trò STAFF ở chi nhánh mình; xem, sửa, khoá, mở khoá, gỡ Google chỉ khi user đó **chỉ có vai trò STAFF** và **mọi** chi nhánh của user đều do MANAGER này quản lý. Không gán vai trò, không đặt lại mật khẩu.
 - Vi phạm → `403 FORBIDDEN`.
 - Quyền đọc từ DB, không từ token: token sống tối đa 15 phút sau khi bị khoá hoặc hạ vai trò, nếu tin token thì ADMIN vừa bị khoá tự mở khoá được.

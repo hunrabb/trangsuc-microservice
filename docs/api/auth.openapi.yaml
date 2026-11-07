@@ -602,6 +602,66 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/admin/auth/branches/{branchId}/activate:
+    parameters:
+    - name: branchId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      operationId: activateBranch
+      tags:
+      - Chi nhánh
+      summary: Mở lại chi nhánh đã ngừng hoạt động
+      description: Chi nhánh đang hoạt động → `409 INVALID_STATE`. Vai trò của nhân viên ở chi nhánh này có hiệu
+        lực trở lại từ lần đăng nhập hoặc refresh kế tiếp.
+      x-roles:
+      - ADMIN
+      x-audience: store-backoffice
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Đã mở lại, phát `branch.updated`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Branch'
+        '401':
+          description: 'Chưa xác thực: INVALID_TOKEN, TOKEN_EXPIRED'
+          x-error-codes:
+          - INVALID_TOKEN
+          - TOKEN_EXPIRED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: 'Không có quyền: FORBIDDEN'
+          x-error-codes:
+          - FORBIDDEN
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 'Không tìm thấy: NOT_FOUND'
+          x-error-codes:
+          - NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 'Xung đột: INVALID_STATE'
+          x-error-codes:
+          - INVALID_STATE
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/admin/auth/users:
     get:
       operationId: listUsers
@@ -1035,7 +1095,8 @@ paths:
       tags:
       - Nhân viên
       summary: Đặt lại mật khẩu của một ADMIN
-      description: Chỉ cho user có vai trò ADMIN; user khác → `409 INVALID_STATE`. Thu hồi mọi phiên của user đó.
+      description: Chỉ cho user có vai trò ADMIN; user khác → `409 INVALID_STATE`. Áp dụng cho chính mình → `403 FORBIDDEN`
+        (tự đổi phải dùng `change-password`). Thu hồi mọi phiên của user đó.
       x-roles:
       - ADMIN
       x-audience: store-backoffice

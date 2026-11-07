@@ -51,4 +51,13 @@ export class BranchesController {
   ): Promise<Branch> {
     return this.branches.deactivate(user.id, branchId);
   }
+
+  @Post(':branchId/activate')
+  @HttpCode(200)
+  activate(
+    @CurrentUser() user: AuthUser,
+    @Param('branchId', UUID_PARAM) branchId: string,
+  ): Promise<Branch> {
+    return this.branches.activate(user.id, branchId);
+  }
 }

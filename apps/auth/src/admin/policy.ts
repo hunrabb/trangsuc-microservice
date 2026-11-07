@@ -53,14 +53,15 @@ const isStaffOfManagedBranches = (actor: Actor, target: TargetUser): boolean => 
 /**
  * Chính sách quyền của API quản trị, mọi quyết định nằm ở đây. Không dùng `@Roles` vì `RolesGuard` đòi
  * `branchId` trong request, còn `/users/{userId}` chỉ biết chi nhánh sau khi đọc user.
- * - Không ai được tự khoá chính mình, kể cả ADMIN.
+ * - Không ai được tự khoá chính mình hay tự đặt lại mật khẩu (phải dùng `change-password`), kể cả ADMIN.
  * - ADMIN: mọi thao tác còn lại.
  * - MANAGER: xem danh sách đúng chi nhánh mình quản lý (`branchId` bắt buộc); tạo user chỉ vai trò STAFF ở
  *   chi nhánh mình; xem, sửa, khoá, mở khoá, gỡ Google theo `isStaffOfManagedBranches`.
  * - Còn lại không được: gán vai trò, đặt lại mật khẩu, quản lý chi nhánh chỉ ADMIN.
  */
 export function isAllowed(actor: Actor, action: AdminAction): boolean {
-  if (action.kind === 'user.lock' && action.target?.id === actor.id) {
+  const isSelfAction = action.kind === 'user.lock' || action.kind === 'user.reset-password';
+  if (isSelfAction && action.target?.id === actor.id) {
     return false;
   }
   if (isSystemAdmin(actor)) {

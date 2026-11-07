@@ -141,6 +141,29 @@ export class BranchesService {
     });
   }
 
+  /**
+   * Mở lại chi nhánh đã ngừng. Vai trò của nhân viên vẫn còn trong `UserBranch` nên có hiệu lực trở lại ở lần
+   * đăng nhập hoặc refresh kế tiếp. Đồng thời: UPDATE có điều kiện `isActive = false`, hai lần gọi song song
+   * chỉ một lần phát sự kiện.
+   */
+  async activate(actorId: string, branchId: string): Promise<Branch> {
+    await this.authorize(actorId);
+    return this.prisma.$transaction(async (tx) => {
+      const before = await tx.branch.findUnique({ where: { id: branchId } });
+      if (before === null) {
+        throw notFound();
+      }
+      const { count } = await tx.branch.updateMany({
+        where: { id: branchId, isActive: false },
+        data: { isActive: true, version: { increment: 1 } },
+      });
+      if (count === 0) {
+        throw new BusinessError('INVALID_STATE', 'Chi nhánh đang hoạt động', 409);
+      }
+      return this.finishChange(tx, actorId, 'branch.activated', before);
+    });
+  }
+
   private async finishChange(
     tx: Prisma.TransactionClient,
     actorId: string,
