@@ -2,7 +2,13 @@
 // cả những gì KHÔNG được tới nơi. Không cần Postgres.
 import assert from 'node:assert/strict';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
-import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
+import {
+  createServer,
+  type IncomingMessage,
+  request,
+  type Server,
+  type ServerResponse,
+} from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { after, before, beforeEach, describe, it } from 'node:test';
 import { gzipSync } from 'node:zlib';
@@ -85,6 +91,38 @@ describe('gateway chuyển tiếp request', () => {
     seen = [];
     reply = (res) => void res.writeHead(200, { 'content-type': 'application/json' }).end('{}');
   });
+
+  /**
+   * Gửi request nhưng không kết thúc body, rồi đọc phản hồi. Gateway đóng kết nối sau 413, nên nếu client còn
+   * ghi tiếp (như fetch) thì có thể gặp EPIPE trước khi đọc được phản hồi.
+   */
+  const postUnfinished = (headers: Record<string, string>, bodySize = 0) =>
+    new Promise<Response>((done, fail) => {
+      const { hostname, port } = new URL(gatewayUrl);
+      const outgoing = request(
+        { host: hostname, port, path: '/api/auth/x', method: 'POST', headers },
+        (incoming) => {
+          let text = '';
+          incoming.on('data', (chunk: Buffer) => (text += chunk.toString()));
+          incoming.on('end', () => {
+            outgoing.destroy();
+            const correlationId = String(incoming.headers['x-correlation-id']);
+            done(
+              new Response(text, {
+                status: incoming.statusCode,
+                headers: { 'x-correlation-id': correlationId },
+              }),
+            );
+          });
+        },
+      );
+      outgoing.on('error', fail);
+      if (bodySize > 0) {
+        outgoing.write(Buffer.alloc(bodySize));
+      } else {
+        outgoing.flushHeaders();
+      }
+    });
 
   const expectErrorBody = async (response: Response, status: number, code: string) => {
     assert.equal(response.status, status);
@@ -218,22 +256,12 @@ describe('gateway chuyển tiếp request', () => {
     assert.equal(seen[0]?.size, limit);
 
     seen = [];
-    const declared = await fetch(`${gatewayUrl}/api/auth/x`, {
-      method: 'POST',
-      body: Buffer.alloc(limit + 1),
-    });
+    // Khai báo quá lớn: gateway từ chối ngay, không cần đọc body.
+    const declared = await postUnfinished({ 'content-length': String(limit + 1) });
     await expectErrorBody(declared, 413, 'PAYLOAD_TOO_LARGE');
 
-    const chunked = await fetch(`${gatewayUrl}/api/auth/x`, {
-      method: 'POST',
-      duplex: 'half',
-      body: new ReadableStream({
-        start(controller) {
-          controller.enqueue(new Uint8Array(limit + 1));
-          controller.close();
-        },
-      }),
-    } as RequestInit);
+    // Không khai báo độ dài: gateway đếm khi đọc, dừng ngay khi vượt.
+    const chunked = await postUnfinished({ 'transfer-encoding': 'chunked' }, limit + 1);
     await expectErrorBody(chunked, 413, 'PAYLOAD_TOO_LARGE');
     assert.equal(seen.length, 0);
   });
