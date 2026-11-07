@@ -41,6 +41,7 @@ const clientInfo = ({ headers }: HttpRequest): ClientInfo => ({
 
 const refreshTokenOf = ({ headers }: HttpRequest) => readRefreshCookie(headerValue(headers.cookie));
 
+/** Đặt cookie refresh rồi trả phần body; refresh token không bao giờ nằm trong body. */
 function withCookie(response: HttpResponse, opened: OpenedSession): AuthSession {
   response.setHeader('set-cookie', refreshCookie(opened.refreshToken, opened.refreshExpiresAt));
   return opened.session;

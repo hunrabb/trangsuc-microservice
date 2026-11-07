@@ -156,6 +156,7 @@ export class SessionService {
     });
   }
 
+  /** Thu hồi mọi phiên của user. Access token đang dùng vẫn hiệu lực tới khi hết hạn, tối đa 15 phút. */
   async logoutAll(userId: string): Promise<void> {
     await this.prisma.refreshToken.updateMany({
       where: { userId, revokedAt: null },
@@ -163,6 +164,7 @@ export class SessionService {
     });
   }
 
+  /** Dữ liệu cho `GET /me`, đọc từ DB nên phản ánh vai trò mới nhất, không phải vai trò trong token. */
   async currentUser(userId: string): Promise<CurrentUser> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -180,6 +182,7 @@ export class SessionService {
     };
   }
 
+  /** User còn được phép có phiên: tồn tại, `ACTIVE`, có ít nhất một vai trò. Không đạt trả `undefined`. */
   private async loadActiveUser(tx: Tx, userId: string): Promise<SessionUser | undefined> {
     const user = await tx.user.findUnique({ where: { id: userId }, ...USER_WITH_ROLES });
     if (user === null || user.status !== 'ACTIVE' || user.branches.length === 0) {

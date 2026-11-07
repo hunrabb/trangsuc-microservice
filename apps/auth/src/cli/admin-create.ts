@@ -8,6 +8,7 @@ import { PrismaClient } from '../generated/prisma/client';
 // Tạo ADMIN đầu tiên. Mật khẩu chỉ nhận từ ADMIN_PASSWORD hoặc stdin, không bao giờ qua tham số dòng lệnh
 // vì tham số lộ trong lịch sử shell và danh sách tiến trình. Xem README.
 
+/** Ưu tiên biến môi trường, không có thì đọc stdin. Có terminal mà không có biến thì báo lỗi, không hỏi. */
 async function readPassword(): Promise<string> {
   if (process.env.ADMIN_PASSWORD) {
     return process.env.ADMIN_PASSWORD;
@@ -22,6 +23,7 @@ async function readPassword(): Promise<string> {
   return input.replace(/\r?\n$/, '');
 }
 
+/** Máy dev có file `.env`; trong container biến lấy từ môi trường. */
 function loadEnvFile(): void {
   try {
     process.loadEnvFile('.env');
@@ -30,6 +32,7 @@ function loadEnvFile(): void {
   }
 }
 
+/** Đọc tham số, mật khẩu, rồi tạo ADMIN. `parseArgs` từ chối tham số lạ, nên `--password` không qua được. */
 async function main(): Promise<void> {
   const { values } = parseArgs({
     args: process.argv.slice(2).filter((arg) => arg !== '--'),

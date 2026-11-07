@@ -32,15 +32,18 @@ export class RefreshTokenCleanupJob implements OnModuleInit, OnModuleDestroy {
 
   constructor(private readonly prisma: PrismaService) {}
 
+  /** `unref`: timer này không giữ tiến trình sống khi service tắt. */
   onModuleInit(): void {
     this.timer = setInterval(() => void this.run(), INTERVAL_MS);
     this.timer.unref();
   }
 
+  /** Dừng timer khi service tắt. */
   onModuleDestroy(): void {
     clearInterval(this.timer);
   }
 
+  /** Lỗi chỉ ghi log: DB bận thì lần sau dọn tiếp, không làm sập service. */
   private async run(): Promise<void> {
     try {
       const count = await deleteStaleRefreshTokens(this.prisma);

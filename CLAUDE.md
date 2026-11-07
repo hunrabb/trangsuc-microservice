@@ -200,6 +200,9 @@ Chưa có (làm ở giai đoạn sau): `prisma db seed` (chưa có seed), `pnpm 
 
 ## 14. Cách làm việc
 
+- Ưu tiên code dễ đọc hơn code ngắn gọn; không dùng thủ thuật khó hiểu.
+- Mỗi hàm nghiệp vụ quan trọng có chú thích tiếng Việt ngắn: làm gì, vì sao, tình huống đồng thời nào được xử lý.
+- Mỗi service có `README.md` ngắn mô tả các luồng chính và file nào chứa luồng đó; cập nhật mỗi khi thêm hoặc đổi luồng.
 - Chỉ làm đúng phạm vi trong prompt. Thấy việc khác cần làm → ghi vào báo cáo, không tự làm.
 - Không thêm thư viện mới nếu prompt không cho phép; cần thì đề xuất trong báo cáo.
 - Không sửa migration đã commit; tạo migration mới.

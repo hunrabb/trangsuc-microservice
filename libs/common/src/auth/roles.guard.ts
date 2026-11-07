@@ -52,6 +52,7 @@ export function resolveBranchId(request: BranchScopedRequest): string | undefine
 export class RolesGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
 
+  /** Quy tắc đầy đủ ở chú thích của class. Chạy sau `JwtGuard` nên `request.user` đã được xác thực. */
   canActivate(context: ExecutionContext): boolean {
     const roles = this.reflector.getAllAndOverride<Role[] | undefined>(ROLES_KEY, [
       context.getHandler(),

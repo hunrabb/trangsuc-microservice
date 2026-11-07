@@ -23,6 +23,7 @@ export class JwtGuard implements CanActivate {
     @Inject(JWT_VERIFICATION) private readonly verification: JwtVerification,
   ) {}
 
+  /** Bỏ qua nếu endpoint có `@Public()`; ngược lại kiểm token theo `aud` của endpoint, mặc định nhân viên. */
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),

@@ -35,6 +35,11 @@ export class GoogleLoginService {
     this.clientId = config.get('GOOGLE_CLIENT_ID', { infer: true });
   }
 
+  /**
+   * Đăng nhập bằng ID token của Google: kiểm token, ghép tài khoản nếu là lần đầu, rồi mở phiên.
+   * Đồng thời: nhiều request đầu tiên cùng lúc do `linkIfFirstLogin` xử lý; ở đây đọc lại sau bước ghép nên
+   * bên thắng và bên thua đều thấy cùng dữ liệu mới nhất.
+   */
   async login(credential: string, client: ClientInfo): Promise<OpenedSession> {
     const identity = await verifyGoogleIdToken(credential, this.keys, this.clientId);
     await this.linkIfFirstLogin(identity);

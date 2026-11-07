@@ -48,6 +48,7 @@ export const PROXY_ROUTES: readonly ProxyRoute[] = [
 /** Đoạn đầu đường dẫn phía service mà gateway không bao giờ chuyển tới. */
 const BLOCKED_FIRST_SEGMENTS = new Set(['internal', 'health']);
 
+/** Giải mã một đoạn đường dẫn; mã hoá hỏng trả `undefined` để bị từ chối. */
 function decodeSegment(segment: string): string | undefined {
   try {
     return decodeURIComponent(segment);
@@ -71,6 +72,7 @@ function isSafePath(path: string): boolean {
   });
 }
 
+/** Đường bắt đầu bằng `/internal` hoặc `/health`, kể cả viết hoa hay mã hoá. */
 function isBlocked(path: string): boolean {
   const first = decodeSegment(path.split('/')[1] ?? '');
   return first !== undefined && BLOCKED_FIRST_SEGMENTS.has(first.toLowerCase());
@@ -83,6 +85,7 @@ export interface ResolvedRoute {
   audience: TokenAudience | null;
 }
 
+/** Khớp theo đoạn đường dẫn, không theo tiền tố chuỗi: `/api/pos` không khớp `/api/posx`. */
 function matches(route: ProxyRoute, path: string): boolean {
   return path === route.prefix || (!route.exact && path.startsWith(`${route.prefix}/`));
 }

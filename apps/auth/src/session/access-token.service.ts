@@ -29,6 +29,7 @@ export class AccessTokenService implements OnModuleInit {
     this.privateKey = privateKey;
   }
 
+  /** Ký access token 15 phút cho nhân viên. Vai trò nằm trong token nên service không phải gọi DB khi kiểm quyền. */
   sign(userId: string, branches: BranchRole[]): Promise<string> {
     return new SignJWT({ branches })
       .setProtectedHeader({ alg: 'RS256', typ: 'JWT' })

@@ -40,6 +40,10 @@ function listedInConnection(value: string | string[] | undefined): Set<string> {
   return new Set(joined.split(',').map((name) => name.trim().toLowerCase()));
 }
 
+/**
+ * Header gửi xuống service. Xoá `x-user-*` để client không tự khai danh tính, bỏ header chỉ có nghĩa trên một
+ * chặng, và đặt lại `x-correlation-id`, `x-forwarded-for` bằng giá trị gateway đã xác định.
+ */
 export function forwardRequestHeaders(
   incoming: IncomingHttpHeaders,
   correlationId: string,

@@ -8,6 +8,7 @@ const REFRESH_TOKEN_BYTES = 32;
 const SLIDING_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const ABSOLUTE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
+/** Chuỗi ngẫu nhiên 32 byte: token gốc chỉ nằm trong cookie của trình duyệt. */
 export function generateRefreshToken(): string {
   return randomBytes(REFRESH_TOKEN_BYTES).toString('base64url');
 }
@@ -26,11 +27,13 @@ export function refreshExpiry(sessionStartedAt: Date, now: Date = new Date()): D
 
 const COOKIE_ATTRIBUTES = `HttpOnly; Secure; SameSite=Strict; Path=${REFRESH_COOKIE_PATH}`;
 
+/** `HttpOnly`: JavaScript không đọc được. `SameSite=Strict`: trang khác không gửi được thay người dùng. */
 export function refreshCookie(token: string, expiresAt: Date, now: Date = new Date()): string {
   const maxAge = Math.max(0, Math.floor((expiresAt.getTime() - now.getTime()) / 1000));
   return `${REFRESH_COOKIE}=${token}; Max-Age=${maxAge}; ${COOKIE_ATTRIBUTES}`;
 }
 
+/** Xoá cookie: phải cùng `Path` với lúc đặt thì trình duyệt mới xoá đúng cookie. */
 export function clearedRefreshCookie(): string {
   return `${REFRESH_COOKIE}=; Max-Age=0; ${COOKIE_ATTRIBUTES}`;
 }

@@ -23,6 +23,7 @@ export class PasswordService implements OnModuleInit {
     private readonly sessions: SessionService,
   ) {}
 
+  /** Tạo hash giả một lần lúc khởi động, cùng chi phí với hash thật. */
   onModuleInit(): void {
     this.decoyHash = hash(randomBytes(32).toString('hex'), BCRYPT_ROUNDS);
   }
