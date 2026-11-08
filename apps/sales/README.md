@@ -1,26 +1,30 @@
-# sales-service — POS cốt lõi
+# sales-service — POS tại quầy
 
 Sales chỉ đọc/ghi schema `sales`. Inventory giữ quyền sở hữu hàng và công thức giá.
 API công khai đi qua gateway: `docs/api/sales.openapi.yaml`. Tiền dùng `Prisma.Decimal`, JSON là chuỗi.
 
 ## Các file
 
-| File                                                       | Trách nhiệm                                                                                 |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `src/pos/pos-orders.controller.ts`                         | Ba cửa vào HTTP, kiểm body/key/id; JWT được kiểm toàn cục                                   |
-| `src/pos/pos-orders.service.ts`                            | Điều phối tạo, xác nhận, huỷ; mọi HTTP nằm ngoài transaction                                |
-| `src/pos/inventory-stock.client.ts`                        | Quote/deduct/release; zod kiểm phản hồi, timeout 3 giây/lượt, tối đa hai retry lỗi tạm thời |
-| `src/core/order-store.ts`                                  | Unique idempotency, lease, transaction chốt dòng bán và trạng thái                          |
-| `src/core/order-transactions.ts`                           | UPDATE có điều kiện, lịch sử và outbox trong cùng transaction                               |
-| `src/core/order-record.ts`                                 | Quyền chi nhánh, trình bày snapshot, phát lại lỗi tạo đơn                                   |
-| `prisma/migrations/20261108150000_sales_pos/migration.sql` | Một migration thêm Order, OrderItem, OrderStatusHistory, AuditLog và CHECK                  |
+| File                                                          | Trách nhiệm                                                                                 |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `src/pos/pos-orders.controller.ts`                            | Tạo, đọc lại, xác nhận và huỷ đơn; JWT được kiểm toàn cục                                   |
+| `src/pos/pos-customers.controller.ts`                         | Tạo/tìm khách và lịch sử mua theo chi nhánh                                                 |
+| `src/pos/pos-customers.service.ts`                            | Chuẩn hoá điện thoại, unique phone, lọc đơn đã thanh toán theo chi nhánh                    |
+| `src/pos/pos-orders.service.ts`                               | Điều phối tạo, xác nhận, huỷ; mọi HTTP nằm ngoài transaction                                |
+| `src/pos/inventory-stock.client.ts`                           | Quote/deduct/release; zod kiểm phản hồi, timeout 3 giây/lượt, tối đa hai retry lỗi tạm thời |
+| `src/core/order-store.ts`                                     | Unique idempotency, lease, transaction chốt dòng bán và trạng thái                          |
+| `src/core/order-transactions.ts`                              | UPDATE có điều kiện, lịch sử và outbox trong cùng transaction                               |
+| `src/core/order-record.ts`                                    | Quyền chi nhánh, trình bày snapshot, phát lại lỗi tạo đơn                                   |
+| `prisma/migrations/20261108150000_sales_pos/migration.sql`    | Một migration thêm Order, OrderItem, OrderStatusHistory, AuditLog và CHECK                  |
+| `prisma/migrations/20261108180000_pos_customer/migration.sql` | Thêm Customer và Order.customerId tùy chọn                                                  |
 
 ## Tạo hoá đơn: POST /api/pos/orders
 
-1. Body chỉ gồm `branchId`, `tagCodes`; bắt buộc `Idempotency-Key`. `OrderStore.open` kiểm quyền STAFF/MANAGER
-   đúng chi nhánh hoặc ADMIN toàn hệ thống. Hash gồm chi nhánh và bộ mã tem đã sắp xếp, không tin giá từ client.
+1. Body gồm `branchId`, `tagCodes`, `customerId` tùy chọn; bắt buộc `Idempotency-Key`. `OrderStore.open` kiểm quyền STAFF/MANAGER
+   đúng chi nhánh hoặc ADMIN toàn hệ thống. Hash gồm chi nhánh, bộ mã tem đã sắp xếp và khách nếu có; không tin giá từ client.
 2. Transaction tạo `Order(CREATING)` và `OrderStatusHistory`. Unique `Order.idempotencyKey` giành một id;
    bắt đúng index `Order_idempotencyKey_key`. Trùng nội dung tiếp tục cùng đơn; khác nội dung trả 422.
+   Mã đơn mới là `POS` + UUID bỏ dấu gạch, để dùng nguyên mã làm nội dung VietQR; mã đơn cũ vẫn đọc được.
 3. `claim` dùng UPDATE có điều kiện giành lease 60 giây theo giờ DB; request còn lại chờ tối đa 35 giây,
    không giữ connection trong lúc chờ. Hết thời gian trả 503 để client gửi lại cùng key.
 4. Chủ lease gọi `quote`, ghi `deductionStarted`, rồi gọi `deduct` với `orderId` của dòng Order.
@@ -40,6 +44,17 @@ Lease quá hạn được request cùng key tiếp quản; mọi ghi sau HTTP ki
 ghi đè tiến trình mới. Nếu đã bắt đầu deduct thì tiếp quản gọi lại deduct (idempotent), không quote chiếc
 đã SOLD cho chính đơn rồi nhầm là hết hàng. Nếu release lỗi, giữ CANCELLING để lần gọi sau tiếp tục.
 Chưa có job tự tiếp tục đơn dở khi không còn request: cần gửi lại cùng key hoặc gọi lại cancel.
+
+## Đọc lại đơn và khách hàng POS
+
+`GET /api/pos/orders/{id}` và `GET /api/pos/orders/by-key/{key}` chỉ đọc trạng thái/snapshot, kiểm quyền trên
+`Order.branchId` thật. Giao diện lưu key trước POST và dùng GET theo key sau reload hoặc timeout; `CREATING` và
+`CANCELLING` chưa phải kết quả cuối, chỉ request dùng lại cùng key mới tiếp tục xử lý.
+
+`POST /api/pos/customers` chuẩn hoá số Việt Nam về dạng `0...`, unique `Customer.phone` làm trọng tài khi hai quầy
+tạo đồng thời. `GET /api/pos/customers/by-phone/{phone}` tìm khách; cả hai yêu cầu chi nhánh có quyền.
+`GET /api/pos/customers/{id}/orders?branchId=...` chỉ trả tối đa 50 đơn `COMPLETED` của chi nhánh được phép.
+Đơn không có khách giữ `customerId = null`; không ghi đè tên khách cũ khi tạo trùng số.
 
 ## Xác nhận tiền: POST /api/pos/orders/{id}/confirm-payment
 
@@ -67,6 +82,7 @@ không bật worker RabbitMQ. Tiền tố `POSTEST-`; dừng khi thấy dữ li�
 so sánh số dòng trước/sau. Test dùng cặp khoá JWT tạm riêng, không đọc khoá đăng nhập thật.
 
 Các ca: tranh một tem 10 vòng, cùng key song song, xác nhận hai lần, huỷ sau thanh toán, xác nhận đua huỷ,
-tiếp tục release bị gián đoạn, tiếp quản tạo đơn sau crash và phân quyền/giá giả từ client.
+tiếp tục release bị gián đoạn, tiếp quản tạo đơn sau crash, timeout còn transaction Inventory, phân quyền/giá giả,
+hai quầy tạo cùng số điện thoại, đơn có/không có khách và lịch sử theo chi nhánh.
 
-Chưa làm: giao diện POS, VietQR, khách hàng, hoàn tiền, webhook và job khôi phục nền.
+Chưa làm: hoàn tiền, webhook và job khôi phục nền.

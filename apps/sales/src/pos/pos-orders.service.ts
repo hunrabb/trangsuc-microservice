@@ -28,6 +28,16 @@ export class PosOrdersService {
     return presentOrder(await this.settle(user, order.id));
   }
 
+  /** Trả trạng thái bền vững sau reload/timeout, không tiếp quản hay gọi HTTP Inventory. */
+  async getById(user: AuthUser, orderId: string): Promise<PosOrder> {
+    return presentOrder(await this.store.load(user, orderId));
+  }
+
+  /** Key được giữ ở trình duyệt để truy tìm đơn khi phản hồi tạo đơn bị mất. */
+  async getByKey(user: AuthUser, key: string): Promise<PosOrder> {
+    return presentOrder(await this.store.loadByKey(user, key));
+  }
+
   /** Chỉ xác nhận đơn chờ trả tiền trong chi nhánh được phép; lần thứ hai không có tác dụng phụ. */
   async confirmPayment(user: AuthUser, orderId: string): Promise<PosOrder> {
     const order = await this.store.load(user, orderId);

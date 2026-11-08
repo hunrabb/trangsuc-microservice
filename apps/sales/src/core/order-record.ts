@@ -26,9 +26,11 @@ export function presentOrder(order: OrderRecord): PosOrder {
     id: order.id,
     code: order.code,
     branchId: order.branchId,
+    customerId: order.customerId,
     status: order.status,
     total: order.total.toFixed(2),
     version: order.version,
+    createdAt: order.createdAt.toISOString(),
     items: order.items.map((item) => ({
       id: item.id,
       tagCode: item.tagCode,

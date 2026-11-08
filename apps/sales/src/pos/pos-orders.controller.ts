@@ -5,13 +5,37 @@ import {
   idempotencyKeySchema,
   type PosOrder,
 } from '@jewelry/contracts';
-import { Body, Controller, Headers, HttpCode, Param, ParseUUIDPipe, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Headers,
+  HttpCode,
+  Param,
+  ParseUUIDPipe,
+  Post,
+} from '@nestjs/common';
 import { PosOrdersService } from './pos-orders.service';
 
 /** Cửa vào POS chỉ kiểm dữ liệu; service kiểm quyền trên chi nhánh thật của từng hoá đơn. */
 @Controller('pos/orders')
 export class PosOrdersController {
   constructor(private readonly orders: PosOrdersService) {}
+
+  /** Đọc trạng thái sau khi phản hồi tạo đơn/thu tiền/huỷ bị mất; quyền dựa vào chi nhánh thật của đơn. */
+  @Get('by-key/:key')
+  getByKey(@CurrentUser() user: AuthUser, @Param('key') key: string): Promise<PosOrder> {
+    const checkedKey = new ZodValidationPipe(idempotencyKeySchema).transform(key);
+    return this.orders.getByKey(user, checkedKey);
+  }
+
+  @Get(':id')
+  getById(
+    @CurrentUser() user: AuthUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<PosOrder> {
+    return this.orders.getById(user, id);
+  }
 
   /** Tạo hoặc phát lại hoá đơn bằng cùng key; không nhận giá hay trạng thái từ client. */
   @Post()

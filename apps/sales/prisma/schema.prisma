@@ -56,11 +56,22 @@ enum OrderStatus {
   CANCELLED
 }
 
+// Khách POS theo số điện thoại chuẩn hoá; một người có thể mua ở nhiều chi nhánh.
+model Customer {
+  id        String   @id @default(uuid()) @db.Uuid
+  phone     String   @unique
+  name      String
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(3)
+  orders    Order[]
+}
+
 // Giữ key ngay trước HTTP; lease cho phép request khác tiếp tục nếu tiến trình cũ chết.
 model Order {
   id                String               @id @default(uuid()) @db.Uuid
   code              String               @unique
   branchId          String               @db.Uuid
+  customerId        String?              @db.Uuid
   status            OrderStatus          @default(CREATING)
   idempotencyKey    String               @unique
   requestHash       String
@@ -78,8 +89,10 @@ model Order {
   updatedAt         DateTime             @default(now()) @updatedAt @db.Timestamptz(3)
   items             OrderItem[]
   history           OrderStatusHistory[]
+  customer          Customer?            @relation(fields: [customerId], references: [id])
 
   @@index([branchId, createdAt])
+  @@index([customerId, createdAt])
 }
 
 // Snapshot do inventory trả lúc deduct; không có khoá ngoại qua schema inventory.

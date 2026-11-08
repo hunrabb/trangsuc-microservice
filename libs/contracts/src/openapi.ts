@@ -21,7 +21,10 @@ import {
 } from './auth-api';
 import { errorResponseSchema } from './error-response';
 import {
+  createPosCustomerRequestSchema,
   createPosOrderRequestSchema,
+  posCustomerOrdersSchema,
+  posCustomerSchema,
   posOrderItemSchema,
   posOrderSchema,
   posOrderStatusSchema,
@@ -158,6 +161,9 @@ export const salesOpenApiSchemas = (): Record<string, unknown> =>
   toOpenApiSchemas({
     ErrorResponse: errorResponseSchema,
     CreatePosOrderRequest: createPosOrderRequestSchema,
+    CreatePosCustomerRequest: createPosCustomerRequestSchema,
+    PosCustomer: posCustomerSchema,
+    PosCustomerOrders: posCustomerOrdersSchema,
     PosOrderStatus: posOrderStatusSchema,
     PosOrderItem: posOrderItemSchema,
     PosOrder: posOrderSchema,

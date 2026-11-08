@@ -71,6 +71,7 @@ const productId = randomUUID();
 const variantId = randomUUID();
 const warehouseId = randomUUID();
 export const usedKeys: string[] = [];
+export const createdCustomerIds: string[] = [];
 export const inventoryCalls: string[] = [];
 export const faults = { releaseFailures: 0, deductFailures: 0 };
 export let inventoryUrl: string;
@@ -122,6 +123,7 @@ async function counts() {
       salesDatabase.orderStatusHistory.count(),
       salesDatabase.auditLog.count(),
       salesDatabase.outboxEvent.count(),
+      salesDatabase.customer.count(),
     ]),
     inventory: await Promise.all([
       inventoryDatabase.metal.count(),
@@ -194,6 +196,8 @@ async function startInventory(): Promise<void> {
 async function startSales(): Promise<void> {
   const { PrismaService } = salesRequire('./dist/prisma/prisma.service.js');
   const { PosOrdersController } = salesRequire('./dist/pos/pos-orders.controller.js');
+  const { PosCustomersController } = salesRequire('./dist/pos/pos-customers.controller.js');
+  const { PosCustomersService } = salesRequire('./dist/pos/pos-customers.service.js');
   const { PosOrdersService } = salesRequire('./dist/pos/pos-orders.service.js');
   const { OrderStore } = salesRequire('./dist/core/order-store.js');
   const { InventoryStockClient } = salesRequire('./dist/pos/inventory-stock.client.js');
@@ -215,12 +219,13 @@ async function startSales(): Promise<void> {
       }),
       JwtAuthModule,
     ],
-    controllers: [PosOrdersController],
+    controllers: [PosOrdersController, PosCustomersController],
     providers: [
       { provide: PrismaService, useValue: salesDatabase },
       OrderStore,
       InventoryStockClient,
       PosOrdersService,
+      PosCustomersService,
     ],
   })(SalesTestModule);
   const app = await createApplication(SalesTestModule);
@@ -281,6 +286,7 @@ export async function cleanup(): Promise<void> {
     await salesDatabase.auditLog.deleteMany({ where: { orderId: { in: orderIds } } });
     await salesDatabase.outboxEvent.deleteMany({ where: { aggregateId: { in: orderIds } } });
     await salesDatabase.order.deleteMany({ where: { id: { in: orderIds } } });
+    await salesDatabase.customer.deleteMany({ where: { id: { in: createdCustomerIds } } });
     await inventoryDatabase.stockMovement.deleteMany({ where: { warehouseId } });
     await inventoryDatabase.stockOrderOperation.deleteMany({
       where: { orderId: { in: orderIds } },

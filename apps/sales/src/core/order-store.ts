@@ -26,11 +26,20 @@ export class OrderStore {
   async open(user: AuthUser, key: string, request: CreatePosOrderRequest): Promise<OrderRecord> {
     assertOrderBranch(user, request.branchId);
     const tagCodes = [...request.tagCodes].sort();
-    const hash = createHash('sha256')
-      .update(JSON.stringify({ branchId: request.branchId, tagCodes }))
-      .digest('hex');
+    const hashInput =
+      request.customerId === undefined
+        ? { branchId: request.branchId, tagCodes }
+        : { branchId: request.branchId, tagCodes, customerId: request.customerId };
+    const hash = createHash('sha256').update(JSON.stringify(hashInput)).digest('hex');
     try {
-      return await this.insertOrder(user, key, hash, request.branchId, tagCodes);
+      return await this.insertOrder(
+        user,
+        key,
+        hash,
+        request.branchId,
+        tagCodes,
+        request.customerId,
+      );
     } catch (error) {
       if (violatedUniqueIndex(error) !== 'Order_idempotencyKey_key') throw error;
       const existing = await this.prisma.order.findUniqueOrThrow({
@@ -56,13 +65,24 @@ export class OrderStore {
     requestHash: string,
     branchId: string,
     tagCodes: string[],
+    customerId?: string,
   ): Promise<OrderRecord> {
     return orderTransaction(this.prisma, async (transaction) => {
+      if (customerId !== undefined) {
+        const customer = await transaction.customer.findUnique({
+          where: { id: customerId },
+          select: { id: true },
+        });
+        if (customer === null)
+          throw new BusinessError('NOT_FOUND', 'Không tìm thấy khách hàng', 404);
+      }
       const order = await transaction.order.create({
         data: {
           id: randomUUID(),
-          code: `POS-${randomUUID()}`,
+          // Mã mới chỉ dùng chữ/số để VietQR dùng nguyên mã đơn làm nội dung chuyển khoản.
+          code: `POS${randomUUID().replaceAll('-', '')}`,
           branchId,
+          customerId,
           idempotencyKey: key,
           requestHash,
           requestedTagCodes: tagCodes,
@@ -81,6 +101,17 @@ export class OrderStore {
   async load(user: AuthUser, orderId: string): Promise<OrderRecord> {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
+      include: { items: true },
+    });
+    if (order === null) throw new BusinessError('NOT_FOUND', 'Không tìm thấy hoá đơn', 404);
+    assertOrderBranch(user, order.branchId);
+    return order;
+  }
+
+  /** Tra theo key cho giao diện khôi phục sau timeout mà không tạo đơn mới. */
+  async loadByKey(user: AuthUser, key: string): Promise<OrderRecord> {
+    const order = await this.prisma.order.findUnique({
+      where: { idempotencyKey: key },
       include: { items: true },
     });
     if (order === null) throw new BusinessError('NOT_FOUND', 'Không tìm thấy hoá đơn', 404);

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash, randomInt, randomUUID } from 'node:crypto';
 import { after, before, describe, it } from 'node:test';
 import { posOrderSchema, posOrderEventPayloadSchema } from '@jewelry/contracts';
 import {
@@ -7,6 +7,7 @@ import {
   branchId,
   cleanup,
   createOrder,
+  createdCustomerIds,
   faults,
   inventoryCalls,
   inventoryDatabase,
@@ -285,6 +286,107 @@ describe('POS trên Postgres thật, hai instance sales và inventory HTTP thậ
     assert.equal(
       (await post(`/${created.body.id}/cancel`, undefined, undefined, 1, foreign)).status,
       403,
+    );
+  });
+
+  it('hai quầy tạo cùng số điện thoại chuẩn hoá: một khách, đơn có/không khách và key không bị đổi nghĩa', async () => {
+    let phone: string;
+    do {
+      phone = `09${randomInt(10_000_000, 100_000_000)}`;
+    } while (await salesDatabase.customer.findUnique({ where: { phone } }));
+    const firstBody = { branchId, phone, name: 'Khách thử POS' };
+    const secondBody = { ...firstBody, phone: `+84${phone.slice(1)}` };
+    const headers = {
+      'content-type': 'application/json',
+      authorization: `Bearer ${await tokenFor()}`,
+    };
+    const [first, second] = await Promise.all([
+      fetch(`${salesUrls[0]}/pos/customers`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(firstBody),
+      }),
+      fetch(`${salesUrls[1]}/pos/customers`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(secondBody),
+      }),
+    ]);
+    assert.equal(first.status, 201);
+    assert.equal(second.status, 201);
+    const customers = (await Promise.all([first.json(), second.json()])) as {
+      id: string;
+      phone: string;
+    }[];
+    assert.equal(customers[0]?.id, customers[1]?.id);
+    assert.equal(customers[0]?.phone, phone);
+    const customerId = customers[0]!.id;
+    createdCustomerIds.push(customerId);
+    assert.equal(await salesDatabase.customer.count({ where: { phone } }), 1);
+
+    const key = newKey();
+    const tagCode = await newItem();
+    const withCustomer = await post('', { branchId, tagCodes: [tagCode], customerId }, key);
+    assert.equal(withCustomer.status, 201);
+    assert.equal(withCustomer.body.customerId, customerId);
+    assert.match(withCustomer.body.code as string, /^POS[A-Za-z0-9]+$/);
+    const repeated = await post('', { branchId, tagCodes: [tagCode], customerId }, key, 1);
+    assert.equal(repeated.body.id, withCustomer.body.id);
+    assert.equal((await post('', { branchId, tagCodes: [tagCode] }, key)).status, 422);
+    assert.equal((await createOrder([await newItem()])).body.customerId, null);
+
+    const foreignToken = await tokenFor('STAFF', randomUUID());
+    const byKey = await fetch(`${salesUrls[1]}/pos/orders/by-key/${key}`, { headers });
+    assert.equal(byKey.status, 200);
+    assert.equal(((await byKey.json()) as { id: string }).id, withCustomer.body.id);
+    assert.equal(
+      (
+        await fetch(`${salesUrls[0]}/pos/orders/${withCustomer.body.id}`, {
+          headers: { authorization: `Bearer ${foreignToken}` },
+        })
+      ).status,
+      403,
+    );
+    assert.equal(
+      (
+        await fetch(`${salesUrls[0]}/pos/customers/by-phone/${phone}?branchId=${branchId}`, {
+          headers: { authorization: `Bearer ${foreignToken}` },
+        })
+      ).status,
+      403,
+    );
+    assert.equal(
+      (
+        await fetch(`${salesUrls[0]}/pos/customers/${customerId}/orders?branchId=${branchId}`, {
+          headers: { authorization: `Bearer ${foreignToken}` },
+        })
+      ).status,
+      403,
+    );
+    assert.equal((await post(`/${withCustomer.body.id}/confirm-payment`)).status, 200);
+    const foreignBranchOrderId = randomUUID();
+    await salesDatabase.order.create({
+      data: {
+        id: foreignBranchOrderId,
+        code: `POS${randomUUID().replaceAll('-', '')}`,
+        branchId: randomUUID(),
+        customerId,
+        idempotencyKey: newKey(),
+        requestHash: 'test-other-branch',
+        requestedTagCodes: ['OTHER-BRANCH'],
+        status: 'COMPLETED',
+        createdBy: actorId,
+        createdAt: new Date(Date.now() + 1000),
+      },
+    });
+    const history = await fetch(
+      `${salesUrls[0]}/pos/customers/${customerId}/orders?branchId=${branchId}`,
+      { headers },
+    );
+    assert.equal(history.status, 200);
+    assert.deepEqual(
+      ((await history.json()) as { items: { id: string }[] }).items.map((item) => item.id),
+      [withCustomer.body.id],
     );
   });
 });
