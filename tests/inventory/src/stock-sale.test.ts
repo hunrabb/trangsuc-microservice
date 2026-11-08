@@ -24,6 +24,61 @@ const { PrismaPg } = appRequire('@prisma/adapter-pg');
 const { PrismaClient } = appRequire('./dist/generated/prisma/client.js');
 const { ItemSalesService } = appRequire('./dist/stock/item-sales.service.js');
 
+/** Dừng đúng sau khi deduct đã ghi trong transaction nhưng trước commit, không sửa code production. */
+function pauseDeductBeforeCommit(request: {
+  orderId: string;
+  branchId: string;
+  tagCodes: string[];
+}) {
+  let entered!: () => void;
+  let resume!: () => void;
+  const transactionEntered = new Promise<void>((resolve) => {
+    entered = resolve;
+  });
+  const mayCommit = new Promise<void>((resolve) => {
+    resume = resolve;
+  });
+  const pausingDatabase = {
+    $transaction: (work: (transaction: unknown) => Promise<unknown>) =>
+      db.$transaction(
+        async (transaction: unknown) => {
+          const result = await work(transaction);
+          entered();
+          await mayCommit;
+          return result;
+        },
+        { timeout: 20_000 },
+      ),
+  };
+  const pausedService = new ItemSalesService(pausingDatabase) as typeof sales;
+  return { transactionEntered, resume, result: pausedService.deductItemsForOrder(request) };
+}
+
+/** Chờ PostgreSQL báo release đang đợi khoá orderId, thay vì đoán bằng sleep. */
+async function waitForReleaseLock(release: Promise<unknown>): Promise<'waiting' | 'finished'> {
+  let finished = false;
+  void release.then(
+    () => {
+      finished = true;
+    },
+    () => {
+      finished = true;
+    },
+  );
+  const deadline = Date.now() + 2_000;
+  while (Date.now() < deadline) {
+    if (finished) return 'finished';
+    const waiting = await db.$queryRaw<{ count: bigint }[]>`
+      SELECT count(*) AS count FROM pg_stat_activity
+      WHERE pid <> pg_backend_pid() AND usename = current_user
+        AND state = 'active' AND wait_event_type = 'Lock'
+        AND query LIKE '%StockOrderOperation%'`;
+    if ((waiting[0]?.count ?? 0n) > 0n) return 'waiting';
+    await new Promise<void>((resolve) => setTimeout(resolve, 10));
+  }
+  throw new Error('Release không hoàn tất và cũng không đợi khoá orderId');
+}
+
 interface Db {
   $disconnect(): Promise<void>;
   [model: string]: any; // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -56,6 +111,7 @@ const TABLES = [
   'warehouse',
   'jewelryItem',
   'stockMovement',
+  'stockOrderOperation',
   'outboxEvent',
 ] as const;
 
@@ -115,6 +171,7 @@ describe('chống bán trùng một tem (deduct, release)', () => {
   after(async () => {
     try {
       await db.stockMovement.deleteMany({ where: { warehouseId } });
+      await db.stockOrderOperation.deleteMany({ where: { orderId: { in: orderIds } } });
       await db.jewelryItem.deleteMany({ where: { warehouseId } });
       await db.outboxEvent.deleteMany({ where: { aggregateId: { in: orderIds } } });
       await db.warehouse.deleteMany({ where: { id: warehouseId } });
@@ -261,6 +318,48 @@ describe('chống bán trùng một tem (deduct, release)', () => {
     await assert.rejects(
       deduct(firstOrder, [await newItemInStock()]),
       (error: { code?: string }) => error.code === 'INVALID_STATE',
+    );
+  });
+
+  it('release đến trước commit deduct: không được để chiếc SOLD theo đơn đã release', async () => {
+    const tagCode = await newItemInStock();
+    const orderId = newOrderId();
+    const pending = pauseDeductBeforeCommit({ orderId, branchId, tagCodes: [tagCode] });
+    await pending.transactionEntered;
+    const release = sales.releaseItemsForOrder(orderId);
+    try {
+      assert.equal(await waitForReleaseLock(release), 'waiting');
+    } finally {
+      pending.resume();
+    }
+    const [deducted, released] = await Promise.all([pending.result, release]);
+    assert.equal(deducted.replayed, false);
+    assert.deepEqual(released.releasedTagCodes, [tagCode]);
+    assert.equal((await itemOf(tagCode)).status, 'IN_STOCK');
+    assert.equal(await movementsOf(orderId, 'SALE'), 1);
+    assert.equal(await movementsOf(orderId, 'RELEASE'), 1);
+    assert.equal(await db.outboxEvent.count({ where: { aggregateId: orderId } }), 2);
+  });
+
+  it('release hoàn tất trước deduct: orderId bị chặn bền vững dù không có chiếc nào đã bán', async () => {
+    const tagCode = await newItemInStock();
+    const orderId = newOrderId();
+    const [first, second] = await Promise.all([
+      sales.releaseItemsForOrder(orderId),
+      sales.releaseItemsForOrder(orderId),
+    ]);
+    assert.deepEqual(first.releasedTagCodes, []);
+    assert.deepEqual(second.releasedTagCodes, []);
+    await assert.rejects(
+      deduct(orderId, [tagCode]),
+      (error: { code?: string }) => error.code === 'INVALID_STATE',
+    );
+    assert.equal((await itemOf(tagCode)).status, 'IN_STOCK');
+    assert.equal(await movementsOf(orderId, 'SALE'), 0);
+    assert.equal(await db.outboxEvent.count({ where: { aggregateId: orderId } }), 0);
+    assert.notEqual(
+      (await db.stockOrderOperation.findUnique({ where: { orderId } })).releasedAt,
+      null,
     );
   });
 });

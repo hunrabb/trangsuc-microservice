@@ -49,8 +49,8 @@ const idempotencyReused = () =>
  * về kho (`releaseItemsForOrder`). Chống bán trùng MỘT tem là việc quan trọng nhất của file này.
  *
  * Nguyên tắc chung cho mọi thay đổi kho:
- * - Khoá các dòng `JewelryItem` liên quan theo thứ tự `id` TRƯỚC khi đọc hay sửa. Hai đơn tranh cùng một nhóm tem
- *   luôn khoá theo cùng thứ tự nên không thể khoá vòng tròn (deadlock); đơn đến sau chờ rồi thấy trạng thái mới.
+ * - Khoá `StockOrderOperation` theo `orderId` trước, rồi khoá các chiếc theo thứ tự `id` trước khi đọc hay sửa.
+ *   Hai đơn tranh cùng một nhóm tem luôn khoá chiếc theo cùng thứ tự; đơn đến sau chờ rồi thấy trạng thái mới.
  * - Mỗi lần đổi trạng thái là UPDATE có điều kiện (`WHERE id = ? AND status = ?`), kiểm tra số dòng bị ảnh hưởng.
  * - Sổ kho (`StockMovement`) có unique (refType, refId, jewelryItemId, type): lặp lại, kể cả song song, không ghi trùng.
  * - Trong transaction không gọi HTTP hay RabbitMQ: sự kiện chỉ ghi vào outbox.
@@ -127,6 +127,7 @@ export class ItemSalesService {
    *   một đơn thành công.
    * - Cùng `orderId` gọi lại (mạng chập chờn, POS gọi lại), kể cả hai lần SONG SONG: lần sau thấy các chiếc đã
    *   `SOLD` cho chính `orderId` đó, trả lại kết quả cũ (`replayed = true`), không trừ kho lần nữa.
+   * - Release đến trước commit deduct: hai bên chờ cùng khoá orderId; sau release, deduct muộn bị chặn.
    * - Deadlock còn sót lại: `runWithLockRetry` chạy lại cả transaction tối đa 3 lần.
    */
   async deductItemsForOrder(request: DeductStockRequest): Promise<DeductStockResponse> {
@@ -140,6 +141,10 @@ export class ItemSalesService {
     request: DeductStockRequest,
   ): Promise<DeductStockResponse> {
     await transaction.$executeRaw`SET LOCAL lock_timeout = '3s'`;
+    const operation = await this.lockOrderOperation(transaction, request.orderId, false);
+    if (operation.releasedAt !== null) {
+      throw invalidState('Đơn này đã được giải phóng hàng, hãy dùng orderId mới');
+    }
     const lockedRows = await this.lockAndLoadItemsByTag(transaction, request.tagCodes);
 
     this.assertEveryTagExistsInBranch(lockedRows, request);
@@ -297,7 +302,7 @@ export class ItemSalesService {
   /**
    * Trả hàng về kho khi đơn thất bại hoặc bị huỷ: các chiếc `SOLD` của `orderId` về `IN_STOCK` (xoá đơn và giá
    * chốt khỏi chiếc đó), ghi sổ kho. Gọi lại không sao: đơn không còn chiếc nào đang giữ thì không làm gì và
-   * không phát sự kiện. Khoá theo thứ tự `id` như `deduct` để hai bên không khoá chéo nhau.
+   * không phát sự kiện. Khoá orderId trước, rồi khoá chiếc theo `id` như deduct để hai bên không khoá chéo nhau.
    */
   async releaseItemsForOrder(orderId: string): Promise<ReleaseStockResponse> {
     return runWithLockRetry(() =>
@@ -312,9 +317,11 @@ export class ItemSalesService {
     orderId: string,
   ): Promise<ReleaseStockResponse> {
     await transaction.$executeRaw`SET LOCAL lock_timeout = '3s'`;
+    await this.lockOrderOperation(transaction, orderId, true);
     const lockedRows = await this.lockAndLoadItemsByOrder(transaction, orderId);
     const soldRows = lockedRows.filter((row) => row.status === 'SOLD');
     if (soldRows.length === 0) {
+      await this.markOrderReleased(transaction, orderId);
       return { orderId, releasedTagCodes: [] };
     }
 
@@ -324,7 +331,34 @@ export class ItemSalesService {
     await this.recordMovements(transaction, soldRows, orderId, 'RELEASE', 'IN_STOCK');
     const branchId = soldRows[0]?.warehouse.branchId ?? '';
     await this.queueStockChangedEvent(transaction, orderId, branchId, 'RELEASED', soldRows);
+    await this.markOrderReleased(transaction, orderId);
     return { orderId, releasedTagCodes: soldRows.map((row) => row.tagCode).sort() };
+  }
+
+  /** Khoá riêng theo orderId trước các chiếc hàng; release đến sớm vẫn có dòng để chặn deduct muộn. */
+  private async lockOrderOperation(
+    transaction: Transaction,
+    orderId: string,
+    releasedOnCreate: boolean,
+  ): Promise<{ releasedAt: Date | null }> {
+    const releasedAt = releasedOnCreate ? new Date() : null;
+    await transaction.$executeRaw`
+      INSERT INTO "inventory"."StockOrderOperation" ("orderId", "releasedAt")
+      VALUES (${orderId}::uuid, ${releasedAt})
+      ON CONFLICT ("orderId") DO NOTHING`;
+    const [operation] = await transaction.$queryRaw<{ releasedAt: Date | null }[]>`
+      SELECT "releasedAt" FROM "inventory"."StockOrderOperation"
+      WHERE "orderId" = ${orderId}::uuid FOR UPDATE`;
+    if (operation === undefined) throw invalidState('Không khoá được đơn trong kho');
+    return operation;
+  }
+
+  /** Dấu release được commit cùng việc trả hàng; gọi lại hoặc restart không mở lại orderId này. */
+  private async markOrderReleased(transaction: Transaction, orderId: string): Promise<void> {
+    await transaction.stockOrderOperation.updateMany({
+      where: { orderId, releasedAt: null },
+      data: { releasedAt: new Date() },
+    });
   }
 
   private async markItemAsInStock(

@@ -247,6 +247,15 @@ model StockMovement {
   @@index([refType, refId])
 }
 
+// Một dòng cho mỗi orderId POS: cả deduct và release phải khoá dòng này trước khi đụng tới chiếc hàng.
+// release đến sớm vẫn ghi dấu bền vững, để deduct cũ hoặc retry không thể bán hàng sau khi đã huỷ.
+model StockOrderOperation {
+  orderId    String    @id @db.Uuid
+  releasedAt DateTime? @db.Timestamptz(3)
+  createdAt  DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime  @default(now()) @updatedAt @db.Timestamptz(3)
+}
+
 // Chỉ ghi thêm. Không chứa dữ liệu nhạy cảm.
 model AuditLog {
   id            String   @id @default(uuid()) @db.Uuid

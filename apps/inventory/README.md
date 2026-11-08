@@ -71,17 +71,18 @@ Bảng bị ghi: không có. Chỉ đọc và không khoá, nên kết quả có
 
 Sales gửi `orderId`, `branchId`, danh sách mã tem. Tất cả hoặc không có gì, trong MỘT transaction (có `runWithLockRetry` và `lock_timeout` 3 giây). Các bước theo thứ tự:
 
-1. **Khoá** các chiếc theo mã tem, sắp theo `id`, rồi đọc lại trạng thái mới nhất: `lockAndLoadItemsByTag`.
-2. **Kiểm tra mã tem** có tồn tại và thuộc kho chi nhánh này không, sai thì `409 ITEM_NOT_AVAILABLE` kèm các mã tem: `assertEveryTagExistsInBranch`.
-3. **Xem đơn này đang ở đâu** dựa trên các dòng đã khoá: `checkOrderProgress`.
+1. **Khoá theo `orderId`** trong `StockOrderOperation` trước khi khoá chiếc. Nếu `releasedAt` đã có, trả `409 INVALID_STATE`; một `deduct` đến muộn sau `release` không thể bán lại bằng đơn đã huỷ: `lockOrderOperation`.
+2. **Khoá** các chiếc theo mã tem, sắp theo `id`, rồi đọc lại trạng thái mới nhất: `lockAndLoadItemsByTag`.
+3. **Kiểm tra mã tem** có tồn tại và thuộc kho chi nhánh này không, sai thì `409 ITEM_NOT_AVAILABLE` kèm các mã tem: `assertEveryTagExistsInBranch`.
+4. **Xem đơn này đang ở đâu** dựa trên các dòng đã khoá: `checkOrderProgress`.
    - Mọi chiếc đã `SOLD` cho chính `orderId` này: đây là lần gọi lặp, trả kết quả cũ (`replayed = true`) từ giá đã chốt trên từng chiếc: `buildStoredResult`.
    - Một phần thuộc đơn này, hoặc đơn này đang giữ chiếc khác: cùng `orderId` khác nội dung, `422 IDEMPOTENCY_KEY_REUSED`.
    - Có chiếc không còn `IN_STOCK` (đã bán cho đơn khác): `409 ITEM_NOT_AVAILABLE` kèm mã tem.
-4. **Kiểm tra `orderId` chưa bị giải phóng**: đã `release` thì `orderId` đó dùng xong, phải dùng `orderId` mới: `assertOrderWasNotReleasedBefore`.
-5. **Giữ hàng**: `reserveItems`. Với từng chiếc: lấy giá kim loại hiện tại (chưa có giá thì `409 METAL_PRICE_NOT_SET`), tính giá, rồi `markItemAsSold` bằng UPDATE có điều kiện `WHERE id = ? AND status = 'IN_STOCK'`, ghi đơn và giá chốt vào chiếc đó. Kết quả thêm `productName` để sales chép tên mẫu vào hoá đơn mà không đọc chéo schema.
-6. **Ghi sổ kho** `StockMovement` loại `SALE` (`recordMovements`) và **ghi outbox** `stock.changed` lý do `SOLD` (`queueStockChangedEvent`).
+5. **Kiểm tra lịch sử cũ**: `assertOrderWasNotReleasedBefore` chặn đơn đã có movement `RELEASE` trước khi bảng `StockOrderOperation` được thêm.
+6. **Giữ hàng**: `reserveItems`. Với từng chiếc: lấy giá kim loại hiện tại (chưa có giá thì `409 METAL_PRICE_NOT_SET`), tính giá, rồi `markItemAsSold` bằng UPDATE có điều kiện `WHERE id = ? AND status = 'IN_STOCK'`, ghi đơn và giá chốt vào chiếc đó. Kết quả thêm `productName` để sales chép tên mẫu vào hoá đơn mà không đọc chéo schema.
+7. **Ghi sổ kho** `StockMovement` loại `SALE` (`recordMovements`) và **ghi outbox** `stock.changed` lý do `SOLD` (`queueStockChangedEvent`).
 
-Bảng bị ghi: `JewelryItem` (`status`, `orderId`, `soldAt`, giá chốt, `version`), `StockMovement`, `OutboxEvent`.
+Bảng bị ghi: `StockOrderOperation`, `JewelryItem` (`status`, `orderId`, `soldAt`, giá chốt, `version`), `StockMovement`, `OutboxEvent`.
 
 **Đồng thời:**
 
@@ -95,14 +96,14 @@ Bảng bị ghi: `JewelryItem` (`status`, `orderId`, `soldAt`, giá chốt, `ver
 
 Sales gửi `orderId` khi đơn thất bại hoặc bị huỷ. Trong MỘT transaction:
 
-1. Khoá các chiếc đang giữ bởi đơn này, sắp theo `id`: `lockAndLoadItemsByOrder`.
-2. Không còn chiếc nào `SOLD`: không làm gì, trả danh sách rỗng, không phát sự kiện (gọi lại không sao).
+1. Khoá `StockOrderOperation` theo `orderId`, rồi khoá các chiếc đang giữ bởi đơn này theo `id`: `lockOrderOperation`, `lockAndLoadItemsByOrder`.
+2. Không còn chiếc nào `SOLD`: ghi `releasedAt` trong cùng transaction, trả danh sách rỗng, không phát sự kiện. Dấu này chặn `deduct` đến muộn kể cả khi release đến trước commit.
 3. Với từng chiếc `SOLD`: về `IN_STOCK`, xoá đơn và giá chốt, bằng UPDATE có điều kiện `status = 'SOLD' AND orderId = ?`: `markItemAsInStock`.
-4. Ghi sổ kho loại `RELEASE` và outbox `stock.changed` lý do `RELEASED`.
+4. Ghi sổ kho loại `RELEASE`, outbox `stock.changed` lý do `RELEASED`, và `releasedAt` trong cùng transaction.
 
-Bảng bị ghi: `JewelryItem`, `StockMovement`, `OutboxEvent`.
+Bảng bị ghi: `StockOrderOperation`, `JewelryItem`, `StockMovement`, `OutboxEvent`.
 
-**Đồng thời:** `release` chạy song song với `deduct` cùng đơn thì khoá cùng các dòng theo cùng thứ tự `id`, nên xử lý lần lượt, không deadlock. Hai `release` song song: lần sau chờ rồi không còn chiếc `SOLD` nào. Sau `release`, chiếc đó bán lại được cho đơn khác.
+**Đồng thời:** `release` và `deduct` cùng đơn khoá cùng dòng `StockOrderOperation` trước các chiếc. Nếu `deduct` commit trước, `release` chờ rồi trả hàng. Nếu `release` commit trước, `deduct` thấy `releasedAt` và bị chặn. Hai `release` song song không ghi trùng. Chiếc đã release vẫn bán lại được cho đơn khác.
 
 ## Kiểm kê kho (3C)
 
@@ -159,4 +160,4 @@ Tổng số dự kiến, đã quét, chưa quét, thiếu, đã bán trong lúc 
 ## Test
 
 - `src/pricing/pricing.test.ts`: tính giá, làm tròn.
-- `tests/inventory` (`pnpm test:inventory`, Postgres thật): duyệt song song, duyệt sai `version`, `branch.created` trùng; hai đơn tranh một tem (10 vòng), `deduct` lặp cùng `orderId`, `release` rồi bán lại; kiểm kê: đóng và quét song song, chiếc thiếu, mã thừa.
+- `tests/inventory` (`pnpm test:inventory`, Postgres thật): duyệt song song, duyệt sai `version`, `branch.created` trùng; hai đơn tranh một tem (10 vòng), `deduct` lặp cùng `orderId`, `release` trước hoặc sau commit `deduct`; kiểm kê: đóng và quét song song, chiếc thiếu, mã thừa.
