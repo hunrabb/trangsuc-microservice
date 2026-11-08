@@ -5,6 +5,7 @@ import {
   portField,
   postgresUrlField,
   rabbitUrlField,
+  httpUrlField,
 } from '@jewelry/common';
 import { z } from 'zod';
 
@@ -17,6 +18,7 @@ export const envSchema = z.object({
   DATABASE_URL: postgresUrlField(DB_SCHEMA),
   DATABASE_POOL_MAX: databasePoolMaxField,
   RABBITMQ_URL: rabbitUrlField,
+  INVENTORY_URL: httpUrlField,
   ...jwtEnvFields,
 });
 
