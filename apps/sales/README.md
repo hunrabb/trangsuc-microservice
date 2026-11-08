@@ -30,6 +30,8 @@ API công khai đi qua gateway: `docs/api/sales.openapi.yaml`. Tiền dùng `Pri
 6. Hết hàng: ghi `CANCELLING` cùng mã lỗi/mã tem; bước kế tiếp gọi `release`. Khi kho xác nhận đã trả,
    transaction đổi `CANCELLED`, ghi lịch sử, AuditLog và outbox `order.cancelled`; trả 409 ITEM_NOT_AVAILABLE.
    Đơn thất bại vẫn còn nhưng không có dòng bán. Lỗi hạ tầng giữ 503, thiếu giá giữ METAL_PRICE_NOT_SET.
+   Nếu `deduct` đã timeout ở Sales nhưng vẫn đang chạy trong Inventory, `release` chờ khoá theo `orderId`
+   và chặn mọi `deduct` đến muộn sau khi đơn được giải phóng.
 
 **Bảng ghi:** `Order`, `OrderItem`, `OrderStatusHistory`, `AuditLog` (khi huỷ), `OutboxEvent`.
 

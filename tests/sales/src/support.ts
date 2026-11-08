@@ -72,10 +72,46 @@ const variantId = randomUUID();
 const warehouseId = randomUUID();
 export const usedKeys: string[] = [];
 export const inventoryCalls: string[] = [];
-export const faults = { releaseFailures: 0 };
+export const faults = { releaseFailures: 0, deductFailures: 0 };
 export let inventoryUrl: string;
 export const salesUrls: string[] = [];
 let baseline: unknown;
+let nextInventoryCommitPause: { entered: () => void; resume: Promise<void> } | undefined;
+
+/** Chặn đúng lần commit Inventory kế tiếp để kiểm tra timeout ở Sales khi transaction vẫn chạy. */
+export function pauseNextInventoryCommit(): { entered: Promise<void>; resume: () => void } {
+  let signalEntered!: () => void;
+  let signalResume!: () => void;
+  const entered = new Promise<void>((resolve) => {
+    signalEntered = resolve;
+  });
+  const resume = new Promise<void>((resolve) => {
+    signalResume = resolve;
+  });
+  nextInventoryCommitPause = { entered: signalEntered, resume };
+  return { entered, resume: signalResume };
+}
+
+/** Chỉ thay điểm commit trong test; mọi truy vấn và transaction vẫn chạy bằng Prisma/Postgres thật. */
+const pausingInventoryDatabase = new Proxy(inventoryDatabase, {
+  get(target, property) {
+    if (property !== '$transaction') return Reflect.get(target, property, target);
+    return (work: (transaction: unknown) => Promise<unknown>) =>
+      target.$transaction(
+        async (transaction) => {
+          const result = await work(transaction);
+          const pause = nextInventoryCommitPause;
+          if (pause !== undefined) {
+            nextInventoryCommitPause = undefined;
+            pause.entered();
+            await pause.resume;
+          }
+          return result;
+        },
+        { timeout: 15_000 },
+      );
+  },
+});
 
 /** Đếm các bảng liên quan để chứng minh sau test không làm mất hay để thừa dữ liệu của người khác. */
 async function counts() {
@@ -96,6 +132,7 @@ async function counts() {
       inventoryDatabase.warehouse.count(),
       inventoryDatabase.jewelryItem.count(),
       inventoryDatabase.stockMovement.count(),
+      inventoryDatabase.stockOrderOperation.count(),
       inventoryDatabase.outboxEvent.count(),
     ]),
   };
@@ -133,12 +170,17 @@ async function startInventory(): Promise<void> {
   class InventoryTestModule {}
   Module({
     controllers: [InternalStockController],
-    providers: [{ provide: PrismaService, useValue: inventoryDatabase }, ItemSalesService],
+    providers: [{ provide: PrismaService, useValue: pausingInventoryDatabase }, ItemSalesService],
   })(InventoryTestModule);
   const app = await createApplication(InventoryTestModule);
   app.use((request, response, next) => {
     inventoryCalls.push(request.path);
-    if (request.path.endsWith('/release') && faults.releaseFailures > 0) {
+    if (request.path.endsWith('/deduct') && faults.deductFailures > 0) {
+      faults.deductFailures -= 1;
+      response
+        .status(503)
+        .json({ code: 'SERVICE_UNAVAILABLE', message: 'Kho bận', correlationId: randomUUID() });
+    } else if (request.path.endsWith('/release') && faults.releaseFailures > 0) {
       faults.releaseFailures -= 1;
       response
         .status(503)
@@ -240,6 +282,9 @@ export async function cleanup(): Promise<void> {
     await salesDatabase.outboxEvent.deleteMany({ where: { aggregateId: { in: orderIds } } });
     await salesDatabase.order.deleteMany({ where: { id: { in: orderIds } } });
     await inventoryDatabase.stockMovement.deleteMany({ where: { warehouseId } });
+    await inventoryDatabase.stockOrderOperation.deleteMany({
+      where: { orderId: { in: orderIds } },
+    });
     await inventoryDatabase.jewelryItem.deleteMany({ where: { warehouseId } });
     await inventoryDatabase.outboxEvent.deleteMany({ where: { aggregateId: { in: orderIds } } });
     await inventoryDatabase.warehouse.deleteMany({ where: { id: warehouseId } });

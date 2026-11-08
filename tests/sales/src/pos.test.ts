@@ -13,6 +13,7 @@ import {
   inventoryUrl,
   newItem,
   newKey,
+  pauseNextInventoryCommit,
   post,
   salesDatabase,
   salesUrls,
@@ -172,6 +173,57 @@ describe('POS trên Postgres thật, hai instance sales và inventory HTTP thậ
       1,
     );
     assert.equal((await post(`/${id}/cancel`)).status, 409);
+  });
+
+  it('deduct timeout tại Sales nhưng commit muộn: release chờ rồi trả kho, không còn chiếc SOLD', async () => {
+    const tagCode = await newItem();
+    const key = newKey();
+    const pause = pauseNextInventoryCommit();
+    faults.deductFailures = 2;
+    const pendingOrder = createOrder([tagCode], key);
+    try {
+      await pause.entered;
+      // Hai lần 503 làm lần deduct cuối thực sự hết hạn HTTP trong khi transaction vẫn mở.
+      const deadline = Date.now() + 6_000;
+      let releaseIsWaiting = false;
+      while (Date.now() < deadline) {
+        const waiting = await inventoryDatabase.$queryRaw<{ count: bigint }[]>`
+          SELECT count(*) AS count FROM pg_stat_activity
+          WHERE pid <> pg_backend_pid() AND usename = current_user
+            AND state = 'active' AND wait_event_type = 'Lock'
+            AND query LIKE '%StockOrderOperation%'`;
+        if ((waiting[0]?.count ?? 0n) > 0n) {
+          releaseIsWaiting = true;
+          break;
+        }
+        await new Promise<void>((resolve) => setTimeout(resolve, 10));
+      }
+      assert.equal(releaseIsWaiting, true, 'release phải chờ transaction deduct còn mở');
+    } finally {
+      pause.resume();
+    }
+    const response = await pendingOrder;
+    assert.equal(response.status, 503);
+    const order = await salesDatabase.order.findUniqueOrThrow({ where: { idempotencyKey: key } });
+    assert.equal(order.status, 'CANCELLED');
+    const item = await inventoryDatabase.jewelryItem.findUniqueOrThrow({ where: { tagCode } });
+    assert.equal(item.status, 'IN_STOCK');
+    assert.equal(item.orderId, null);
+    assert.equal(
+      await inventoryDatabase.stockMovement.count({ where: { refId: order.id, type: 'SALE' } }),
+      1,
+    );
+    assert.equal(
+      await inventoryDatabase.stockMovement.count({ where: { refId: order.id, type: 'RELEASE' } }),
+      1,
+    );
+    assert.equal(await salesDatabase.orderItem.count({ where: { orderId: order.id } }), 0);
+    assert.equal(
+      await salesDatabase.outboxEvent.count({
+        where: { aggregateId: order.id, eventType: 'order.created' },
+      }),
+      0,
+    );
   });
 
   it('tiếp quản sau crash giữa deduct và lưu đơn: replay deduct, không quote lại rồi trả nhầm hàng', async () => {
