@@ -12,6 +12,9 @@ const MESSAGES: Partial<Record<string, string>> = {
   NOT_FOUND: 'Không tìm thấy dữ liệu. Có thể nó đã bị xoá hoặc đổi.',
   VERSION_CONFLICT: 'Dữ liệu đã bị người khác sửa, tải lại?',
   LAST_ADMIN: 'Không thể: hệ thống phải còn ít nhất một quản trị viên.',
+  METAL_PRICE_NOT_SET:
+    'Kim loại này chưa có giá. Hãy nhập giá kim loại ở trang "Giá kim loại" trước.',
+  ITEM_NOT_AVAILABLE: 'Có món hàng không còn bán được.',
   INVALID_STATE: 'Thao tác không còn phù hợp với trạng thái hiện tại. Hãy tải lại danh sách.',
   VALIDATION_FAILED: 'Dữ liệu chưa hợp lệ, vui lòng kiểm tra lại.',
   SERVICE_UNAVAILABLE: 'Hệ thống đang bận, vui lòng thử lại sau ít giây.',

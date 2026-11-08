@@ -1,0 +1,65 @@
+/* Trang in tem: chỉ tem được in, các nút điều khiển bị ẩn. Kích thước khớp tem 70 x 40 mm. */
+.label-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+}
+
+.label-sheet {
+  box-sizing: border-box;
+  width: 70mm;
+  min-height: 40mm;
+  padding: 3mm 4mm;
+  border: 1px dashed #868e96;
+  background: #fff;
+  color: #000;
+  font-family: system-ui, sans-serif;
+}
+
+.label-sheet .label-name {
+  margin: 0;
+  font-size: 11pt;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.label-sheet .label-detail {
+  margin: 1mm 0 0;
+  font-size: 8.5pt;
+  line-height: 1.3;
+}
+
+.label-sheet .label-price {
+  margin: 2mm 0 0;
+  font-size: 13pt;
+  font-weight: 700;
+}
+
+.label-sheet .label-tag {
+  margin: 2mm 0 0;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 12pt;
+  letter-spacing: 0.5px;
+  word-break: break-all;
+}
+
+@media print {
+  @page {
+    size: 70mm 40mm;
+    margin: 0;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .label-page {
+    padding: 0;
+  }
+
+  .label-sheet {
+    border: none;
+  }
+}
