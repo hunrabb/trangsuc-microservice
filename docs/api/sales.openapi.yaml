@@ -1,0 +1,268 @@
+openapi: 3.1.0
+info:
+  title: Sales POS API
+  version: 1.0.0
+  description: >-
+    Đường ở gateway. Chỉ ADMIN toàn hệ thống hoặc STAFF/MANAGER đúng chi nhánh.
+    Tiền và trọng lượng là chuỗi thập phân. Không nhận giá, channel hay status từ client.
+    CREATING/CANCELLING là bước nội bộ có lease 60 giây; gửi lại cùng key để tiếp tục khi bị gián đoạn.
+    Mỗi lượt HTTP inventory timeout 3 giây, retry tối đa hai lần chỉ với lỗi tạm thời.
+security:
+  - bearerAuth: []
+paths:
+  /api/pos/orders:
+    post:
+      operationId: createPosOrder
+      summary: Tạo hoá đơn POS hoặc trả cùng hoá đơn đã tạo
+      x-roles: [ADMIN, MANAGER, STAFF]
+      description: >-
+        Cùng key và cùng branchId/bộ mã tem trả cùng id; thứ tự mã tem không có ý nghĩa.
+        Key khác nội dung trả 422. Hết hàng trả 409 ITEM_NOT_AVAILABLE kèm details.tagCodes và orderId;
+        giữ đơn CANCELLED không có dòng bán. Lỗi hạ tầng trả 503, không đổi thành hết hàng.
+        Nếu trả kho lỗi, đơn giữ CANCELLING để request cùng key tiếp tục release.
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 200 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreatePosOrderRequest' }
+      responses:
+        '201':
+          description: Hoá đơn mới hoặc phát lại cùng key, snapshot lấy từ deduct
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PosOrder' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/StockConflict' }
+        '422':
+          description: IDEMPOTENCY_KEY_REUSED
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '503': { $ref: '#/components/responses/Unavailable' }
+  /api/pos/orders/{id}/confirm-payment:
+    post:
+      operationId: confirmPosPayment
+      summary: Xác nhận đã nhận chuyển khoản
+      x-roles: [ADMIN, MANAGER, STAFF]
+      description: UPDATE PENDING_PAYMENT sang COMPLETED; lần thứ hai hoặc đua huỷ thua trả 409.
+      parameters:
+        - { $ref: '#/components/parameters/OrderId' }
+      responses:
+        '200': { $ref: '#/components/responses/Order' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/InvalidState' }
+        '503': { $ref: '#/components/responses/Unavailable' }
+  /api/pos/orders/{id}/cancel:
+    post:
+      operationId: cancelPosOrder
+      summary: Huỷ đơn chờ thanh toán và trả kho
+      x-roles: [ADMIN, MANAGER, STAFF]
+      description: >-
+        Giành CANCELLING trước HTTP release để ngăn xác nhận tiền đồng thời.
+        Release thành công mới ghi CANCELLED, lịch sử, AuditLog và outbox.
+        Gọi lại tiếp tục CANCELLING; đã COMPLETED/CANCELLED trả 409, không release.
+      parameters:
+        - { $ref: '#/components/parameters/OrderId' }
+      responses:
+        '200': { $ref: '#/components/responses/Order' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/AuthenticationError' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/InvalidState' }
+        '503': { $ref: '#/components/responses/Unavailable' }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  parameters:
+    OrderId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+  responses:
+    Order:
+      description: Snapshot hoá đơn
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/PosOrder' }
+    ValidationError:
+      description: VALIDATION_FAILED
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    AuthenticationError:
+      description: INVALID_TOKEN hoặc TOKEN_EXPIRED
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Forbidden:
+      description: FORBIDDEN
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    NotFound:
+      description: NOT_FOUND
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    InvalidState:
+      description: INVALID_STATE
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    StockConflict:
+      description: ITEM_NOT_AVAILABLE hoặc METAL_PRICE_NOT_SET
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Unavailable:
+      description: SERVICE_UNAVAILABLE, gửi lại cùng key để tiếp tục
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+  schemas:
+    ErrorResponse:
+      type: "object"
+      properties:
+        code:
+          type: "string"
+          enum:
+            - "VALIDATION_FAILED"
+            - "INVALID_CREDENTIALS"
+            - "ACCOUNT_NOT_PROVISIONED"
+            - "SESSION_EXPIRED"
+            - "REFRESH_CONFLICT"
+            - "PASSWORD_TOO_WEAK"
+            - "INVALID_TOKEN"
+            - "TOKEN_EXPIRED"
+            - "FORBIDDEN"
+            - "NOT_FOUND"
+            - "METHOD_NOT_ALLOWED"
+            - "VERSION_CONFLICT"
+            - "INVALID_STATE"
+            - "LAST_ADMIN"
+            - "METAL_PRICE_NOT_SET"
+            - "ITEM_NOT_AVAILABLE"
+            - "INVALID_ITEM_STATE"
+            - "IDEMPOTENCY_KEY_REUSED"
+            - "PAYLOAD_TOO_LARGE"
+            - "RATE_LIMITED"
+            - "SERVICE_UNAVAILABLE"
+            - "INTERNAL_ERROR"
+        message:
+          type: "string"
+        details:
+          type: "object"
+          propertyNames:
+            type: "string"
+          additionalProperties: {}
+        correlationId:
+          type: "string"
+      required:
+        - "code"
+        - "message"
+        - "correlationId"
+      additionalProperties: false
+    CreatePosOrderRequest:
+      type: "object"
+      properties:
+        branchId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        tagCodes:
+          minItems: 1
+          maxItems: 100
+          type: "array"
+          items:
+            type: "string"
+            minLength: 1
+            maxLength: 64
+      required:
+        - "branchId"
+        - "tagCodes"
+      additionalProperties: false
+    PosOrderStatus:
+      type: "string"
+      enum:
+        - "CREATING"
+        - "PENDING_PAYMENT"
+        - "COMPLETED"
+        - "CANCELLING"
+        - "CANCELLED"
+    PosOrderItem:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        tagCode:
+          type: "string"
+        productName:
+          type: "string"
+        metalWeight:
+          type: "string"
+        laborFee:
+          type: "string"
+        stoneFee:
+          type: "string"
+        metalPriceAtSale:
+          type: "string"
+        price:
+          type: "string"
+      required:
+        - "id"
+        - "tagCode"
+        - "productName"
+        - "metalWeight"
+        - "laborFee"
+        - "stoneFee"
+        - "metalPriceAtSale"
+        - "price"
+      additionalProperties: false
+    PosOrder:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        code:
+          type: "string"
+        branchId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        status:
+          $ref: "#/components/schemas/PosOrderStatus"
+        total:
+          type: "string"
+        version:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
+        items:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/PosOrderItem"
+      required:
+        - "id"
+        - "code"
+        - "branchId"
+        - "status"
+        - "total"
+        - "version"
+        - "items"
+      additionalProperties: false

@@ -51,6 +51,10 @@ Kim loại và giá, danh mục, phiếu nhập, tồn kho (giai đoạn 3A). M�
 
 ## API nội bộ cho POS (3B)
 
+Các binding `order.created`, `order.paid`, `order.cancelled` đã có trong topology. `stock/pos-order-events.ts`
+kiểm `channel = POS` rồi ack qua consumer chung (vẫn ghi ProcessedEvent): kho đã được đổi qua HTTP nên không
+trừ hay trả lần thứ hai. Payload ngoài POS hiện chưa được hỗ trợ.
+
 Đường `/internal/stock/*`, chỉ gọi được trong mạng Docker: gateway không bao giờ chuyển tiếp `/internal/*`, nên không kiểm token. Controller là [internal-stock.controller.ts](src/stock/internal-stock.controller.ts), toàn bộ logic ở [item-sales.service.ts](src/stock/item-sales.service.ts). Schema yêu cầu và kết quả: `libs/contracts/src/inventory-internal-api.ts`.
 
 ### Báo giá: `POST /internal/stock/quote` (`quoteItems`)
@@ -74,7 +78,7 @@ Sales gửi `orderId`, `branchId`, danh sách mã tem. Tất cả hoặc không 
    - Một phần thuộc đơn này, hoặc đơn này đang giữ chiếc khác: cùng `orderId` khác nội dung, `422 IDEMPOTENCY_KEY_REUSED`.
    - Có chiếc không còn `IN_STOCK` (đã bán cho đơn khác): `409 ITEM_NOT_AVAILABLE` kèm mã tem.
 4. **Kiểm tra `orderId` chưa bị giải phóng**: đã `release` thì `orderId` đó dùng xong, phải dùng `orderId` mới: `assertOrderWasNotReleasedBefore`.
-5. **Giữ hàng**: `reserveItems`. Với từng chiếc: lấy giá kim loại hiện tại (chưa có giá thì `409 METAL_PRICE_NOT_SET`), tính giá, rồi `markItemAsSold` bằng UPDATE có điều kiện `WHERE id = ? AND status = 'IN_STOCK'`, ghi đơn và giá chốt vào chiếc đó.
+5. **Giữ hàng**: `reserveItems`. Với từng chiếc: lấy giá kim loại hiện tại (chưa có giá thì `409 METAL_PRICE_NOT_SET`), tính giá, rồi `markItemAsSold` bằng UPDATE có điều kiện `WHERE id = ? AND status = 'IN_STOCK'`, ghi đơn và giá chốt vào chiếc đó. Kết quả thêm `productName` để sales chép tên mẫu vào hoá đơn mà không đọc chéo schema.
 6. **Ghi sổ kho** `StockMovement` loại `SALE` (`recordMovements`) và **ghi outbox** `stock.changed` lý do `SOLD` (`queueStockChangedEvent`).
 
 Bảng bị ghi: `JewelryItem` (`status`, `orderId`, `soldAt`, giá chốt, `version`), `StockMovement`, `OutboxEvent`.

@@ -21,6 +21,20 @@ import {
 } from './auth-api';
 import { errorResponseSchema } from './error-response';
 import {
+  createPosOrderRequestSchema,
+  posOrderItemSchema,
+  posOrderSchema,
+  posOrderStatusSchema,
+} from './sales-api';
+import {
+  quoteStockRequestSchema,
+  quoteStockResponseSchema,
+  deductStockRequestSchema,
+  deductStockResponseSchema,
+  releaseStockRequestSchema,
+  releaseStockResponseSchema,
+} from './inventory-internal-api';
+import {
   addReceiptLineRequestSchema,
   createStockCountRequestSchema,
   itemLabelSchema,
@@ -128,7 +142,23 @@ const INVENTORY_OPENAPI_SCHEMAS = {
   ScanResult: scanResultSchema,
   StockCountSummary: stockCountSummarySchema,
   ItemLabel: itemLabelSchema,
+  QuoteStockRequest: quoteStockRequestSchema,
+  QuoteStockResponse: quoteStockResponseSchema,
+  DeductStockRequest: deductStockRequestSchema,
+  DeductStockResponse: deductStockResponseSchema,
+  ReleaseStockRequest: releaseStockRequestSchema,
+  ReleaseStockResponse: releaseStockResponseSchema,
 };
 
 export const inventoryOpenApiSchemas = (): Record<string, unknown> =>
   toOpenApiSchemas(INVENTORY_OPENAPI_SCHEMAS);
+
+/** Hợp đồng POS cùng một nguồn zod cho sales, client và OpenAPI. */
+export const salesOpenApiSchemas = (): Record<string, unknown> =>
+  toOpenApiSchemas({
+    ErrorResponse: errorResponseSchema,
+    CreatePosOrderRequest: createPosOrderRequestSchema,
+    PosOrderStatus: posOrderStatusSchema,
+    PosOrderItem: posOrderItemSchema,
+    PosOrder: posOrderSchema,
+  });

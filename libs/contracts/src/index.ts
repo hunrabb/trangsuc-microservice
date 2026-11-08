@@ -6,4 +6,5 @@ export * from './events';
 export * from './inventory-api';
 export * from './inventory-internal-api';
 export * from './openapi';
+export * from './sales-api';
 export * from './topology';

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Sinh phần `components/schemas` của docs/api/*.openapi.yaml (auth, inventory) từ schema zod trong libs/contracts.
+// Sinh phần `components/schemas` của docs/api/*.openapi.yaml (auth, inventory, sales) từ schema zod trong libs/contracts.
 //   pnpm openapi:generate           ghi vào file
 //   node scripts/openapi-generate.mjs --check   chỉ so sánh, lệch thì thoát mã 1
 // Phần `paths` viết tay; không sửa tay từ dòng `schemas:` trở xuống.
@@ -15,6 +15,10 @@ const SPECS = [
   {
     file: resolve(import.meta.dirname, '../docs/api/inventory.openapi.yaml'),
     schemas: () => contracts.inventoryOpenApiSchemas(),
+  },
+  {
+    file: resolve(import.meta.dirname, '../docs/api/sales.openapi.yaml'),
+    schemas: () => contracts.salesOpenApiSchemas(),
   },
 ];
 const MARKER = '\n  schemas:\n';

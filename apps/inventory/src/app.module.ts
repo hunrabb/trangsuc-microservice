@@ -17,6 +17,7 @@ import { InventoryModule } from './inventory.module';
 import { InternalPingController } from './internal/ping.controller';
 import { PrismaModule } from './prisma/prisma.module';
 import { PrismaService } from './prisma/prisma.service';
+import { POS_ORDER_HANDLERS } from './stock/pos-order-events';
 
 @Module({
   imports: [
@@ -31,7 +32,10 @@ import { PrismaService } from './prisma/prisma.service';
       dbSchema: DB_SCHEMA,
       inject: [PrismaService],
       database: (prisma: PrismaService) => prisma,
-      consumer: { queue: QUEUES.INVENTORY, handlers: BRANCH_HANDLERS },
+      consumer: {
+        queue: QUEUES.INVENTORY,
+        handlers: { ...BRANCH_HANDLERS, ...POS_ORDER_HANDLERS },
+      },
     }),
     HealthModule.forRoot({
       inject: [PrismaService, RabbitConnection],

@@ -19,6 +19,9 @@ export const ROUTING_KEYS = {
   BRANCH_UPDATED: 'branch.updated',
   METAL_PRICE_CHANGED: 'metal_price.changed',
   STOCK_CHANGED: 'stock.changed',
+  ORDER_CREATED: 'order.created',
+  ORDER_PAID: 'order.paid',
+  ORDER_CANCELLED: 'order.cancelled',
 } as const;
 
 export const systemTestPayloadSchema = z.object({ message: z.string().max(200) });
@@ -64,6 +67,18 @@ export const stockChangedPayloadSchema = z.object({
 
 export type StockChangedPayload = z.infer<typeof stockChangedPayloadSchema>;
 
+/** POS đã trừ kho qua HTTP; consumer phải xem channel trước khi xử lý giữ hàng online. */
+export const posOrderEventPayloadSchema = z.object({
+  orderId: z.uuid(),
+  branchId: z.uuid(),
+  channel: z.literal('POS'),
+  code: z.string().min(1),
+  total: z.string().min(1),
+  tagCodes: z.array(z.string().min(1)).min(1),
+});
+
+export type PosOrderEventPayload = z.infer<typeof posOrderEventPayloadSchema>;
+
 /** Sự kiện nào có schema payload nào. Thêm sự kiện mới = thêm một dòng ở đây. */
 export const EVENT_PAYLOAD_SCHEMAS = {
   [ROUTING_KEYS.SYSTEM_TEST]: systemTestPayloadSchema,
@@ -71,6 +86,9 @@ export const EVENT_PAYLOAD_SCHEMAS = {
   [ROUTING_KEYS.BRANCH_UPDATED]: branchUpdatedPayloadSchema,
   [ROUTING_KEYS.METAL_PRICE_CHANGED]: metalPriceChangedPayloadSchema,
   [ROUTING_KEYS.STOCK_CHANGED]: stockChangedPayloadSchema,
+  [ROUTING_KEYS.ORDER_CREATED]: posOrderEventPayloadSchema,
+  [ROUTING_KEYS.ORDER_PAID]: posOrderEventPayloadSchema,
+  [ROUTING_KEYS.ORDER_CANCELLED]: posOrderEventPayloadSchema,
 } as const;
 
 export type EventType = keyof typeof EVENT_PAYLOAD_SCHEMAS;

@@ -6,9 +6,9 @@ datasource db {
 }
 
 generator client {
-  provider     = "prisma-client"
-  output       = "../src/generated/prisma"
-  moduleFormat = "cjs"
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "cjs"
   // `nest build` không viết lại đường dẫn import: để mặc định sẽ sinh `.ts` và dist không chạy được.
   importFileExtension = "js"
 }
@@ -46,4 +46,83 @@ model ProcessedEvent {
   processedAt DateTime @default(now()) @db.Timestamptz(3)
 
   @@id([eventId, consumer])
+}
+
+enum OrderStatus {
+  CREATING
+  PENDING_PAYMENT
+  COMPLETED
+  CANCELLING
+  CANCELLED
+}
+
+// Giữ key ngay trước HTTP; lease cho phép request khác tiếp tục nếu tiến trình cũ chết.
+model Order {
+  id                String               @id @default(uuid()) @db.Uuid
+  code              String               @unique
+  branchId          String               @db.Uuid
+  status            OrderStatus          @default(CREATING)
+  idempotencyKey    String               @unique
+  requestHash       String
+  requestedTagCodes String[]
+  total             Decimal              @default(0) @db.Decimal(15, 2)
+  version           Int                  @default(1)
+  createdBy         String               @db.Uuid
+  operationOwner    String?              @db.Uuid
+  operationUntil    DateTime?            @db.Timestamptz(3)
+  deductionStarted  Boolean              @default(false)
+  failureCode       String?
+  failureHttpStatus Int?
+  failedTagCodes    String[]             @default([])
+  createdAt         DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime             @default(now()) @updatedAt @db.Timestamptz(3)
+  items             OrderItem[]
+  history           OrderStatusHistory[]
+
+  @@index([branchId, createdAt])
+}
+
+// Snapshot do inventory trả lúc deduct; không có khoá ngoại qua schema inventory.
+model OrderItem {
+  id               String   @id @default(uuid()) @db.Uuid
+  orderId          String   @db.Uuid
+  jewelryItemId    String   @db.Uuid
+  tagCode          String
+  productName      String
+  metalWeight      Decimal  @db.Decimal(12, 4)
+  laborFee         Decimal  @db.Decimal(15, 2)
+  stoneFee         Decimal  @default(0) @db.Decimal(15, 2)
+  metalPriceAtSale Decimal  @db.Decimal(15, 2)
+  price            Decimal  @db.Decimal(15, 2)
+  createdAt        DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime @default(now()) @updatedAt @db.Timestamptz(3)
+  order            Order    @relation(fields: [orderId], references: [id])
+
+  @@unique([orderId, tagCode])
+}
+
+// Chỉ ghi thêm, bao gồm trạng thái trung gian để truy được lần xử lý dở.
+model OrderStatusHistory {
+  id         String       @id @default(uuid()) @db.Uuid
+  orderId    String       @db.Uuid
+  fromStatus OrderStatus?
+  toStatus   OrderStatus
+  changedBy  String       @db.Uuid
+  createdAt  DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime     @default(now()) @db.Timestamptz(3)
+  order      Order        @relation(fields: [orderId], references: [id])
+
+  @@index([orderId, createdAt])
+}
+
+// Nhật ký huỷ hoá đơn theo CLAUDE.md mục 9; chỉ ghi thêm.
+model AuditLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  actorId   String   @db.Uuid
+  action    String
+  orderId   String   @db.Uuid
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([orderId])
 }

@@ -21,7 +21,7 @@ type Money = Prisma.Decimal;
 
 const WITH_BRANCH_AND_METAL = {
   warehouse: { select: { branchId: true } },
-  variant: { select: { metalId: true } },
+  variant: { select: { metalId: true, product: { select: { name: true } } } },
 } as const satisfies Prisma.JewelryItemInclude;
 
 type ItemRow = Prisma.JewelryItemGetPayload<{ include: typeof WITH_BRANCH_AND_METAL }>;
@@ -457,6 +457,8 @@ export class ItemSalesService {
     return {
       itemId: row.id,
       tagCode: row.tagCode,
+      // Sales chép tên lúc tạo hoá đơn; không phải đọc chéo schema hay tin tên từ client.
+      productName: row.variant.product.name,
       weight: row.weight.toFixed(4),
       laborFee: row.laborFee.toFixed(2),
       metalSellPricePerChi: metalSellPrice.toFixed(2),

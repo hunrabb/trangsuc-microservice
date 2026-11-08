@@ -48,6 +48,7 @@ export const deductStockRequestSchema = z.strictObject({
 export const deductedItemSchema = z.object({
   itemId: z.uuid(),
   tagCode: z.string(),
+  productName: z.string().min(1).optional().describe('Tên mẫu để sales chép vào hoá đơn POS'),
   weight: z.string(),
   laborFee: z.string(),
   metalSellPricePerChi: z.string(),

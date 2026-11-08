@@ -24,6 +24,74 @@ tags:
 - name: Tồn kho
 - name: Kiểm kê
 paths:
+  /internal/stock/quote:
+    servers: [{ url: 'http://inventory:3000' }]
+    post:
+      operationId: quoteInternalStock
+      summary: Báo giá nội bộ cho POS, không đi qua gateway
+      x-internal: true
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/QuoteStockRequest' }
+      responses:
+        '200':
+          description: Mã tem kèm giá tham khảo hoặc lý do không bán được
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/QuoteStockResponse' }
+        '400':
+          description: VALIDATION_FAILED
+  /internal/stock/deduct:
+    servers: [{ url: 'http://inventory:3000' }]
+    post:
+      operationId: deductInternalStock
+      summary: Trừ hàng nguyên tử và chốt giá, idempotent theo orderId
+      x-internal: true
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DeductStockRequest' }
+      responses:
+        '200':
+          description: Snapshot giá và productName cho hoá đơn; replay trả giá đã chốt
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DeductStockResponse' }
+        '400':
+          description: VALIDATION_FAILED
+        '409':
+          description: ITEM_NOT_AVAILABLE, METAL_PRICE_NOT_SET hoặc INVALID_STATE
+        '422':
+          description: IDEMPOTENCY_KEY_REUSED
+        '503':
+          description: SERVICE_UNAVAILABLE
+  /internal/stock/release:
+    servers: [{ url: 'http://inventory:3000' }]
+    post:
+      operationId: releaseInternalStock
+      summary: Trả hàng theo orderId, gọi lại không ghi sổ kho trùng
+      x-internal: true
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReleaseStockRequest' }
+      responses:
+        '200':
+          description: Các mã tem đã trả, rỗng nếu đã trả trước đó
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReleaseStockResponse' }
+        '400':
+          description: VALIDATION_FAILED
+        '503':
+          description: SERVICE_UNAVAILABLE
   /api/admin/inventory/metals:
     get:
       operationId: listMetals
@@ -2569,4 +2637,174 @@ components:
         - "weight"
         - "sellPricePerChi"
         - "estimatedPrice"
+      additionalProperties: false
+    QuoteStockRequest:
+      type: "object"
+      properties:
+        tagCodes:
+          minItems: 1
+          maxItems: 100
+          type: "array"
+          items:
+            type: "string"
+            minLength: 1
+            maxLength: 64
+        branchId:
+          description: "Có thì chỉ chiếc thuộc kho chi nhánh này mới \"còn bán được\""
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+      required:
+        - "tagCodes"
+      additionalProperties: false
+    QuoteStockResponse:
+      type: "object"
+      properties:
+        items:
+          type: "array"
+          items:
+            type: "object"
+            properties:
+              tagCode:
+                type: "string"
+              available:
+                type: "boolean"
+              reason:
+                anyOf:
+                  - type: "string"
+                    enum:
+                      - "NOT_FOUND"
+                      - "WRONG_BRANCH"
+                      - "NOT_IN_STOCK"
+                  - type: "null"
+              weight:
+                type:
+                  - "string"
+                  - "null"
+              laborFee:
+                type:
+                  - "string"
+                  - "null"
+              metalSellPricePerChi:
+                description: "null nếu kim loại chưa có giá"
+                type:
+                  - "string"
+                  - "null"
+              price:
+                description: "null nếu kim loại chưa có giá"
+                type:
+                  - "string"
+                  - "null"
+            required:
+              - "tagCode"
+              - "available"
+              - "reason"
+              - "weight"
+              - "laborFee"
+              - "metalSellPricePerChi"
+              - "price"
+            additionalProperties: false
+      required:
+        - "items"
+      additionalProperties: false
+    DeductStockRequest:
+      type: "object"
+      properties:
+        orderId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        branchId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        tagCodes:
+          minItems: 1
+          maxItems: 100
+          type: "array"
+          items:
+            type: "string"
+            minLength: 1
+            maxLength: 64
+      required:
+        - "orderId"
+        - "branchId"
+        - "tagCodes"
+      additionalProperties: false
+    DeductStockResponse:
+      type: "object"
+      properties:
+        orderId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        branchId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        replayed:
+          type: "boolean"
+          description: "true nếu đây là lần gọi lặp, trả lại kết quả cũ"
+        items:
+          type: "array"
+          items:
+            type: "object"
+            properties:
+              itemId:
+                type: "string"
+                format: "uuid"
+                pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              tagCode:
+                type: "string"
+              productName:
+                description: "Tên mẫu để sales chép vào hoá đơn POS"
+                type: "string"
+                minLength: 1
+              weight:
+                type: "string"
+              laborFee:
+                type: "string"
+              metalSellPricePerChi:
+                type: "string"
+              price:
+                type: "string"
+            required:
+              - "itemId"
+              - "tagCode"
+              - "weight"
+              - "laborFee"
+              - "metalSellPricePerChi"
+              - "price"
+            additionalProperties: false
+      required:
+        - "orderId"
+        - "branchId"
+        - "replayed"
+        - "items"
+      additionalProperties: false
+    ReleaseStockRequest:
+      type: "object"
+      properties:
+        orderId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+      required:
+        - "orderId"
+      additionalProperties: false
+    ReleaseStockResponse:
+      type: "object"
+      properties:
+        orderId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        releasedTagCodes:
+          type: "array"
+          items:
+            type: "string"
+          description: "Rỗng nếu đơn không còn chiếc nào đang giữ (gọi lặp)"
+      required:
+        - "orderId"
+        - "releasedTagCodes"
       additionalProperties: false
