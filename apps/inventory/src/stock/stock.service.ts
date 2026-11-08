@@ -1,5 +1,5 @@
 import type { AuthUser } from '@jewelry/common';
-import type { Item, ItemPage, ItemWithPrice, ListItemsQuery } from '@jewelry/contracts';
+import type { Item, ItemLabel, ItemPage, ItemWithPrice, ListItemsQuery } from '@jewelry/contracts';
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -83,6 +83,44 @@ export class StockService {
       ...toItem(row, user),
       sellPricePerChi: current.sellPrice.toFixed(2),
       price: price.toFixed(2),
+    };
+  }
+
+  /**
+   * Dữ liệu tem của một chiếc: mã tem, tên mẫu, biến thể, trọng lượng, kim loại (tên đã gồm tuổi) và giá tạm tính.
+   * Khác `byTag`: kim loại chưa có giá thì KHÔNG báo lỗi mà để giá là `null`, vì tem vẫn in được. Chỉ đọc.
+   */
+  async getLabel(user: AuthUser, tagCode: string): Promise<ItemLabel> {
+    const row = await this.prisma.jewelryItem.findUnique({
+      where: { tagCode },
+      include: {
+        warehouse: { select: { branchId: true } },
+        variant: {
+          include: {
+            product: { select: { name: true } },
+            metal: { select: { name: true, kind: true } },
+          },
+        },
+      },
+    });
+    if (row === null) {
+      throw notFound('món hàng');
+    }
+    assertRoleAtBranch(user, row.warehouse.branchId, VIEW_ROLES);
+    const currentPrice = await findCurrentPrice(this.prisma, row.variant.metalId);
+    return {
+      tagCode: row.tagCode,
+      productName: row.variant.product.name,
+      variantName: row.variant.name,
+      sku: row.variant.sku,
+      metalName: row.variant.metal.name,
+      metalKind: row.variant.metal.kind,
+      weight: row.weight.toFixed(4),
+      sellPricePerChi: currentPrice?.sellPrice.toFixed(2) ?? null,
+      estimatedPrice:
+        currentPrice === undefined
+          ? null
+          : computeItemPrice(row.weight, currentPrice.sellPrice, row.laborFee).toFixed(2),
     };
   }
 }

@@ -133,15 +133,16 @@ model ProductVariant {
 // ---------------------------------------------------------------- Kho và hàng có tem
 // Mỗi chi nhánh đúng một kho; tạo khi nhận `branch.created`. `branchId` chỉ là id, không có khoá ngoại sang auth.
 model Warehouse {
-  id        String         @id @default(uuid()) @db.Uuid
-  branchId  String         @unique @db.Uuid
-  name      String
-  isActive  Boolean        @default(true)
-  version   Int            @default(1)
-  items     JewelryItem[]
-  receipts  GoodsReceipt[]
-  createdAt DateTime       @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime       @default(now()) @updatedAt @db.Timestamptz(3)
+  id          String         @id @default(uuid()) @db.Uuid
+  branchId    String         @unique @db.Uuid
+  name        String
+  isActive    Boolean        @default(true)
+  version     Int            @default(1)
+  items       JewelryItem[]
+  receipts    GoodsReceipt[]
+  stockCounts StockCount[]
+  createdAt   DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime       @default(now()) @updatedAt @db.Timestamptz(3)
 }
 
 enum ItemStatus {
@@ -224,6 +225,7 @@ enum MovementType {
   RECEIPT
   SALE
   RELEASE
+  COUNT_MISSING
 }
 
 model StockMovement {
@@ -258,4 +260,70 @@ model AuditLog {
   updatedAt     DateTime @default(now()) @updatedAt @db.Timestamptz(3)
 
   @@index([entityType, entityId])
+}
+
+// ---------------------------------------------------------------- Kiểm kê
+enum StockCountStatus {
+  OPEN
+  CLOSED
+}
+
+// Trạng thái của một chiếc trong phiên kiểm kê (không phải `ItemStatus` của chiếc hàng).
+//   EXPECTED: dự kiến có, chưa quét     SCANNED: đã quét thấy
+//   MISSING:  khi đóng phiên vẫn không thấy, và chiếc còn `IN_STOCK`
+//   MOVED:    khi đóng phiên chiếc không còn `IN_STOCK` (đã bán hoặc đang giữ trong lúc kiểm kê), không tính thiếu
+enum StockCountLineStatus {
+  EXPECTED
+  SCANNED
+  MISSING
+  MOVED
+}
+
+// Mỗi kho tối đa MỘT phiên đang mở: partial unique index viết tay trong migration (Prisma không sinh).
+model StockCount {
+  id          String            @id @default(uuid()) @db.Uuid
+  code        String            @unique
+  warehouseId String            @db.Uuid
+  status      StockCountStatus  @default(OPEN)
+  createdBy   String            @db.Uuid
+  closedBy    String?           @db.Uuid
+  closedAt    DateTime?         @db.Timestamptz(3)
+  version     Int               @default(1)
+  warehouse   Warehouse         @relation(fields: [warehouseId], references: [id])
+  lines       StockCountLine[]
+  extras      StockCountExtra[]
+  createdAt   DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime          @default(now()) @updatedAt @db.Timestamptz(3)
+
+  @@index([warehouseId, status])
+}
+
+// Danh sách chiếc dự kiến, chụp lúc mở phiên. Không đổi trạng thái chiếc hàng.
+model StockCountLine {
+  id            String               @id @default(uuid()) @db.Uuid
+  stockCountId  String               @db.Uuid
+  jewelryItemId String               @db.Uuid
+  tagCode       String
+  status        StockCountLineStatus @default(EXPECTED)
+  scannedBy     String?              @db.Uuid
+  scannedAt     DateTime?            @db.Timestamptz(3)
+  stockCount    StockCount           @relation(fields: [stockCountId], references: [id], onDelete: Cascade)
+  createdAt     DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime             @default(now()) @updatedAt @db.Timestamptz(3)
+
+  @@unique([stockCountId, tagCode])
+  @@unique([stockCountId, jewelryItemId])
+}
+
+// Mã quét được nhưng không thuộc danh sách dự kiến ("thừa"). Chỉ để báo cáo, không tự thêm vào kho.
+model StockCountExtra {
+  id           String     @id @default(uuid()) @db.Uuid
+  stockCountId String     @db.Uuid
+  tagCode      String
+  scannedBy    String     @db.Uuid
+  stockCount   StockCount @relation(fields: [stockCountId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime   @default(now()) @updatedAt @db.Timestamptz(3)
+
+  @@unique([stockCountId, tagCode])
 }
