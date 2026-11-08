@@ -15,14 +15,15 @@
     "test": "turbo run test",
     "test:messaging": "turbo run test:messaging --concurrency=1",
     "test:auth": "turbo run test:auth --concurrency=1",
-    "test:infra": "turbo run test:messaging test:auth test:inventory --concurrency=1",
+    "test:infra": "turbo run test:messaging test:auth test:inventory test:sales --concurrency=1",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "openapi:validate": "validate-api docs/api/auth.openapi.yaml && validate-api docs/api/inventory.openapi.yaml",
+    "openapi:validate": "validate-api docs/api/auth.openapi.yaml && validate-api docs/api/inventory.openapi.yaml && validate-api docs/api/sales.openapi.yaml",
     "openapi:generate": "pnpm --filter @jewelry/contracts build && node scripts/openapi-generate.mjs",
     "keys:generate": "node scripts/generate-jwt-keys.mjs",
     "outbox:requeue": "node scripts/outbox-requeue.mjs",
-    "test:inventory": "turbo run test:inventory --concurrency=1"
+    "test:inventory": "turbo run test:inventory --concurrency=1",
+    "test:sales": "turbo run test:sales --filter=@jewelry/sales-tests --concurrency=1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -68,9 +68,10 @@ pnpm dev                                        # chạy mọi app ở chế đ�
 pnpm --filter @jewelry/<app> exec prisma migrate dev --name <ten>   # CHỈ máy dev; cần database shadow
 pnpm --filter @jewelry/<app> db:generate        # sinh Prisma client (turbo tự chạy trước build/typecheck/dev)
 pnpm test                                       # unit + tests/integration (chạy bản build thật của gateway, inventory; chưa cần Postgres)
-pnpm test:infra                                 # test:messaging + test:auth + test:inventory; cần postgres, rabbitmq, rabbitmq-setup; không chạy trong `pnpm test`
+pnpm test:infra                                 # test:messaging + test:auth + test:inventory + test:sales; cần postgres, rabbitmq, rabbitmq-setup; không chạy trong `pnpm test`
 pnpm test:messaging                             # có dừng và bật RabbitMQ thật
 pnpm test:inventory                             # lõi inventory (duyệt phiếu song song, consumer chi nhánh) trên Postgres thật
+pnpm test:sales                                 # POS: hai instance sales, HTTP inventory và Postgres thật; chỉ dọn dữ liệu POSTEST- của lần chạy
 pnpm test:auth                                  # đăng nhập và quản trị trên Postgres thật, Google là server giả; dừng nếu DB có ADMIN ngoài dữ liệu test
 pnpm outbox:requeue -- --service <app> [--event-type <x>] [--id <uuid>] [--dry-run]   # gửi lại dòng outbox FAILED; cần pnpm build trước
 pnpm lint && pnpm typecheck

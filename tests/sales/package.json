@@ -1,0 +1,18 @@
+{
+  "name": "@jewelry/sales-tests",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "eslint .",
+    "test:sales": "node ../../scripts/run-tests.mjs \"src/**/*.test.ts\""
+  },
+  "devDependencies": {
+    "@jewelry/sales": "workspace:*",
+    "@jewelry/inventory": "workspace:*",
+    "@jewelry/common": "workspace:*",
+    "@jewelry/contracts": "workspace:*",
+    "@jewelry/test-utils": "workspace:*"
+  }
+}

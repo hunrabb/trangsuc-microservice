@@ -32,6 +32,10 @@
     "test:inventory": {
       "dependsOn": ["^build", "db:generate"],
       "cache": false
+    },
+    "test:sales": {
+      "dependsOn": ["^build", "db:generate"],
+      "cache": false
     }
   }
 }

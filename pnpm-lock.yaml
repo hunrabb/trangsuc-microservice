@@ -564,6 +564,24 @@ importers:
         specifier: 2.2.1
         version: 2.2.1
 
+  tests/sales:
+    devDependencies:
+      '@jewelry/common':
+        specifier: workspace:*
+        version: link:../../libs/common
+      '@jewelry/contracts':
+        specifier: workspace:*
+        version: link:../../libs/contracts
+      '@jewelry/inventory':
+        specifier: workspace:*
+        version: link:../../apps/inventory
+      '@jewelry/sales':
+        specifier: workspace:*
+        version: link:../../apps/sales
+      '@jewelry/test-utils':
+        specifier: workspace:*
+        version: link:../test-utils
+
   tests/test-utils:
     dependencies:
       jose:

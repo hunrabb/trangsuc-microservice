@@ -224,9 +224,17 @@ Mọi luồng làm thay đổi tồn kho đều đi qua inventory-service và k�
 
 1. Thu ngân quét hàng, POS gọi `POST /api/pos/orders` kèm header `Idempotency-Key` (mã chống gửi trùng, xem mục 7).
 2. sales-service gọi thẳng inventory-service để **trừ kho có điều kiện**: chỉ trừ khi còn đủ hàng.
-3. Đủ hàng → tạo hoá đơn trạng thái `AWAITING_PAYMENT`, hiện mã VietQR. Thiếu hàng → báo "không đủ hàng", không tạo hoá đơn.
+3. Đủ hàng → hoá đơn trạng thái `PENDING_PAYMENT`. Thiếu hàng → báo lỗi kèm mã tem, giữ đơn `CANCELLED` không có dòng bán để truy vết và phát lại lỗi theo cùng key. VietQR làm sau phần cốt lõi.
 4. Thu ngân bấm "Đã nhận tiền" → hoá đơn `COMPLETED`, in hoá đơn. Khách không chuyển khoản / huỷ → hoá đơn `CANCELLED`, inventory cộng lại số đã trừ.
 5. Ở quầy dùng gọi trực tiếp (chờ kết quả ngay) vì khách đang đứng chờ.
+
+**Quyết định giai đoạn 4 cốt lõi:** `CREATING` giành unique key trước HTTP; `CANCELLING` giành quyền huỷ
+trước release để không trả hàng khi xác nhận thanh toán đang thắng. Mỗi đổi trạng thái có lịch sử cùng transaction.
+Lease 60 giây trong DB phân xử nhiều instance; client gửi lại cùng key để tiếp quản bước dở sau khi lease hết hạn.
+Không gọi HTTP trong transaction. Xác nhận tiền dùng UPDATE `PENDING_PAYMENT → COMPLETED`; huỷ chỉ bắt đầu
+từ PENDING_PAYMENT. Giá cuối và tên mẫu chép từ deduct. Sự kiện `order.created`, `order.paid`, `order.cancelled`
+chứa `channel = POS`; consumer online phải phân biệt đơn đã trừ kho đồng bộ. Huỷ ghi AuditLog cùng transaction.
+Hợp đồng API ở `docs/api/sales.openapi.yaml`; chưa có VietQR, khách hàng, hoàn tiền, webhook, hay job khôi phục nền.
 
 ### 4.3 Đơn online (Saga qua RabbitMQ)
 
