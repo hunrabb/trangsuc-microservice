@@ -25,6 +25,7 @@ import {
   canManageBranches,
   canManageCatalog,
   canManageUsers,
+  canUsePos,
   isAdmin,
 } from '../auth/permissions.ts';
 import { useSession } from '../auth/session-context.tsx';
@@ -102,6 +103,12 @@ export function AppLayout() {
       label: 'Nhập hàng',
       icon: <ReceiptIcon />,
       visible: canBranchStockAccess(branches),
+    },
+    {
+      to: '/ban-tai-quay',
+      label: 'Bán tại quầy',
+      icon: <ReceiptIcon />,
+      visible: canUsePos(branches),
     },
     {
       to: '/ton-kho',

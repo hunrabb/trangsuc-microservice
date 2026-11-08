@@ -200,4 +200,36 @@ describe('bộ gọi API: phiên và refresh', () => {
     assert.equal(lost(), 0);
     assert.equal(client.hasSession(), true);
   });
+
+  it('POST POS sau refresh gửi lại đúng Idempotency-Key và body ban đầu', async () => {
+    const received: { key: string | null; body: string | undefined }[] = [];
+    const client = createApiClient({
+      fetch: async (input, init) => {
+        if (String(input) === '/api/auth/refresh') return json(200, sessionWith('moi'));
+        received.push({
+          key: new Headers(init?.headers).get('idempotency-key'),
+          body: init?.body as string | undefined,
+        });
+        const token = new Headers(init?.headers).get('authorization');
+        return token === 'Bearer moi'
+          ? json(201, { id: 'mot-don' })
+          : json(401, errorBody('TOKEN_EXPIRED'));
+      },
+      onSessionLost: () => undefined,
+      onForbidden: () => undefined,
+      schedule: () => () => undefined,
+    });
+    client.setSession(sessionWith('cu'));
+    await client.request('/api/pos/orders', {
+      method: 'POST',
+      body: { branchId: 'chi-nhanh', tagCodes: ['TEM-1'] },
+      idempotencyKey: 'cung-key',
+    });
+    assert.equal(received.length, 2);
+    assert.deepEqual(
+      received.map((request) => request.key),
+      ['cung-key', 'cung-key'],
+    );
+    assert.equal(received[0]?.body, received[1]?.body);
+  });
 });

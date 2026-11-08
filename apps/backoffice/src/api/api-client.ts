@@ -24,6 +24,8 @@ export interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   /** Được gửi dạng JSON. */
   body?: unknown;
+  /** Key cho thao tác tạo đơn; token vẫn chỉ do client đặt. */
+  idempotencyKey?: string;
 }
 
 export interface ApiClientOptions {
@@ -67,10 +69,11 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
 
   async function send(
     path: string,
-    { method = 'GET', body }: RequestOptions,
+    { method = 'GET', body, idempotencyKey }: RequestOptions,
     token: string | undefined,
   ): Promise<Response> {
     const headers: Record<string, string> = { accept: 'application/json' };
+    if (idempotencyKey !== undefined) headers['idempotency-key'] = idempotencyKey;
     if (body !== undefined) {
       headers['content-type'] = 'application/json';
     }

@@ -18,6 +18,12 @@ RUN pnpm fetch
 # Client ID của Google (công khai, nhúng vào bản build). Thiếu thì trang đăng nhập báo rõ chứ không hỏng.
 ARG VITE_GOOGLE_CLIENT_ID=
 ENV VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
+ARG VITE_POS_BANK_BIN=
+ARG VITE_POS_BANK_ACCOUNT=
+ARG VITE_POS_BANK_NAME=
+ENV VITE_POS_BANK_BIN=${VITE_POS_BANK_BIN}
+ENV VITE_POS_BANK_ACCOUNT=${VITE_POS_BANK_ACCOUNT}
+ENV VITE_POS_BANK_NAME=${VITE_POS_BANK_NAME}
 
 COPY . .
 RUN pnpm install --offline --frozen-lockfile --filter "@jewelry/backoffice..." --filter "."

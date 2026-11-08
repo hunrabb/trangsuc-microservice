@@ -11,11 +11,17 @@ export default defineConfig(({ mode }) => {
   // VITE_GOOGLE_CLIENT_ID qua build arg (biến môi trường). Giá trị này công khai nhưng không in ra log.
   const rootEnv = loadEnv(mode, repoRoot, '');
   const googleClientId = rootEnv.VITE_GOOGLE_CLIENT_ID || rootEnv.GOOGLE_CLIENT_ID || '';
+  const bankBin = rootEnv.VITE_POS_BANK_BIN || rootEnv.POS_BANK_BIN || '';
+  const bankAccount = rootEnv.VITE_POS_BANK_ACCOUNT || rootEnv.POS_BANK_ACCOUNT || '';
+  const bankName = rootEnv.VITE_POS_BANK_NAME || rootEnv.POS_BANK_NAME || '';
 
   return {
     plugins: [react()],
     define: {
       'import.meta.env.VITE_GOOGLE_CLIENT_ID': JSON.stringify(googleClientId),
+      'import.meta.env.VITE_POS_BANK_BIN': JSON.stringify(bankBin),
+      'import.meta.env.VITE_POS_BANK_ACCOUNT': JSON.stringify(bankAccount),
+      'import.meta.env.VITE_POS_BANK_NAME': JSON.stringify(bankName),
     },
     server: {
       port: 5173,

@@ -324,6 +324,9 @@ services:
       dockerfile: apps/backoffice/Dockerfile
       args:
         VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+        VITE_POS_BANK_BIN: ${POS_BANK_BIN:-}
+        VITE_POS_BANK_ACCOUNT: ${POS_BANK_ACCOUNT:-}
+        VITE_POS_BANK_NAME: ${POS_BANK_NAME:-}
     image: jewelry/backoffice:dev
     restart: unless-stopped
     networks:

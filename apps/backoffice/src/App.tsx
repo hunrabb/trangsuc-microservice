@@ -5,6 +5,7 @@ import {
   canManageBranches,
   canManageCatalog,
   canManageUsers,
+  canUsePos,
 } from './auth/permissions.ts';
 import { RequireAuth, RequireRole } from './auth/require-auth.tsx';
 import { WorkingBranchLayout } from './inventory/working-branch.tsx';
@@ -17,6 +18,7 @@ import { LoginPage } from './pages/login-page.tsx';
 import { MetalsPage } from './pages/metals-page.tsx';
 import { NotFoundPage } from './pages/not-found-page.tsx';
 import { ProductsPage } from './pages/products-page.tsx';
+import { PosPage } from './pages/pos-page.tsx';
 import { ReceiptDetailPage } from './pages/receipt-detail-page.tsx';
 import { ReceiptsPage } from './pages/receipts-page.tsx';
 import { StockCountDetailPage } from './pages/stock-count-detail-page.tsx';
@@ -68,6 +70,11 @@ export function App() {
             <Route path="/ton-kho" element={<StockPage />} />
             <Route path="/kiem-ke" element={<StockCountsPage />} />
             <Route path="/kiem-ke/:stockCountId" element={<StockCountDetailPage />} />
+          </Route>
+        </Route>
+        <Route element={<RequireRole allow={canUsePos} />}>
+          <Route element={<WorkingBranchLayout />}>
+            <Route path="/ban-tai-quay" element={<PosPage />} />
           </Route>
         </Route>
         <Route path="*" element={<NotFoundPage />} />

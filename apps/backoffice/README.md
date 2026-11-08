@@ -82,6 +82,21 @@ Gọi inventory-service qua `src/api/inventory-endpoints.ts` (đường `/api/ad
 | Phiên kiểm kê (`/kiem-ke/:id`)         | STAFF quét; MANAGER đóng           | `pages/stock-count-detail-page.tsx`                     | Ô quét mã tem (nhập tay hoặc máy quét đứng gõ mã rồi Enter): quét xong ô được xoá và đặt lại con trỏ. Thẻ tổng kết (dự kiến, đã quét, chưa quét hoặc thiếu, thừa). Đóng phiên có hộp xác nhận; sau khi đóng hiện danh sách mã thiếu và thừa                                                                     |
 | In tem (`/in-tem/:tagCode`)            | MANAGER, STAFF, ADMIN              | `pages/item-label-page.tsx`, `pages/label-print.css`    | Trang riêng không có khung menu hay nút điều khiển, mở ở thẻ mới từ trang Tồn kho. Dựng tem từ JSON của `/jewelry-items/{tagCode}/label`; `@media print` đặt khổ giấy 70 × 40 mm. Không tạo file PDF                                                                                                            |
 
+## Bán tại quầy (giai đoạn 4F)
+
+`/ban-tai-quay` dùng `pages/pos-page.tsx`, `pos/pos-customer.tsx`, `pos/pos-payment.tsx`.
+STAFF/MANAGER bán tại chi nhánh được cấp; ADMIN chọn chi nhánh đang hoạt động. Tem được tra qua Inventory,
+giá giỏ chỉ tham khảo. Khi tạo đơn, frontend lưu `Idempotency-Key`, chi nhánh, khách và tem vào localStorage
+theo người dùng trước khi gọi Sales; reload/đăng nhập lại dùng `GET /api/pos/orders/by-key/{key}` để tra trạng thái.
+Không lưu token. Giá cuối, tổng và mã chuyển khoản luôn lấy từ snapshot đơn Sales. Khi mất phản hồi thu tiền/huỷ,
+giao diện chỉ cho thử lại cùng thao tác sau khi tra trạng thái, backend kiểm trạng thái bằng UPDATE có điều kiện.
+
+VietQR dùng Quick Link của VietQR với `POS_BANK_BIN`, `POS_BANK_ACCOUNT`, `POS_BANK_NAME` từ `.env` root;
+Docker truyền vào build args `VITE_POS_BANK_*`, Vite dev đọc cùng cấu hình. Chỉ khi đủ ba giá trị hợp lệ
+và đơn đang chờ tiền mới hiện QR. Không cấu hình thì không dựng QR giả. Nhân viên tự xác nhận tiền sau đối chiếu;
+không có webhook hoặc tự động thu tiền.
+Đơn cũ có mã chứa dấu gạch không dựng QR theo định dạng mới; giao diện hiện thông tin chuyển khoản để đối chiếu tay.
+
 ## Chạy phát triển
 
 Yêu cầu Node và pnpm theo phiên bản trong `.nvmrc` và `package.json` ở root. Cần gateway/auth cùng Postgres và

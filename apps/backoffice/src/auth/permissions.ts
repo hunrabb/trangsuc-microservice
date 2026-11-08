@@ -70,6 +70,11 @@ export const hasRoleAtBranch = (
 export const canBranchStockAccess = (branches: readonly BranchRole[]): boolean =>
   isAdmin(branches) || branches.some((entry) => entry.branchId !== null);
 
+/** Quầy POS: ADMIN hoặc STAFF/MANAGER của một chi nhánh đang được cấp quyền. */
+export const canUsePos = (branches: readonly BranchRole[]): boolean =>
+  isAdmin(branches) ||
+  branches.some((entry) => entry.branchId !== null && ['STAFF', 'MANAGER'].includes(entry.role));
+
 /** Trang giá kim loại và sản phẩm: chỉ ADMIN ghi. */
 export const canManageCatalog = (branches: readonly BranchRole[]): boolean => isAdmin(branches);
 
