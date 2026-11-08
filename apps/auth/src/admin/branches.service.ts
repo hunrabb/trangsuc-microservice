@@ -44,6 +44,7 @@ export class BranchesService {
   constructor(private readonly prisma: PrismaService) {}
 
   private async authorize(actorId: string): Promise<void> {
+    // Kiểm tra người thao tác có quyền quản lý chi nhánh không; sai thì ném 403.
     assertAllowed(await loadActor(this.prisma, actorId), { kind: 'branch.manage' });
   }
 
@@ -76,6 +77,7 @@ export class BranchesService {
           payload: { branchId: created.id, code: created.code, name: created.name },
         });
         const branch = toBranch(created);
+        // Ghi AuditLog cùng transaction: nếu tạo chi nhánh bị rollback thì nhật ký cũng mất.
         await writeAudit(tx, {
           actorId,
           action: 'branch.created',
