@@ -1,16 +1,15 @@
-import { Alert, Button, Group, Loader, Text } from '@mantine/core';
+import { Alert, Loader } from '@mantine/core';
 import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router';
 import { inventoryApi } from '../api/inventory-endpoints.ts';
 import { describeError } from '../api/messages.ts';
-import { PrinterIcon } from '../components/icons.tsx';
 import { formatMoney, formatWeight } from '../inventory/format.ts';
 import './label-print.css';
 
 /**
  * Trang in tem riêng (không có khung menu), mở ở thẻ mới từ trang tồn kho. Dựng tem từ JSON của
- * `GET /jewelry-items/{tagCode}/label`, rồi dùng chức năng in của trình duyệt: CSS `@media print` ẩn nút điều
- * khiển và đặt khổ giấy 70 × 40 mm. Không tạo file PDF. "Giá tạm tính" nghĩa là theo giá kim loại tại lúc in.
+ * `GET /jewelry-items/{tagCode}/label`. Trang chỉ hiện nội dung tem để khi mở ở thẻ mới không lẫn nút điều khiển;
+ * CSS `@media print` đặt khổ giấy 70 × 40 mm. Không tạo file PDF. "Giá tạm tính" là theo giá lúc mở trang.
  */
 export function ItemLabelPage() {
   const { tagCode = '' } = useParams();
@@ -22,18 +21,6 @@ export function ItemLabelPage() {
 
   return (
     <div className="label-page">
-      <Group className="no-print">
-        <Button
-          leftSection={<PrinterIcon size={16} />}
-          disabled={label.data === undefined}
-          onClick={() => window.print()}
-        >
-          In tem
-        </Button>
-        <Button variant="default" onClick={() => window.close()}>
-          Đóng
-        </Button>
-      </Group>
       {label.isPending && <Loader className="no-print" />}
       {label.isError && (
         <Alert color="red" className="no-print">
@@ -51,9 +38,6 @@ export function ItemLabelPage() {
           <p className="label-tag">{label.data.tagCode}</p>
         </div>
       )}
-      <Text className="no-print" size="xs" c="dimmed">
-        Giá tạm tính theo giá kim loại hiện tại. Chọn khổ giấy 70 × 40 mm khi in.
-      </Text>
     </div>
   );
 }
