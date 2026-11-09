@@ -57,6 +57,10 @@ trừ hay trả lần thứ hai. Payload ngoài POS hiện chưa được hỗ t
 
 Đường `/internal/stock/*`, chỉ gọi được trong mạng Docker: gateway không bao giờ chuyển tiếp `/internal/*`, nên không kiểm token. Controller là [internal-stock.controller.ts](src/stock/internal-stock.controller.ts), toàn bộ logic ở [item-sales.service.ts](src/stock/item-sales.service.ts). Schema yêu cầu và kết quả: `libs/contracts/src/inventory-internal-api.ts`.
 
+`GET /internal/stock/orders/{orderId}` (`getOrderState`) trả dấu `released` và tem đang `SOLD`
+cho đúng `orderId` trong snapshot `REPEATABLE READ`. Sales dùng kết quả này khi phục hồi đơn quá
+lease; kết quả chỉ là đọc, thao tác release/deduct tiếp theo vẫn phải dùng khoá theo orderId.
+
 ### Báo giá: `POST /internal/stock/quote` (`quoteItems`)
 
 Sales gửi danh sách mã tem (tối đa 100). Các bước:
@@ -161,3 +165,12 @@ Tổng số dự kiến, đã quét, chưa quét, thiếu, đã bán trong lúc 
 
 - `src/pricing/pricing.test.ts`: tính giá, làm tròn.
 - `tests/inventory` (`pnpm test:inventory`, Postgres thật): duyệt song song, duyệt sai `version`, `branch.created` trùng; hai đơn tranh một tem (10 vòng), `deduct` lặp cùng `orderId`, `release` trước hoặc sau commit `deduct`; kiểm kê: đóng và quét song song, chiếc thiếu, mã thừa.
+
+## Chốt tồn kho đêm (Phase 5.2)
+
+`InventoryCloseWorker` trong `src/stock/inventory-close.worker.ts` chạy mỗi phút, chỉ làm việc
+từ 00:05 đến 00:59 giờ Việt Nam để chốt ngày trước. `InventoryDailyClose` lưu bản chốt bất biến
+theo kho/ngày; cùng transaction phát `inventory.snapshot.closed` qua outbox cho Report.
+Unique ngày/kho và advisory lock chống chạy trùng giữa nhiều instance. Nếu toàn bộ khung giờ
+thất bại, ngày đó thiếu bản chốt; không lấy tồn hiện tại dựng lại ngày cũ. Movement dùng
+`RECEIPT`, `RELEASE`, `SALE`; `COUNT_MISSING` chỉ là ghi nhận kiểm kê.

@@ -1,0 +1,44 @@
+# Task 6.5B preparation only. Never invoked by the 6.5A checks.
+# Separate project, loopback ports and volumes; no application dependency graph.
+name: jewelry-phase6-acceptance
+services:
+  postgres:
+    image: postgres:16.15
+    mem_limit: 384m
+    shm_size: 64m
+    environment:
+      POSTGRES_USER: phase6_admin
+      POSTGRES_PASSWORD: ${PHASE6_TEST_POSTGRES_PASSWORD:?Set a separate test password}
+      POSTGRES_DB: phase6_test
+      SHADOW_DB_NAME: phase6_test_shadow
+      AUTH_DB_PASSWORD: ${PHASE6_TEST_AUTH_PASSWORD:?Set a separate test password}
+      INVENTORY_DB_PASSWORD: ${PHASE6_TEST_INVENTORY_PASSWORD:?Set a separate test password}
+      SALES_DB_PASSWORD: ${PHASE6_TEST_SALES_PASSWORD:?Set a separate test password}
+      REPORT_DB_PASSWORD: ${PHASE6_TEST_REPORT_PASSWORD:?Set a separate test password}
+    ports: ['127.0.0.1:55432:5432']
+    volumes:
+      - phase6_pg:/var/lib/postgresql/data
+      - ../postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -h 127.0.0.1 -U phase6_admin -d phase6_test']
+      interval: 5s
+      timeout: 3s
+      retries: 12
+  rabbitmq:
+    image: rabbitmq:4.4.0-management
+    hostname: phase6-rabbitmq
+    mem_limit: 512m
+    environment:
+      RABBITMQ_DEFAULT_USER: phase6_admin
+      RABBITMQ_DEFAULT_PASS: ${PHASE6_TEST_RABBIT_ADMIN_PASSWORD:?Set a separate test password}
+    ports: ['127.0.0.1:55672:5672', '127.0.0.1:55673:15672']
+    volumes:
+      - phase6_rabbit:/var/lib/rabbitmq
+    healthcheck:
+      test: ['CMD', 'gosu', 'rabbitmq', 'rabbitmq-diagnostics', '-q', 'check_port_connectivity']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+volumes:
+  phase6_pg:
+  phase6_rabbit:

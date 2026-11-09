@@ -8,6 +8,8 @@
     "prisma.config.ts"
   ],
   "scripts": {
+    "report:backfill:export": "node dist/cli/report-backfill-export.js",
+    "test:backfill": "node test/historical-orders.test.mjs",
     "build": "nest build",
     "dev": "nest start --watch",
     "start": "node dist/main.js",
@@ -16,7 +18,11 @@
     "test": "node ../../scripts/run-tests.mjs \"src/**/*.test.ts\"",
     "db:generate": "prisma generate",
     "db:migrate:dev": "prisma migrate dev",
-    "db:migrate:deploy": "prisma migrate deploy"
+    "db:migrate:deploy": "prisma migrate deploy",
+    "test:catalog": "node test/catalog.test.mjs",
+    "test:online": "node test/online-checkout.test.mjs",
+    "test:online-payments": "node test/online-payments.test.mjs",
+    "test:buybacks": "node test/buybacks.test.mjs"
   },
   "dependencies": {
     "@jewelry/common": "workspace:*",

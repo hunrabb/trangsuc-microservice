@@ -1,0 +1,370 @@
+openapi: 3.1.0
+info:
+  title: Report API
+  version: 1.0.0
+  description: >-
+    Báo cáo bất đồng bộ từ order.paid. Ngày tính theo Asia/Ho_Chi_Minh;
+    MANAGER chỉ xem chi nhánh được gán, ADMIN có thể xem mọi chi nhánh.
+security:
+  - bearerAuth: []
+paths:
+  /api/admin/reports/dlq:
+    get:
+      operationId: listDeadLetters
+      summary: Danh sách bản sao thư lỗi DLQ
+      description: Chỉ gồm thư đi qua DLX sau khi observer được triển khai; đọc Report DB, không lấy thư khỏi DLQ gốc. failedAt là thời điểm observer lưu bản sao.
+      x-roles: [ADMIN]
+      parameters:
+        - { in: query, name: page, schema: { type: integer, minimum: 1, maximum: 10000, default: 1 } }
+        - { in: query, name: pageSize, schema: { type: integer, minimum: 1, maximum: 50, default: 20 } }
+        - { in: query, name: service, schema: { type: string, enum: [inventory, sales, report] } }
+        - { in: query, name: eventType, schema: { type: string, maxLength: 80 } }
+        - { in: query, name: status, description: Lọc thư có ít nhất một lần replay mang trạng thái này, schema: { type: string, enum: [REQUESTED, REPUBLISHED, PUBLISH_FAILED, PUBLISH_UNCONFIRMED, PROCESSING_FAILED] } }
+      responses:
+        '200':
+          description: Trang metadata an toàn, không gồm payload hoặc RabbitMQ headers
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [page, pageSize, total, items]
+                properties:
+                  page: { type: integer }
+                  pageSize: { type: integer }
+                  total: { type: integer }
+                  items: { type: array, items: { $ref: '#/components/schemas/DeadLetterMessage' } }
+        '400': { description: Bộ lọc không hợp lệ }
+        '401': { description: Chưa đăng nhập }
+        '403': { description: Không phải ADMIN }
+  /api/admin/reports/dlq/{id}:
+    get:
+      operationId: getDeadLetter
+      summary: Chi tiết an toàn của thư lỗi
+      x-roles: [ADMIN]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Metadata và các lần phát lại gần nhất; không gồm payload hoặc headers gốc
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DeadLetterMessage' }
+        '401': { description: Chưa đăng nhập }
+        '403': { description: Không phải ADMIN }
+        '404': { description: Không tìm thấy thư }
+  /api/admin/reports/dlq/{id}/replay:
+    post:
+      operationId: replayDeadLetter
+      summary: Phát lại bản sao sự kiện theo destination cố định
+      description: >-
+        Chỉ ADMIN. Giới hạn 3 lần mỗi thư, một lần tại một thời điểm. Không cho sửa payload,
+        exchange hoặc routing key. Publisher confirm chỉ xác nhận broker nhận bản sao;
+        không chứng minh consumer xử lý thành công. Thư DLQ gốc vẫn được giữ nguyên.
+      x-roles: [ADMIN]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '201':
+          description: Broker đã nhận bản sao; xử lý nghiệp vụ chưa được xác nhận
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [attemptId, status, message]
+                properties:
+                  attemptId: { type: string, format: uuid }
+                  status: { type: string, const: REPUBLISHED }
+                  message: { type: string }
+        '401': { description: Chưa đăng nhập }
+        '403': { description: Không phải ADMIN }
+        '404': { description: Không tìm thấy thư }
+        '409': { description: 'Thư không đủ điều kiện, đang phát lại hoặc hết lượt' }
+        '503': { description: 'Publisher hoặc audit chưa xác nhận; kiểm tra audit, thư DLQ gốc còn nguyên' }
+  /api/admin/reports/daily.xlsx:
+    get:
+      operationId: exportDailyRevenueExcel
+      summary: Tải doanh thu theo ngày dạng Excel
+      x-roles: [ADMIN, MANAGER]
+      parameters:
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - $ref: '#/components/parameters/BranchId'
+      responses:
+        '200': { $ref: '#/components/responses/ExcelDownload' }
+        '400': { description: Ngày sai hoặc khoảng xuất quá 31 ngày }
+        '401': { description: Chưa đăng nhập }
+        '403': { description: Không có quyền trên chi nhánh }
+        '413': { description: Quá 1000 dòng báo cáo }
+  /api/admin/reports/top-products.xlsx:
+    get:
+      operationId: exportTopProductsExcel
+      summary: Tải top 20 sản phẩm dạng Excel
+      x-roles: [ADMIN, MANAGER]
+      parameters:
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - $ref: '#/components/parameters/BranchId'
+      responses:
+        '200': { $ref: '#/components/responses/ExcelDownload' }
+        '400': { description: Ngày sai hoặc khoảng xuất quá 31 ngày }
+        '401': { description: Chưa đăng nhập }
+        '403': { description: Không có quyền trên chi nhánh }
+  /api/admin/reports/stock-movements.xlsx:
+    get:
+      operationId: exportStockMovementsExcel
+      summary: Tải nhập–xuất–tồn dạng Excel
+      description: Sheet trạng thái thể hiện kho thiếu snapshot hoặc đối soát lệch; không điền số liệu giả.
+      x-roles: [ADMIN, MANAGER]
+      parameters:
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - $ref: '#/components/parameters/BranchId'
+      responses:
+        '200': { $ref: '#/components/responses/ExcelDownload' }
+        '400': { description: Ngày sai hoặc khoảng xuất quá 31 ngày }
+        '401': { description: Chưa đăng nhập }
+        '403': { description: Không có quyền trên chi nhánh }
+        '413': { description: Quá 1000 dòng xuất hoặc quá 2000 dòng snapshot nguồn }
+  /api/admin/reports/inventory-snapshots:
+    get:
+      operationId: getInventorySnapshots
+      summary: Bản chốt tồn kho theo ngày và chi nhánh
+      description: Chỉ trả bản chốt đã nhận từ Inventory; ngày thiếu không được suy diễn từ tồn hiện tại.
+      x-roles: [ADMIN, MANAGER]
+      parameters:
+        - in: query
+          name: date
+          required: true
+          schema: { type: string, format: date }
+        - $ref: '#/components/parameters/BranchId'
+      responses:
+        '200':
+          description: Snapshot theo kho, từng biến thể và tuổi kim loại
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [timezone, date, complete, warehouses]
+                properties:
+                  timezone: { type: string, const: Asia/Ho_Chi_Minh }
+                  date: { type: string, format: date }
+                  complete: { type: [boolean, 'null'], description: Null khi ADMIN không lọc chi nhánh }
+                  warehouses:
+                    type: array
+                    items:
+                      type: object
+                      required: [branchId, warehouseId, capturedAt, rows]
+                      properties:
+                        branchId: { type: string, format: uuid }
+                        warehouseId: { type: string, format: uuid }
+                        capturedAt: { type: string, format: date-time }
+                        rows:
+                          type: array
+                          items:
+                            $ref: '#/components/schemas/InventorySnapshotRow'
+        '400': { description: Ngày hoặc chi nhánh không hợp lệ }
+        '401': { description: Chưa đăng nhập }
+        '403': { description: Không có quyền trên chi nhánh }
+  /api/admin/reports/stock-movements:
+    get:
+      operationId: getStockMovements
+      summary: Báo cáo nhập, xuất và tồn theo kỳ
+      description: >-
+        Kỳ dùng các mốc chốt liên tiếp; nhập = RECEIPT + RELEASE, xuất = SALE.
+        COUNT_MISSING chỉ là chênh lệch kiểm kê và không đổi trạng thái tồn.
+        Thiếu mốc hoặc lệch đối soát thì complete=false và không trả số giả.
+      x-roles: [ADMIN, MANAGER]
+      parameters:
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - $ref: '#/components/parameters/BranchId'
+      responses:
+        '200':
+          description: Báo cáo theo từng kho và biến thể
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [timezone, from, to, coverage, warehouses]
+                properties:
+                  timezone: { type: string, const: Asia/Ho_Chi_Minh }
+                  from: { type: string, format: date }
+                  to: { type: string, format: date }
+                  coverage: { type: string, enum: [REQUESTED_BRANCH, OBSERVED_WAREHOUSES_ONLY] }
+                  warehouses:
+                    type: array
+                    items:
+                      type: object
+                      required: [branchId, warehouseId, complete, reason, missingDates, rows]
+                      properties:
+                        branchId: { type: string, format: uuid }
+                        warehouseId: { type: [string, 'null'], format: uuid }
+                        complete: { type: boolean }
+                        reason: { type: [string, 'null'], enum: [MISSING_SNAPSHOT, BROKEN_SNAPSHOT_CHAIN, RECONCILIATION_FAILED, null] }
+                        missingDates: { type: array, items: { type: string, format: date } }
+                        rows:
+                          type: array
+                          items:
+                            $ref: '#/components/schemas/StockMovementRow'
+        '400': { description: Khoảng ngày không hợp lệ hoặc dài hơn 366 ngày }
+        '401': { description: Chưa đăng nhập }
+        '403': { description: Không có quyền trên chi nhánh }
+  /api/admin/reports/daily:
+    get:
+      operationId: getDailyRevenue
+      summary: Doanh thu và số đơn theo ngày, chi nhánh, kênh
+      x-roles: [ADMIN, MANAGER]
+      parameters:
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - $ref: '#/components/parameters/BranchId'
+      responses:
+        '200':
+          description: Doanh thu theo snapshot tại lúc xác nhận tiền
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [timezone, rows]
+                properties:
+                  timezone: { type: string, const: Asia/Ho_Chi_Minh }
+                  rows:
+                    type: array
+                    items:
+                      type: object
+                      required: [date, branchId, channel, orderCount, revenue, cogs, grossProfit]
+                      properties:
+                        date: { type: string, format: date }
+                        branchId: { type: string, format: uuid }
+                        channel: { type: string, enum: [POS] }
+                        orderCount: { type: integer, minimum: 0 }
+                        revenue: { type: string, description: Đồng, chuỗi thập phân }
+                        cogs: { type: [string, 'null'], description: Null nếu có đơn cũ thiếu snapshot giá vốn }
+                        grossProfit: { type: [string, 'null'], description: Doanh thu trừ giá vốn }
+        '400': { description: Khoảng ngày không hợp lệ hoặc dài hơn 366 ngày }
+        '401': { description: Chưa đăng nhập }
+        '403': { description: Không có quyền trên chi nhánh }
+  /api/admin/reports/top-products:
+    get:
+      operationId: getTopProducts
+      summary: Top 20 mẫu bán chạy theo số chiếc đã thu tiền
+      x-roles: [ADMIN, MANAGER]
+      parameters:
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - $ref: '#/components/parameters/BranchId'
+      responses:
+        '200':
+          description: Danh sách mẫu
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [variantId, productName, quantity, revenue]
+                  properties:
+                    variantId: { type: [string, 'null'], format: uuid }
+                    productName: { type: string }
+                    quantity: { type: integer, minimum: 0 }
+                    revenue: { type: string }
+        '400': { description: Khoảng ngày không hợp lệ hoặc dài hơn 366 ngày }
+        '401': { description: Chưa đăng nhập }
+        '403': { description: Không có quyền trên chi nhánh }
+components:
+  responses:
+    ExcelDownload:
+      description: File XLSX được tải về; ngày theo Asia/Ho_Chi_Minh
+      headers:
+        Content-Disposition:
+          schema: { type: string }
+          description: attachment; filename an toàn, không chứa token hoặc dữ liệu cá nhân
+        Cache-Control:
+          schema: { type: string, const: 'private, no-store' }
+      content:
+        application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+          schema: { type: string, format: binary }
+  schemas:
+    DeadLetterMessage:
+      type: object
+      required: [id, sourceQueue, sourceService, routingKey, deadLetterQueue, eventType, eventId, correlationId, failureKind, failureReason, retryCount, failedAt, replayCount, replayable, attempts]
+      properties:
+        id: { type: string, format: uuid }
+        sourceQueue: { type: string }
+        sourceService: { type: string, enum: [inventory, sales, report] }
+        routingKey: { type: [string, 'null'], description: Giá trị từ header outbox; null nếu thư cũ hoặc broker không cung cấp }
+        deadLetterQueue: { type: string }
+        eventType: { type: [string, 'null'] }
+        eventId: { type: [string, 'null'], format: uuid }
+        correlationId: { type: [string, 'null'] }
+        failureKind: { type: string, enum: [TRANSIENT, PERMANENT, UNKNOWN] }
+        failureReason: { type: string, description: Nhóm lỗi đã lọc; không phải raw exception }
+        retryCount: { type: [integer, 'null'] }
+        failedAt: { type: string, format: date-time }
+        replayCount: { type: integer }
+        replayable: { type: boolean }
+        attempts:
+          type: array
+          items:
+            type: object
+            required: [id, actorId, status, requestedAt, publishedAt, failureCode]
+            properties:
+              id: { type: string, format: uuid }
+              actorId: { type: string, format: uuid }
+              status: { type: string, enum: [REQUESTED, REPUBLISHED, PUBLISH_FAILED, PUBLISH_UNCONFIRMED, PROCESSING_FAILED] }
+              requestedAt: { type: string, format: date-time }
+              publishedAt: { type: [string, 'null'], format: date-time }
+              failureCode: { type: [string, 'null'] }
+    StockAmount:
+      type: object
+      required: [pieces, chi, costValue]
+      properties:
+        pieces: { type: integer, minimum: 0 }
+        chi: { type: string, description: Số chỉ chính xác tới 4 chữ số thập phân }
+        costValue: { type: string, description: Giá vốn đồng, không phải giá bán hiện tại }
+    InventorySnapshotRow:
+      type: object
+      required: [variantId, sku, metalId, metalCode, metalKind, onHand]
+      properties:
+        variantId: { type: string, format: uuid }
+        sku: { type: string }
+        metalId: { type: string, format: uuid }
+        metalCode: { type: string }
+        metalKind: { type: string, enum: [GOLD, SILVER] }
+        onHand: { $ref: '#/components/schemas/StockAmount' }
+    StockMovementRow:
+      type: object
+      required: [variantId, sku, metalId, metalCode, metalKind, opening, received, released, sold, closing]
+      properties:
+        variantId: { type: string, format: uuid }
+        sku: { type: string }
+        metalId: { type: string, format: uuid }
+        metalCode: { type: string }
+        metalKind: { type: string, enum: [GOLD, SILVER] }
+        opening: { $ref: '#/components/schemas/StockAmount' }
+        received: { $ref: '#/components/schemas/StockAmount' }
+        released: { $ref: '#/components/schemas/StockAmount' }
+        sold: { $ref: '#/components/schemas/StockAmount' }
+        closing: { $ref: '#/components/schemas/StockAmount' }
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    From:
+      in: query
+      name: from
+      required: true
+      schema: { type: string, format: date }
+    To:
+      in: query
+      name: to
+      required: true
+      schema: { type: string, format: date }
+    BranchId:
+      in: query
+      name: branchId
+      required: false
+      description: Bắt buộc với MANAGER; ADMIN bỏ trống để xem toàn hệ thống.
+      schema: { type: string, format: uuid }

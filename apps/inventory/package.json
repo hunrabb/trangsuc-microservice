@@ -14,9 +14,15 @@
     "typecheck": "tsc -p tsconfig.json",
     "lint": "eslint .",
     "test": "node ../../scripts/run-tests.mjs \"src/**/*.test.ts\"",
+    "test:close": "node test/inventory-close.test.mjs",
+    "test:close:integration": "node test/inventory-close.integration.mjs",
     "db:generate": "prisma generate",
     "db:migrate:dev": "prisma migrate dev",
-    "db:migrate:deploy": "prisma migrate deploy"
+    "db:migrate:deploy": "prisma migrate deploy",
+    "catalog:replay": "node dist/cli/catalog-replay.js",
+    "test:catalog": "node test/catalog.test.mjs",
+    "test:online": "node test/reservations.test.mjs",
+    "test:online-payments": "node test/paid-reservations.test.mjs"
   },
   "dependencies": {
     "@jewelry/common": "workspace:*",

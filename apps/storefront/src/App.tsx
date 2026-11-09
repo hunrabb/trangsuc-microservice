@@ -1,43 +1,60 @@
-import { useEffect, useState } from 'react';
-
-const APP_NAME = 'Storefront';
-const APP_DESCRIPTION = 'Website bán hàng cho khách';
-
-type PingState =
-  { status: 'loading' } | { status: 'ok'; body: unknown } | { status: 'error'; message: string };
-
-export function App() {
-  const [ping, setPing] = useState<PingState>({ status: 'loading' });
-
-  useEffect(() => {
-    const controller = new AbortController();
-
-    fetch('/api/ping', { signal: controller.signal })
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-        setPing({ status: 'ok', body: await response.json() });
-      })
-      .catch((error: unknown) => {
-        if (!controller.signal.aborted) {
-          setPing({ status: 'error', message: String(error) });
-        }
-      });
-
-    return () => controller.abort();
-  }, []);
-
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { BrowserRouter, Link, Route, Routes } from 'react-router';
+import { StoreProvider } from './state/store.tsx';
+import { Layout } from './components/layout.tsx';
+import { StatePanel } from './components/ui.tsx';
+import { HomePage } from './pages/home.tsx';
+import { CatalogPage } from './pages/catalog.tsx';
+import { ProductPage } from './pages/product.tsx';
+import { CartPage } from './pages/cart.tsx';
+import { CheckoutPage } from './pages/checkout.tsx';
+import { OrdersPage } from './pages/orders.tsx';
+import { GuidePage } from './pages/guide.tsx';
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { refetchOnWindowFocus: false, retry: false },
+    mutations: { retry: false },
+  },
+});
+export function StorefrontRoutes() {
   return (
-    <main>
-      <h1>{APP_NAME}</h1>
-      <p>{APP_DESCRIPTION}</p>
-      <h2>
-        <code>GET /api/ping</code>
-      </h2>
-      {ping.status === 'loading' && <p>Đang gọi…</p>}
-      {ping.status === 'ok' && <pre data-testid="ping-result">{JSON.stringify(ping.body)}</pre>}
-      {ping.status === 'error' && <pre data-testid="ping-error">Lỗi: {ping.message}</pre>}
-    </main>
+    <Routes>
+      <Route element={<Layout />}>
+        <Route index element={<HomePage />} />
+        <Route path="bo-suu-tap" element={<CatalogPage />} />
+        <Route path="san-pham/:productId" element={<ProductPage />} />
+        <Route path="gio-hang" element={<CartPage />} />
+        <Route path="dat-hang" element={<CheckoutPage />} />
+        <Route path="don-hang" element={<OrdersPage />} />
+        <Route path="don-hang/:orderId" element={<OrdersPage />} />
+        <Route path="huong-dan" element={<GuidePage />} />
+        <Route
+          path="*"
+          element={
+            <div className="container">
+              <StatePanel
+                title="Trang này chưa có trong bộ sưu tập"
+                action={
+                  <Link className="button button-dark" to="/bo-suu-tap">
+                    Khám phá bộ sưu tập
+                  </Link>
+                }
+              />
+            </div>
+          }
+        />
+      </Route>
+    </Routes>
+  );
+}
+export function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <StoreProvider>
+        <BrowserRouter>
+          <StorefrontRoutes />
+        </BrowserRouter>
+      </StoreProvider>
+    </QueryClientProvider>
   );
 }

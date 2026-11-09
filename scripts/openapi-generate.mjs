@@ -9,6 +9,10 @@ import contracts from '../libs/contracts/dist/index.js';
 
 const SPECS = [
   {
+    file: resolve(import.meta.dirname, '../docs/api/shop.openapi.yaml'),
+    schemas: () => contracts.shopOpenApiSchemas(),
+  },
+  {
     file: resolve(import.meta.dirname, '../docs/api/auth.openapi.yaml'),
     schemas: () => contracts.authOpenApiSchemas(),
   },
@@ -51,7 +55,13 @@ function render(value, indent) {
 
 const check = process.argv.includes('--check');
 let failed = false;
-for (const { file, schemas } of SPECS) {
+const only = process.argv
+  .find((arg) => arg.startsWith('--only='))
+  ?.slice(7)
+  .split(',');
+for (const { file, schemas } of SPECS.filter(
+  (spec) => !only || only.some((name) => spec.file.endsWith(`/${name}.openapi.yaml`)),
+)) {
   const current = readFileSync(file, 'utf8');
   const start = current.indexOf(MARKER);
   if (start === -1) {

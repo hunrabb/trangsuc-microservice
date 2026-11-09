@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import { createHash, randomInt, randomUUID } from 'node:crypto';
 import { after, before, describe, it } from 'node:test';
-import { posOrderSchema, posOrderEventPayloadSchema } from '@jewelry/contracts';
+import {
+  orderPaidPayloadSchema,
+  posOrderSchema,
+  posOrderEventPayloadSchema,
+} from '@jewelry/contracts';
 import {
   actorId,
   branchId,
@@ -9,6 +13,7 @@ import {
   createOrder,
   createdCustomerIds,
   faults,
+  gatewayUrl,
   inventoryCalls,
   inventoryDatabase,
   inventoryUrl,
@@ -16,6 +21,7 @@ import {
   newKey,
   pauseNextInventoryCommit,
   post,
+  recoveryWorkers,
   salesDatabase,
   salesUrls,
   setup,
@@ -82,6 +88,93 @@ describe('POS trên Postgres thật, hai instance sales và inventory HTTP thậ
     assert.equal((await createOrder(tags, key)).body.total, order.total);
   });
 
+  it('trình duyệt mất phản hồi sau khi gửi: tra bằng key rồi retry không tạo đơn thứ hai', async () => {
+    const tagCode = await newItem();
+    const key = newKey();
+    const controller = new AbortController();
+    const token = await tokenFor();
+    const pending = fetch(`${salesUrls[0]}/pos/orders`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${token}`,
+        'idempotency-key': key,
+      },
+      body: JSON.stringify({ branchId, tagCodes: [tagCode] }),
+      signal: controller.signal,
+    }).catch(() => undefined);
+    const deadline = Date.now() + 5_000;
+    while (
+      (await salesDatabase.order.count({ where: { idempotencyKey: key } })) === 0 &&
+      Date.now() < deadline
+    ) {
+      await new Promise<void>((resolve) => setTimeout(resolve, 20));
+    }
+    assert.equal(await salesDatabase.order.count({ where: { idempotencyKey: key } }), 1);
+    controller.abort();
+    await pending;
+    const replay = await createOrder([tagCode], key, 1);
+    assert.equal(replay.status, 201);
+    const read = await fetch(`${salesUrls[1]}/pos/orders/by-key/${encodeURIComponent(key)}`, {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    assert.equal(read.status, 200);
+    assert.equal(((await read.json()) as { id: string }).id, replay.body.id);
+    assert.equal(await salesDatabase.order.count({ where: { idempotencyKey: key } }), 1);
+    assert.equal(
+      await salesDatabase.outboxEvent.count({ where: { aggregateId: replay.body.id } }),
+      1,
+    );
+  });
+
+  it('qua Gateway thật: JWT, chi nhánh và Idempotency-Key giữ nguyên tới Sales', async () => {
+    const tagCode = await newItem();
+    const key = newKey();
+    const body = JSON.stringify({ branchId, tagCodes: [tagCode] });
+    const endpoint = `${gatewayUrl}/api/pos/orders`;
+    const forbidden = await fetch(endpoint, { method: 'POST', body });
+    assert.equal(forbidden.status, 401);
+    const foreignToken = await tokenFor('STAFF', randomUUID());
+    const foreign = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${foreignToken}`,
+        'idempotency-key': newKey(),
+      },
+      body,
+    });
+    assert.equal(foreign.status, 403);
+    const token = await tokenFor();
+    const headers = {
+      'content-type': 'application/json',
+      authorization: `Bearer ${token}`,
+      'idempotency-key': key,
+    };
+    const first = await fetch(endpoint, { method: 'POST', headers, body });
+    assert.equal(first.status, 201);
+    const order = posOrderSchema.parse(await first.json());
+    const replay = await fetch(endpoint, { method: 'POST', headers, body });
+    assert.equal(replay.status, 201);
+    assert.equal(posOrderSchema.parse(await replay.json()).id, order.id);
+    const lookup = await fetch(`${endpoint}/by-key/${encodeURIComponent(key)}`, {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    assert.equal(lookup.status, 200);
+    assert.equal(posOrderSchema.parse(await lookup.json()).id, order.id);
+    const confirm = await fetch(`${endpoint}/${order.id}/confirm-payment`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${token}` },
+    });
+    assert.equal(confirm.status, 200);
+    assert.equal(posOrderSchema.parse(await confirm.json()).status, 'COMPLETED');
+    assert.equal(
+      (await inventoryDatabase.jewelryItem.findUniqueOrThrow({ where: { tagCode } })).status,
+      'SOLD',
+    );
+    assert.equal(await salesDatabase.order.count({ where: { idempotencyKey: key } }), 1);
+  });
+
   it('hai confirm-payment song song: đúng một thành công, một lịch sử và một order.paid', async () => {
     const created = await createOrder([await newItem()]);
     const id = created.body.id as string;
@@ -106,6 +199,20 @@ describe('POS trên Postgres thật, hai instance sales và inventory HTTP thậ
         where: { aggregateId: id, eventType: 'order.paid' },
       }),
       1,
+    );
+    const paidEvent = await salesDatabase.outboxEvent.findFirstOrThrow({
+      where: { aggregateId: id, eventType: 'order.paid' },
+    });
+    const snapshot = orderPaidPayloadSchema.parse(paidEvent.payload);
+    assert.equal(snapshot.items.length, 1);
+    assert.equal(snapshot.items[0]?.costPrice, '4000000.00');
+    assert.equal(
+      snapshot.items[0]?.variantId,
+      (
+        await salesDatabase.orderItem.findFirstOrThrow({
+          where: { orderId: id },
+        })
+      ).variantId,
     );
   });
 
@@ -255,15 +362,125 @@ describe('POS trên Postgres thật, hai instance sales và inventory HTTP thậ
       body: JSON.stringify({ orderId: id, branchId, tagCodes: [tagCode] }),
     });
     assert.equal(deducted.status, 200);
-    const recovered = await createOrder([tagCode], key, 1);
-    assert.equal(recovered.status, 201);
-    assert.equal(recovered.body.id, id);
-    assert.equal(recovered.body.status, 'PENDING_PAYMENT');
+    await Promise.all(recoveryWorkers.map((worker) => worker.scan()));
+    const recovered = await salesDatabase.order.findUniqueOrThrow({ where: { id } });
+    assert.equal(recovered.status, 'PENDING_PAYMENT');
     assert.equal(
       (await inventoryDatabase.jewelryItem.findUniqueOrThrow({ where: { tagCode } })).status,
       'SOLD',
     );
     assert.equal(await salesDatabase.orderItem.count({ where: { orderId: id } }), 1);
+    assert.equal(await salesDatabase.outboxEvent.count({ where: { aggregateId: id } }), 1);
+  });
+
+  it('worker tự hủy đơn CREATING chưa trừ kho; deduct đến muộn bị chặn bởi dấu release', async () => {
+    const tagCode = await newItem();
+    const id = randomUUID();
+    await salesDatabase.order.create({
+      data: {
+        id,
+        code: `POS${randomUUID().replaceAll('-', '')}`,
+        branchId,
+        idempotencyKey: newKey(),
+        requestHash: 'crash-before-deduct',
+        requestedTagCodes: [tagCode],
+        createdBy: actorId,
+        operationUntil: new Date(0),
+        history: { create: { toStatus: 'CREATING', changedBy: actorId } },
+      },
+    });
+    await Promise.all(recoveryWorkers.map((worker) => worker.scan()));
+    assert.equal(
+      (await salesDatabase.order.findUniqueOrThrow({ where: { id } })).status,
+      'CANCELLED',
+    );
+    assert.equal(
+      (await inventoryDatabase.stockOrderOperation.findUniqueOrThrow({ where: { orderId: id } }))
+        .releasedAt !== null,
+      true,
+    );
+    assert.equal(
+      (await inventoryDatabase.jewelryItem.findUniqueOrThrow({ where: { tagCode } })).status,
+      'IN_STOCK',
+    );
+    const late = await fetch(`${inventoryUrl}/internal/stock/deduct`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ orderId: id, branchId, tagCodes: [tagCode] }),
+    });
+    assert.equal(late.status, 409);
+    assert.equal(await salesDatabase.outboxEvent.count({ where: { aggregateId: id } }), 1);
+  });
+
+  it('worker không suy đoán khi không đọc được kho; lần sau mới quyết định và không mất hàng', async () => {
+    const tagCode = await newItem();
+    const id = randomUUID();
+    await salesDatabase.order.create({
+      data: {
+        id,
+        code: `POS${randomUUID().replaceAll('-', '')}`,
+        branchId,
+        idempotencyKey: newKey(),
+        requestHash: 'crash-before-state-read',
+        requestedTagCodes: [tagCode],
+        createdBy: actorId,
+        operationUntil: new Date(0),
+        history: { create: { toStatus: 'CREATING', changedBy: actorId } },
+      },
+    });
+    faults.stateFailures = 3;
+    await recoveryWorkers[0]!.scan();
+    assert.equal(
+      (await salesDatabase.order.findUniqueOrThrow({ where: { id } })).status,
+      'CREATING',
+    );
+    assert.equal(
+      (await inventoryDatabase.jewelryItem.findUniqueOrThrow({ where: { tagCode } })).status,
+      'IN_STOCK',
+    );
+    assert.equal(await inventoryDatabase.stockOrderOperation.count({ where: { orderId: id } }), 0);
+    await salesDatabase.order.update({ where: { id }, data: { operationUntil: new Date(0) } });
+    await recoveryWorkers[1]!.scan();
+    assert.equal(
+      (await salesDatabase.order.findUniqueOrThrow({ where: { id } })).status,
+      'CANCELLED',
+    );
+    assert.equal(
+      (await inventoryDatabase.jewelryItem.findUniqueOrThrow({ where: { tagCode } })).status,
+      'IN_STOCK',
+    );
+    assert.equal(await salesDatabase.outboxEvent.count({ where: { aggregateId: id } }), 1);
+  });
+
+  it('worker tiếp tục CANCELLING sau lỗi mạng, không ghi trùng event hay trả kho hai lần', async () => {
+    const tagCode = await newItem();
+    const created = await createOrder([tagCode]);
+    const id = created.body.id as string;
+    faults.releaseFailures = 3;
+    assert.equal((await post(`/${id}/cancel`)).status, 503);
+    await salesDatabase.order.update({
+      where: { id },
+      data: { operationUntil: new Date(0) },
+    });
+    await Promise.all(recoveryWorkers.map((worker) => worker.scan()));
+    assert.equal(
+      (await salesDatabase.order.findUniqueOrThrow({ where: { id } })).status,
+      'CANCELLED',
+    );
+    assert.equal(
+      (await inventoryDatabase.jewelryItem.findUniqueOrThrow({ where: { tagCode } })).status,
+      'IN_STOCK',
+    );
+    assert.equal(
+      await inventoryDatabase.stockMovement.count({ where: { refId: id, type: 'RELEASE' } }),
+      1,
+    );
+    assert.equal(
+      await salesDatabase.outboxEvent.count({
+        where: { aggregateId: id, eventType: 'order.cancelled' },
+      }),
+      1,
+    );
   });
 
   it('không token, sai chi nhánh hay tự gửi giá: bị chặn trước khi ghi hoặc gọi kho', async () => {

@@ -19,6 +19,8 @@ const MESSAGES: Partial<Record<string, string>> = {
   VALIDATION_FAILED: 'Dữ liệu chưa hợp lệ, vui lòng kiểm tra lại.',
   SERVICE_UNAVAILABLE: 'Hệ thống đang bận, vui lòng thử lại sau ít giây.',
   NETWORK_ERROR: 'Không kết nối được tới máy chủ. Hãy kiểm tra mạng rồi thử lại.',
+  INVALID_DOWNLOAD: 'Máy chủ không trả về file Excel hợp lệ. Vui lòng thử lại.',
+  PAYLOAD_TOO_LARGE: 'Báo cáo quá lớn. Hãy chọn ít ngày hơn hoặc lọc một chi nhánh.',
   INTERNAL_ERROR: 'Hệ thống gặp lỗi, vui lòng thử lại sau.',
 };
 

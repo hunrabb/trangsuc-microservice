@@ -2,7 +2,9 @@
 
 Monorepo (pnpm workspaces + Turborepo). Luật làm việc và kiến trúc nằm ở [CLAUDE.md](CLAUDE.md); thiết kế chi tiết ở [docs/](docs/).
 
-Giai đoạn hiện tại: **khung chạy được, chưa có nghiệp vụ** (xem `docs/` mục kế hoạch, giai đoạn 1).
+Giai đoạn hiện tại: **5 — sự kiện và báo cáo**, đang triển khai. POS Phase 4 đã có backend,
+giao diện và cơ chế phục hồi; Report Phase 5 đã có phần doanh thu POS nhưng chưa đủ toàn bộ
+acceptance criteria. Xem `docs/phase5-progress.md` và README của từng service để đối chiếu tiến độ.
 
 | Thành phần                                  | Công nghệ                     | Cổng khi `pnpm dev`             | Cổng khi chạy Docker     |
 | ------------------------------------------- | ----------------------------- | ------------------------------- | ------------------------ |
@@ -223,7 +225,7 @@ docker compose exec postgres sh -c \
 
 ### RabbitMQ
 
-Topology (exchange `domain.events` kiểu topic, `dlx` kiểu direct, 3 queue `*.events`, 3 `*.events.dlq`, 9 queue chờ `*.events.retry.{5s,30s,5m}`, các binding) nằm trong [infra/rabbitmq/definitions.json](infra/rabbitmq/definitions.json) — không chứa mật khẩu. Container `rabbitmq-setup` chạy [infra/rabbitmq/setup.mjs](infra/rabbitmq/setup.mjs) sau khi RabbitMQ healthy: tạo/cập nhật user ứng dụng (mật khẩu từ `.env`), rồi nạp definitions qua management API. Chạy lại bao nhiêu lần cũng không lỗi:
+Topology (exchange `domain.events` kiểu topic, `dlx` kiểu direct, 3 queue `*.events`, 3 `*.events.dlq`, queue bản sao `report.dlq.observer`, 9 queue chờ `*.events.retry.{5s,30s,5m}`, các binding) nằm trong [infra/rabbitmq/definitions.json](infra/rabbitmq/definitions.json) — không chứa mật khẩu. Container `rabbitmq-setup` chạy [infra/rabbitmq/setup.mjs](infra/rabbitmq/setup.mjs) sau khi RabbitMQ healthy: tạo/cập nhật user ứng dụng (mật khẩu từ `.env`), rồi nạp definitions qua management API. Chạy lại bao nhiêu lần cũng không lỗi:
 
 ```bash
 docker compose run --rm rabbitmq-setup

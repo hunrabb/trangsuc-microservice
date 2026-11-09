@@ -32,6 +32,8 @@ const toCategory = ({
 });
 
 const toProduct = ({
+  publishedOnline,
+  imageUrl,
   id,
   categoryId,
   name,
@@ -39,6 +41,8 @@ const toProduct = ({
   isActive,
   version,
 }: Prisma.ProductGetPayload<object>): Product => ({
+  publishedOnline,
+  imageUrl,
   id,
   categoryId,
   name,

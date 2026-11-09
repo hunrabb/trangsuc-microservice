@@ -9,6 +9,7 @@
     "test:sales": "node ../../scripts/run-tests.mjs \"src/**/*.test.ts\""
   },
   "devDependencies": {
+    "@jewelry/gateway": "workspace:*",
     "@jewelry/sales": "workspace:*",
     "@jewelry/inventory": "workspace:*",
     "@jewelry/common": "workspace:*",

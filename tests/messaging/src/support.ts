@@ -7,6 +7,7 @@ import { resolve } from 'node:path';
 import { deadLetterQueueName, QUEUES, retryQueueName } from '@jewelry/contracts';
 import {
   createTestKeys,
+  signTestToken,
   TEST_AUDIENCE_BACKOFFICE,
   TEST_AUDIENCE_SHOP,
   TEST_ISSUER,
@@ -104,8 +105,17 @@ function isTestMessage(content: Buffer, headers: Record<string, unknown> | undef
     return true;
   }
   try {
-    const { eventType } = JSON.parse(content.toString('utf8')) as { eventType?: unknown };
-    return eventType === 'system.test' || eventType === TEST_ROUTING_KEY;
+    const { eventType, payload } = JSON.parse(content.toString('utf8')) as {
+      eventType?: unknown;
+      payload?: { tagCodes?: unknown };
+    };
+    if (eventType === 'system.test' || eventType === TEST_ROUTING_KEY) return true;
+    // Chỉ nhận các POS event do test tự gắn mã tem, để không xoá thư thật của cửa hàng.
+    return (
+      ['order.paid', 'order.cancelled'].includes(String(eventType)) &&
+      Array.isArray(payload?.tagCodes) &&
+      payload.tagCodes.every((tag) => typeof tag === 'string' && tag.startsWith('POSTEST-'))
+    );
   } catch {
     return false;
   }
@@ -295,6 +305,13 @@ export interface RunningService {
 }
 
 const keys = createTestKeys();
+
+/** Token ký bằng cùng khoá tạm mà hai service test đang dùng. */
+export function testToken(role: 'ADMIN' | 'MANAGER' | 'STAFF', branchId: string | null) {
+  return signTestToken(keys.privateKey, {
+    claims: { branches: [{ role, branchId }] },
+  });
+}
 
 /** Chạy bản build thật của service. */
 export async function startService(service: 'inventory' | 'report'): Promise<RunningService> {

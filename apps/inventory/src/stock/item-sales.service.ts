@@ -6,6 +6,7 @@ import {
   type QuoteItem,
   type QuoteStockRequest,
   type QuoteStockResponse,
+  type StockOrderStateResponse,
   ROUTING_KEYS,
 } from '@jewelry/contracts';
 import type { ReleaseStockResponse } from '@jewelry/contracts';
@@ -58,6 +59,28 @@ const idempotencyReused = () =>
 @Injectable()
 export class ItemSalesService {
   constructor(private readonly prisma: PrismaService) {}
+
+  /** Đọc một snapshot nhất quán để Sales biết deduct đã commit hay release đã chặn đơn. */
+  getOrderState(orderId: string): Promise<StockOrderStateResponse> {
+    return this.prisma.$transaction(
+      async (transaction) => {
+        const operation = await transaction.stockOrderOperation.findUnique({ where: { orderId } });
+        const soldItems = await transaction.jewelryItem.findMany({
+          where: { orderId, status: 'SOLD' },
+          select: { tagCode: true, warehouse: { select: { branchId: true } } },
+        });
+        return {
+          orderId,
+          released: operation?.releasedAt !== null && operation?.releasedAt !== undefined,
+          soldItems: soldItems.map((item) => ({
+            tagCode: item.tagCode,
+            branchId: item.warehouse.branchId,
+          })),
+        };
+      },
+      { isolationLevel: 'RepeatableRead' },
+    );
+  }
 
   // ================================================================ quote
   /**
@@ -497,6 +520,9 @@ export class ItemSalesService {
       laborFee: row.laborFee.toFixed(2),
       metalSellPricePerChi: metalSellPrice.toFixed(2),
       price: price.toFixed(2),
+      costPrice: row.costPrice.toFixed(2),
+      variantId: row.variantId,
+      metalId: row.variant.metalId,
     };
   }
 

@@ -1,0 +1,416 @@
+openapi: 3.1.0
+info:
+  title: Public Online Catalog API
+  version: 1.0.0
+  description: >-
+    Bản sao công khai trong Sales, đồng bộ từ Inventory qua outbox/RabbitMQ mỗi 30 giây.
+    Giá là giá tham khảo thấp nhất của chiếc IN_STOCK trong kho online sau buffer.
+    Không giữ hàng hoặc chốt giá; Inventory phải kiểm tra lại khi checkout ở task sau.
+    Snapshot sản phẩm quá 2 phút không được trả; tồn thiếu/cũ/lệch version không báo còn hàng.
+security: []
+paths:
+  /api/shop/orders:
+    post:
+      operationId: createOnlineOrder
+      summary: Tạo checkout PENDING và phát order.created; chưa thu tiền
+      description: >-
+        Giỏ ở client; tối đa 20 biến thể/50 chiếc, không nhận giá hay tổng tiền.
+        Client sinh 32 byte crypto random trước POST đầu tiên và giữ Authorization Checkout token
+        để retry, polling và huỷ. Cùng token và Idempotency-Key chỉ tạo một đơn;
+        cùng key đổi nội dung trả 422. Giá chỉ có sau stock.reserved từ Inventory.
+      security: [{ checkoutAccess: [] }]
+      parameters:
+        - { in: header, name: Idempotency-Key, required: true, schema: { type: string, minLength: 1, maxLength: 200 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateOnlineOrder' }
+      responses:
+        '202':
+          description: Đơn mới hoặc trạng thái hiện tại khi retry; Cache-Control no-store
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OnlineOrderView' }
+        '400': { description: Body hoặc header không hợp lệ }
+        '422': { description: IDEMPOTENCY_KEY_REUSED }
+        '429': { description: Tối đa 10 POST/phút/IP gồm cả huỷ }
+  /api/shop/orders/by-key:
+    get:
+      operationId: lookupOnlineOrderByKey
+      summary: Khôi phục đơn sau khi response tạo checkout bị mất
+      security: [{ checkoutAccess: [] }]
+      parameters:
+        - { in: header, name: Idempotency-Key, required: true, schema: { type: string, minLength: 1, maxLength: 200 } }
+      responses:
+        '200':
+          description: Trạng thái đơn thuộc cùng token; không trả PII
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OnlineOrderView' }
+        '400': { description: Header không hợp lệ }
+        '404': { description: Không có đơn của token/key này }
+        '429': { description: Tối đa 120 GET/HEAD/phút/IP }
+  /api/shop/orders/{orderId}:
+    get:
+      operationId: getOnlineOrder
+      summary: Poll trạng thái đơn; chỉ token sở hữu đọc được
+      security: [{ checkoutAccess: [] }]
+      parameters:
+        - { in: path, name: orderId, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Trạng thái checkout/tiền nhận/Inventory; CONFIRMED không phải COMPLETED
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OnlineOrderView' }
+        '400': { description: ID/header không hợp lệ }
+        '404': { description: Không tồn tại hoặc token không sở hữu đơn }
+        '429': { description: Tối đa 120 GET/HEAD/phút/IP }
+  /api/shop/orders/{orderId}/cancel:
+    post:
+      operationId: cancelOnlineOrder
+      summary: Huỷ đơn chưa thanh toán và phát order.cancelled để Inventory nhả hàng
+      security: [{ checkoutAccess: [] }]
+      parameters:
+        - { in: path, name: orderId, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: CANCELLED trước nhận tiền; retry không tạo thêm transition; giải phóng bất đồng bộ
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OnlineOrderView' }
+        '400': { description: ID/header không hợp lệ }
+        '404': { description: Không tồn tại hoặc token không sở hữu đơn }
+        '409': { description: INVALID_STATE nếu đã nhận tiền hoặc đang đối soát/hoàn tiền }
+        '429': { description: Tối đa 10 POST/phút/IP gồm cả tạo đơn }
+
+  /api/shop/products:
+    get:
+      operationId: listShopProducts
+      summary: Danh sách sản phẩm được publish online
+      description: >-
+        Lọc categoryId, loại kim loại và giá trên cùng một biến thể.
+        Tìm tên mẫu hoặc SKU (không phân biệt hoa thường, ký tự % và _ là literal).
+        Sắp xếp giá theo biến thể có giá thấp nhất khớp bộ lọc, giá null cuối; id là tie-breaker.
+        inStock tính cho toàn bộ mẫu; trang rỗng nếu không có kết quả.
+      parameters:
+        - { in: query, name: page, schema: { type: integer, minimum: 1, maximum: 10000, default: 1 } }
+        - { in: query, name: pageSize, schema: { type: integer, minimum: 1, maximum: 50, default: 20 } }
+        - { in: query, name: search, schema: { type: string, maxLength: 100 } }
+        - { in: query, name: categoryId, schema: { type: string, format: uuid } }
+        - { in: query, name: metalKind, schema: { type: string, enum: [GOLD, SILVER] } }
+        - { in: query, name: minPrice, schema: { type: string, pattern: '^\d{1,13}(\.\d{1,2})?$' } }
+        - { in: query, name: maxPrice, schema: { type: string, pattern: '^\d{1,13}(\.\d{1,2})?$' } }
+        - { in: query, name: sort, schema: { type: string, enum: [name, price_asc, price_desc], default: name } }
+      responses:
+        '200':
+          description: Trang kết quả; tiền VND là chuỗi thập phân, null khi chưa có giá
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ShopPage' }
+        '400': { description: "Query lạ, sai kiểu hoặc minPrice lớn hơn maxPrice" }
+        '429': { description: Vượt 120 request/phút/IP (GET và HEAD chung bucket) }
+        '503': { description: Upstream không sẵn sàng }
+  /api/shop/products/{productId}:
+    get:
+      operationId: getShopProduct
+      summary: Chi tiết mẫu với SKU, hình ảnh, giá tham khảo, tình trạng còn hàng
+      parameters:
+        - { in: path, name: productId, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Mẫu được publish, tối đa 200 biến thể công khai
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ShopProduct' }
+        '400': { description: ID không hợp lệ }
+        '404': { description: "Không tồn tại, chưa publish, ngừng hoạt động hoặc snapshot quá cũ" }
+        '429': { description: Vượt 120 request/phút/IP }
+        '503': { description: Upstream không sẵn sàng }
+components:
+  securitySchemes:
+    checkoutAccess:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Checkout theo sau bởi dấu cách và token hex 64 ký tự chữ thường; không đưa token vào URL hoặc log.'
+  schemas:
+    CreateOnlineOrder:
+      type: "object"
+      properties:
+        items:
+          $ref: "#/components/schemas/OnlineCart"
+        recipientName:
+          type: "string"
+          minLength: 1
+          maxLength: 150
+        recipientPhone:
+          type: "string"
+          pattern: "^\\+?\\d{9,15}$"
+        shippingAddress:
+          type: "string"
+          minLength: 10
+          maxLength: 1000
+        email:
+          type: "string"
+          maxLength: 254
+          format: "email"
+          pattern: "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+      required:
+        - "items"
+        - "recipientName"
+        - "recipientPhone"
+        - "shippingAddress"
+      additionalProperties: false
+    OnlineOrderView:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        code:
+          type: "string"
+        status:
+          type: "string"
+          enum:
+            - "PENDING"
+            - "AWAITING_PAYMENT"
+            - "CANCELLED"
+            - "PAYMENT_PROCESSING"
+            - "CONFIRMED"
+            - "PAYMENT_REVIEW"
+            - "REFUND_PENDING"
+        total:
+          anyOf:
+            - type: "string"
+              pattern: "^\\d{1,18}\\.\\d{2}$"
+            - type: "null"
+        expiresAt:
+          anyOf:
+            - type: "string"
+              format: "date-time"
+              pattern: "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+            - type: "null"
+        needsReview:
+          type: "boolean"
+        failureCode:
+          type:
+            - "string"
+            - "null"
+        items:
+          maxItems: 50
+          type: "array"
+          items:
+            type: "object"
+            properties:
+              variantId:
+                type: "string"
+                format: "uuid"
+                pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              sku:
+                type: "string"
+                maxLength: 200
+              productName:
+                type: "string"
+                maxLength: 500
+              price:
+                type: "string"
+                pattern: "^\\d{1,18}\\.\\d{2}$"
+            required:
+              - "variantId"
+              - "sku"
+              - "productName"
+              - "price"
+            additionalProperties: false
+      required:
+        - "id"
+        - "code"
+        - "status"
+        - "total"
+        - "expiresAt"
+        - "needsReview"
+        - "failureCode"
+        - "items"
+      additionalProperties: false
+    OnlineCart:
+      minItems: 1
+      maxItems: 20
+      type: "array"
+      items:
+        type: "object"
+        properties:
+          variantId:
+            type: "string"
+            format: "uuid"
+            pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          quantity:
+            type: "integer"
+            minimum: 1
+            maximum: 10
+        required:
+          - "variantId"
+          - "quantity"
+        additionalProperties: false
+    ShopProduct:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        categoryId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        categoryName:
+          type: "string"
+          maxLength: 500
+        name:
+          type: "string"
+          maxLength: 500
+        description:
+          anyOf:
+            - type: "string"
+              maxLength: 10000
+            - type: "null"
+        imageUrl:
+          anyOf:
+            - type: "string"
+              maxLength: 2048
+            - type: "null"
+        capturedAt:
+          type: "string"
+          format: "date-time"
+          pattern: "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+        variants:
+          maxItems: 200
+          type: "array"
+          items:
+            type: "object"
+            properties:
+              id:
+                type: "string"
+                format: "uuid"
+                pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              sku:
+                type: "string"
+                maxLength: 200
+              name:
+                type: "string"
+                maxLength: 500
+              metalKind:
+                type: "string"
+                enum:
+                  - "GOLD"
+                  - "SILVER"
+              estimatedPrice:
+                anyOf:
+                  - type: "string"
+                    pattern: "^\\d{1,18}\\.\\d{2}$"
+                  - type: "null"
+              inStock:
+                type: "boolean"
+            required:
+              - "id"
+              - "sku"
+              - "name"
+              - "metalKind"
+              - "estimatedPrice"
+              - "inStock"
+            additionalProperties: false
+        inStock:
+          type: "boolean"
+      required:
+        - "id"
+        - "categoryId"
+        - "categoryName"
+        - "name"
+        - "description"
+        - "imageUrl"
+        - "capturedAt"
+        - "variants"
+        - "inStock"
+      additionalProperties: false
+    ShopPage:
+      type: "object"
+      properties:
+        items:
+          maxItems: 50
+          type: "array"
+          items:
+            $ref: "#/components/schemas/ShopProduct"
+        total:
+          type: "integer"
+          minimum: 0
+          maximum: 9007199254740991
+        page:
+          type: "integer"
+          minimum: -9007199254740991
+          maximum: 9007199254740991
+        pageSize:
+          type: "integer"
+          minimum: -9007199254740991
+          maximum: 9007199254740991
+      required:
+        - "items"
+        - "total"
+        - "page"
+        - "pageSize"
+      additionalProperties: false
+    ErrorResponse:
+      type: "object"
+      properties:
+        code:
+          type: "string"
+          enum:
+            - "VALIDATION_FAILED"
+            - "INVALID_CREDENTIALS"
+            - "ACCOUNT_NOT_PROVISIONED"
+            - "SESSION_EXPIRED"
+            - "REFRESH_CONFLICT"
+            - "PASSWORD_TOO_WEAK"
+            - "INVALID_TOKEN"
+            - "TOKEN_EXPIRED"
+            - "FORBIDDEN"
+            - "NOT_FOUND"
+            - "METHOD_NOT_ALLOWED"
+            - "VERSION_CONFLICT"
+            - "INVALID_STATE"
+            - "LAST_ADMIN"
+            - "METAL_PRICE_NOT_SET"
+            - "ITEM_NOT_AVAILABLE"
+            - "RESERVATION_EXPIRED"
+            - "RESERVATION_RELEASED"
+            - "PRICE_NOT_AVAILABLE"
+            - "PAYMENT_AMOUNT_MISMATCH"
+            - "PAYMENT_REFERENCE_CONFLICT"
+            - "PAYMENT_RECONCILIATION_REQUIRED"
+            - "INVALID_ITEM_STATE"
+            - "IDEMPOTENCY_KEY_REUSED"
+            - "PAYLOAD_TOO_LARGE"
+            - "RATE_LIMITED"
+            - "SERVICE_UNAVAILABLE"
+            - "INVALID_DLQ_REQUEST"
+            - "DLQ_NOT_FOUND"
+            - "DLQ_NOT_REPLAYABLE"
+            - "DLQ_REPLAY_BUSY"
+            - "DLQ_PUBLISH_UNCONFIRMED"
+            - "DLQ_PUBLISH_FAILED"
+            - "DLQ_AUDIT_UNCONFIRMED"
+            - "INTERNAL_ERROR"
+        message:
+          type: "string"
+        details:
+          type: "object"
+          propertyNames:
+            type: "string"
+          additionalProperties: {}
+        correlationId:
+          type: "string"
+      required:
+        - "code"
+        - "message"
+        - "correlationId"
+      additionalProperties: false

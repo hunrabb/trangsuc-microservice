@@ -150,7 +150,10 @@ export class OutboxWorker {
         routingKey: row.eventType,
         content: Buffer.from(JSON.stringify(envelope)),
         messageId: row.id,
-        headers: { [MESSAGE_HEADERS.CORRELATION_ID]: row.correlationId },
+        headers: {
+          [MESSAGE_HEADERS.CORRELATION_ID]: row.correlationId,
+          [MESSAGE_HEADERS.ORIGINAL_ROUTING_KEY]: row.eventType,
+        },
       });
       await this.options.db.$executeRawUnsafe(
         `UPDATE ${this.table}

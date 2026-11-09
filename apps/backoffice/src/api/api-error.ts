@@ -1,7 +1,7 @@
 import type { ErrorCode } from '@jewelry/contracts';
 
 /** Mã lỗi của server, cộng hai mã chỉ có phía giao diện. */
-export type ApiErrorCode = ErrorCode | 'NETWORK_ERROR' | 'UNKNOWN';
+export type ApiErrorCode = ErrorCode | 'NETWORK_ERROR' | 'INVALID_DOWNLOAD' | 'UNKNOWN';
 
 export interface ApiErrorInit {
   status: number;

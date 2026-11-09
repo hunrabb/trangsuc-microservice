@@ -1,0 +1,32 @@
+# Chỉ dữ liệu test, không dùng .env hay volume của dự án dev.
+name: jewelry-phase54-test
+services:
+  postgres:
+    image: postgres:16.15
+    environment:
+      POSTGRES_DB: jewelry_phase54_test
+      POSTGRES_USER: phase54_test
+      POSTGRES_PASSWORD: phase54_test_only
+    ports:
+      - '127.0.0.1:55432:5432'
+    tmpfs:
+      - /var/lib/postgresql/data
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/01-test.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U phase54_test -d jewelry_phase54_test']
+      interval: 2s
+      timeout: 2s
+      retries: 30
+  rabbitmq:
+    image: rabbitmq:4.4.0-management
+    environment:
+      RABBITMQ_DEFAULT_USER: phase54_test
+      RABBITMQ_DEFAULT_PASS: phase54_test_only
+    ports:
+      - '127.0.0.1:55672:5672'
+    healthcheck:
+      test: ['CMD', 'rabbitmq-diagnostics', '-q', 'check_port_connectivity']
+      interval: 3s
+      timeout: 5s
+      retries: 20

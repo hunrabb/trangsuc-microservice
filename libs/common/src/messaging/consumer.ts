@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { setTimeout as sleep } from 'node:timers/promises';
 import {
   deadLetterQueueName,
+  DEAD_LETTER_EXCHANGE,
   EVENT_PAYLOAD_SCHEMAS,
   type EventEnvelope,
   eventEnvelopeSchema,
@@ -287,7 +288,8 @@ export class EventConsumer<Tx extends ConsumerTx = ConsumerTx> {
     const queue = deadLetterQueueName(this.options.queue);
     await this.forward(channel, message, {
       routingKey: queue,
-      exchange: '',
+      // Đi qua DLX để RabbitMQ giữ thư gốc trong DLQ và gửi một bản sao tới queue quan sát.
+      exchange: DEAD_LETTER_EXCHANGE,
       headers: this.copyHeaders(message, {
         [MESSAGE_HEADERS.CORRELATION_ID]: correlationId,
         [MESSAGE_HEADERS.ERROR_KIND]: kind,

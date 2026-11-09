@@ -80,6 +80,10 @@ pnpm format:check                               # Prettier (pnpm format để t�
 pnpm openapi:validate                           # kiểm tra các file docs/api/*.openapi.yaml
 pnpm openapi:generate                           # sinh components/schemas từ zod; `pnpm test` đỏ nếu file lệch
 pnpm --filter @jewelry/auth admin:create -- --email <email> --full-name <tên>   # tạo ADMIN đầu tiên; mật khẩu từ ADMIN_PASSWORD hoặc stdin
+pnpm --filter @jewelry/sales report:backfill:export -- --from <UTC-ISO> --to <UTC-ISO> --output <file> # một batch đọc Sales, xem docs/phase5-backfill-runbook.md
+pnpm --filter @jewelry/report report:backfill:import -- --input <file> --audit <file> --checkpoint <file> # mặc định dry-run; dữ liệu thật cần duyệt riêng trước --apply
+node tests/reporting/run.mjs backfill           # integration riêng; snapshot/recovery là hai mode khác, recovery chờ thật 10 phút
+pnpm --filter @jewelry/backoffice test:reports  # chỉ frontend báo cáo: quyền, bộ lọc, Excel và render SSR
 docker compose up --build                       # chạy cả hệ thống (kèm override dev)
 docker compose -f docker-compose.yml up --build # chạy như production (không mở cổng dev)
 docker compose run --rm rabbitmq-setup          # nạp lại topology RabbitMQ sau khi sửa definitions.json

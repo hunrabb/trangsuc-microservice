@@ -6,6 +6,8 @@ import {
   canManageCatalog,
   canManageUsers,
   canUsePos,
+  canViewReports,
+  isAdmin,
 } from './auth/permissions.ts';
 import { RequireAuth, RequireRole } from './auth/require-auth.tsx';
 import { WorkingBranchLayout } from './inventory/working-branch.tsx';
@@ -15,6 +17,8 @@ import { ChangePasswordPage } from './pages/change-password-page.tsx';
 import { HomePage } from './pages/home-page.tsx';
 import { ItemLabelPage } from './pages/item-label-page.tsx';
 import { LoginPage } from './pages/login-page.tsx';
+import { DlqPage } from './pages/dlq-page.tsx';
+import { ReportsPage } from './pages/reports-page.tsx';
 import { MetalsPage } from './pages/metals-page.tsx';
 import { NotFoundPage } from './pages/not-found-page.tsx';
 import { ProductsPage } from './pages/products-page.tsx';
@@ -62,6 +66,12 @@ export function App() {
         <Route element={<RequireRole allow={canManageCatalog} />}>
           <Route path="/gia-kim-loai" element={<MetalsPage />} />
           <Route path="/san-pham" element={<ProductsPage />} />
+        </Route>
+        <Route element={<RequireRole allow={isAdmin} />}>
+          <Route path="/thu-loi" element={<DlqPage />} />
+        </Route>
+        <Route element={<RequireRole allow={canViewReports} />}>
+          <Route path="/bao-cao" element={<ReportsPage />} />
         </Route>
         <Route element={<RequireRole allow={canBranchStockAccess} />}>
           <Route element={<WorkingBranchLayout />}>

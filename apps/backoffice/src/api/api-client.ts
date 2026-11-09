@@ -21,6 +21,8 @@ const DEFAULT_REFRESH_LEAD_SECONDS = 60;
 const MIN_REFRESH_DELAY_MS = 1000;
 
 export interface RequestOptions {
+  /** Kiểu phản hồi mong muốn, ví dụ Excel; vẫn dùng cùng cơ chế token/refresh. */
+  accept?: string;
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   /** Được gửi dạng JSON. */
   body?: unknown;
@@ -41,6 +43,7 @@ export interface ApiClientOptions {
 
 export interface ApiClient {
   request<T>(path: string, options?: RequestOptions): Promise<T>;
+  requestResponse(path: string, options?: RequestOptions): Promise<Response>;
   /** Gọi không kèm token và không xử lý phiên: đăng nhập, đăng xuất. */
   publicRequest<T>(path: string, options?: RequestOptions): Promise<T>;
   /** Dùng token của phiên vừa đăng nhập, và hẹn refresh. */
@@ -69,10 +72,10 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
 
   async function send(
     path: string,
-    { method = 'GET', body, idempotencyKey }: RequestOptions,
+    { method = 'GET', body, idempotencyKey, accept = 'application/json' }: RequestOptions,
     token: string | undefined,
   ): Promise<Response> {
-    const headers: Record<string, string> = { accept: 'application/json' };
+    const headers: Record<string, string> = { accept };
     if (idempotencyKey !== undefined) headers['idempotency-key'] = idempotencyKey;
     if (body !== undefined) {
       headers['content-type'] = 'application/json';
@@ -185,7 +188,7 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     throw error;
   }
 
-  async function request<T>(path: string, init: RequestOptions = {}): Promise<T> {
+  async function requestResponse(path: string, init: RequestOptions = {}): Promise<Response> {
     const sentToken = accessToken;
     let response = await send(path, init, sentToken);
     if (response.status === 401) {
@@ -199,7 +202,11 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     if (!response.ok) {
       return fail(await toApiError(response));
     }
-    return readBody<T>(response);
+    return response;
+  }
+
+  async function request<T>(path: string, init: RequestOptions = {}): Promise<T> {
+    return readBody<T>(await requestResponse(path, init));
   }
 
   async function publicRequest<T>(path: string, init: RequestOptions = {}): Promise<T> {
@@ -223,6 +230,7 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
 
   return {
     request,
+    requestResponse,
     publicRequest,
     setSession,
     clearSession,

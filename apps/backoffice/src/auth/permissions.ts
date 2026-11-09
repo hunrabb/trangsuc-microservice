@@ -24,6 +24,9 @@ export const canManageBranches = (branches: readonly BranchRole[]): boolean => i
 export const canManageUsers = (branches: readonly BranchRole[]): boolean =>
   isAdmin(branches) || managedBranchIds(branches).length > 0;
 
+export const canViewReports = (branches: readonly BranchRole[]): boolean =>
+  isAdmin(branches) || managedBranchIds(branches).length > 0;
+
 export const canAssignRoles = (branches: readonly BranchRole[]): boolean => isAdmin(branches);
 
 export const canChangeOwnPassword = (branches: readonly BranchRole[]): boolean => isAdmin(branches);

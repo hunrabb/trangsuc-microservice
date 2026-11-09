@@ -24,6 +24,26 @@ tags:
 - name: Tồn kho
 - name: Kiểm kê
 paths:
+  /internal/stock/orders/{orderId}:
+    servers: [{ url: 'http://inventory:3000' }]
+    get:
+      operationId: getInternalStockOrderState
+      summary: Đọc dấu giải phóng và các chiếc đã bán cho một đơn POS để phục hồi
+      x-internal: true
+      security: []
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Snapshot nhất quán từ kho
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StockOrderStateResponse' }
+        '400':
+          description: orderId không hợp lệ
   /internal/stock/quote:
     servers: [{ url: 'http://inventory:3000' }]
     post:
@@ -92,6 +112,48 @@ paths:
           description: VALIDATION_FAILED
         '503':
           description: SERVICE_UNAVAILABLE
+  /api/admin/inventory/online-catalog/warehouses/{warehouseId}:
+    put:
+      operationId: configureOnlineWarehouse
+      summary: ADMIN bật hoặc tắt nhận đơn online của kho
+      x-roles: [ADMIN]
+      security: [{ bearerAuth: [] }]
+      x-audience: store-backoffice
+      parameters:
+        - { in: path, name: warehouseId, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OnlineWarehouse' }
+      responses:
+        '200': { description: ID và acceptsOnlineOrders đã lưu }
+        '400': { description: Query/body không hợp lệ }
+        '401': { description: Chưa đăng nhập }
+        '403': { description: Chỉ ADMIN }
+        '404': { description: Không có kho }
+  /api/admin/inventory/online-catalog/warehouses/{warehouseId}/buffers/{variantId}:
+    put:
+      operationId: configureOnlineBuffer
+      summary: ADMIN cấu hình lượng hàng để lại cho POS theo kho và biến thể
+      x-roles: [ADMIN]
+      security: [{ bearerAuth: [] }]
+      x-audience: store-backoffice
+      parameters:
+        - { in: path, name: warehouseId, required: true, schema: { type: string, format: uuid } }
+        - { in: path, name: variantId, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OnlineBuffer' }
+      responses:
+        '200': { description: "warehouseId, variantId, quantity đã lưu" }
+        '400': { description: Body không hợp lệ }
+        '401': { description: Chưa đăng nhập }
+        '403': { description: Chỉ ADMIN }
+        '404': { description: Không có kho hoặc biến thể }
+
   /api/admin/inventory/metals:
     get:
       operationId: listMetals
@@ -1743,6 +1805,276 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    OnlineOrderPaid:
+      type: "object"
+      properties:
+        channel:
+          type: "string"
+          const: "WEBSITE"
+        orderId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        paymentId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        reservationId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        amount:
+          type: "string"
+          pattern: "^\\d{1,18}\\.\\d{2}$"
+        currency:
+          type: "string"
+          const: "VND"
+        receivedAt:
+          type: "string"
+          format: "date-time"
+          pattern: "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+      required:
+        - "channel"
+        - "orderId"
+        - "paymentId"
+        - "reservationId"
+        - "amount"
+        - "currency"
+        - "receivedAt"
+      additionalProperties: false
+    PaymentInventoryResult:
+      type: "object"
+      properties:
+        channel:
+          type: "string"
+          const: "WEBSITE"
+        orderId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        paymentId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        reservationId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        amount:
+          type: "string"
+          pattern: "^\\d{1,18}\\.\\d{2}$"
+        currency:
+          type: "string"
+          const: "VND"
+        version:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
+        outcome:
+          type: "string"
+          enum:
+            - "CONFIRMED"
+            - "REJECTED"
+        reason:
+          anyOf:
+            - type: "string"
+              enum:
+                - "RESERVATION_EXPIRED"
+                - "RESERVATION_RELEASED"
+                - "INVENTORY_CONFLICT"
+                - "AMOUNT_MISMATCH"
+                - "PAID_HOLD_EXPIRED"
+            - type: "null"
+        holdUntil:
+          anyOf:
+            - type: "string"
+              format: "date-time"
+              pattern: "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+            - type: "null"
+      required:
+        - "channel"
+        - "orderId"
+        - "paymentId"
+        - "reservationId"
+        - "amount"
+        - "currency"
+        - "version"
+        - "outcome"
+        - "reason"
+        - "holdUntil"
+      additionalProperties: false
+    OnlineOrderCreated:
+      type: "object"
+      properties:
+        channel:
+          type: "string"
+          const: "WEBSITE"
+        orderId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        requestHash:
+          type: "string"
+          pattern: "^[a-f0-9]{64}$"
+        items:
+          minItems: 1
+          maxItems: 20
+          type: "array"
+          items:
+            type: "object"
+            properties:
+              variantId:
+                type: "string"
+                format: "uuid"
+                pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              quantity:
+                type: "integer"
+                minimum: 1
+                maximum: 10
+            required:
+              - "variantId"
+              - "quantity"
+            additionalProperties: false
+        deadlineAt:
+          type: "string"
+          format: "date-time"
+          pattern: "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+      required:
+        - "channel"
+        - "orderId"
+        - "requestHash"
+        - "items"
+        - "deadlineAt"
+      additionalProperties: false
+    StockReserved:
+      type: "object"
+      properties:
+        channel:
+          type: "string"
+          const: "WEBSITE"
+        orderId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        reservationId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        warehouseId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        branchId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        expiresAt:
+          type: "string"
+          format: "date-time"
+          pattern: "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+        total:
+          type: "string"
+          pattern: "^\\d{1,18}\\.\\d{2}$"
+        items:
+          minItems: 1
+          maxItems: 50
+          type: "array"
+          items:
+            type: "object"
+            properties:
+              jewelryItemId:
+                type: "string"
+                format: "uuid"
+                pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              variantId:
+                type: "string"
+                format: "uuid"
+                pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              sku:
+                type: "string"
+                maxLength: 200
+              productName:
+                type: "string"
+                maxLength: 500
+              price:
+                type: "string"
+                pattern: "^\\d{1,18}\\.\\d{2}$"
+            required:
+              - "jewelryItemId"
+              - "variantId"
+              - "sku"
+              - "productName"
+              - "price"
+            additionalProperties: false
+      required:
+        - "channel"
+        - "orderId"
+        - "reservationId"
+        - "warehouseId"
+        - "branchId"
+        - "expiresAt"
+        - "total"
+        - "items"
+      additionalProperties: false
+    StockReserveFailed:
+      type: "object"
+      properties:
+        channel:
+          type: "string"
+          const: "WEBSITE"
+        orderId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        code:
+          type: "string"
+          enum:
+            - "ITEM_NOT_AVAILABLE"
+            - "RESERVATION_EXPIRED"
+            - "RESERVATION_RELEASED"
+            - "PRICE_NOT_AVAILABLE"
+      required:
+        - "channel"
+        - "orderId"
+        - "code"
+      additionalProperties: false
+    StockReservationExpired:
+      type: "object"
+      properties:
+        channel:
+          type: "string"
+          const: "WEBSITE"
+        orderId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        reservationId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+      required:
+        - "channel"
+        - "orderId"
+        - "reservationId"
+      additionalProperties: false
+    OnlineWarehouse:
+      type: "object"
+      properties:
+        acceptsOnlineOrders:
+          type: "boolean"
+      required:
+        - "acceptsOnlineOrders"
+      additionalProperties: false
+    OnlineBuffer:
+      type: "object"
+      properties:
+        quantity:
+          type: "integer"
+          minimum: 0
+          maximum: 1000000
+      required:
+        - "quantity"
+      additionalProperties: false
     ErrorResponse:
       type: "object"
       properties:
@@ -1765,11 +2097,24 @@ components:
             - "LAST_ADMIN"
             - "METAL_PRICE_NOT_SET"
             - "ITEM_NOT_AVAILABLE"
+            - "RESERVATION_EXPIRED"
+            - "RESERVATION_RELEASED"
+            - "PRICE_NOT_AVAILABLE"
+            - "PAYMENT_AMOUNT_MISMATCH"
+            - "PAYMENT_REFERENCE_CONFLICT"
+            - "PAYMENT_RECONCILIATION_REQUIRED"
             - "INVALID_ITEM_STATE"
             - "IDEMPOTENCY_KEY_REUSED"
             - "PAYLOAD_TOO_LARGE"
             - "RATE_LIMITED"
             - "SERVICE_UNAVAILABLE"
+            - "INVALID_DLQ_REQUEST"
+            - "DLQ_NOT_FOUND"
+            - "DLQ_NOT_REPLAYABLE"
+            - "DLQ_REPLAY_BUSY"
+            - "DLQ_PUBLISH_UNCONFIRMED"
+            - "DLQ_PUBLISH_FAILED"
+            - "DLQ_AUDIT_UNCONFIRMED"
             - "INTERNAL_ERROR"
         message:
           type: "string"
@@ -1958,6 +2303,12 @@ components:
     Product:
       type: "object"
       properties:
+        publishedOnline:
+          type: "boolean"
+        imageUrl:
+          type:
+            - "string"
+            - "null"
         id:
           type: "string"
           format: "uuid"
@@ -1979,6 +2330,8 @@ components:
           exclusiveMinimum: 0
           maximum: 9007199254740991
       required:
+        - "publishedOnline"
+        - "imageUrl"
         - "id"
         - "categoryId"
         - "name"
@@ -2031,6 +2384,14 @@ components:
     UpdateProductRequest:
       type: "object"
       properties:
+        publishedOnline:
+          type: "boolean"
+        imageUrl:
+          anyOf:
+            - type: "string"
+              maxLength: 2048
+              format: "uri"
+            - type: "null"
         version:
           type: "integer"
           exclusiveMinimum: 0
@@ -2768,6 +3129,16 @@ components:
                 type: "string"
               price:
                 type: "string"
+              costPrice:
+                type: "string"
+              variantId:
+                type: "string"
+                format: "uuid"
+                pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              metalId:
+                type: "string"
+                format: "uuid"
+                pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             required:
               - "itemId"
               - "tagCode"
@@ -2775,6 +3146,9 @@ components:
               - "laborFee"
               - "metalSellPricePerChi"
               - "price"
+              - "costPrice"
+              - "variantId"
+              - "metalId"
             additionalProperties: false
       required:
         - "orderId"
@@ -2807,4 +3181,33 @@ components:
       required:
         - "orderId"
         - "releasedTagCodes"
+      additionalProperties: false
+    StockOrderStateResponse:
+      type: "object"
+      properties:
+        orderId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        released:
+          type: "boolean"
+        soldItems:
+          type: "array"
+          items:
+            type: "object"
+            properties:
+              tagCode:
+                type: "string"
+              branchId:
+                type: "string"
+                format: "uuid"
+                pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            required:
+              - "tagCode"
+              - "branchId"
+            additionalProperties: false
+      required:
+        - "orderId"
+        - "released"
+        - "soldItems"
       additionalProperties: false

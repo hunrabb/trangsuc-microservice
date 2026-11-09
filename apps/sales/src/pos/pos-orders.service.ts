@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { setTimeout as sleep } from 'node:timers/promises';
-import { type AuthUser } from '@jewelry/common';
+import { BusinessError, type AuthUser } from '@jewelry/common';
 import type { CreatePosOrderRequest, PosOrder } from '@jewelry/contracts';
 import { Injectable } from '@nestjs/common';
 import {
@@ -53,6 +53,56 @@ export class PosOrdersService {
       throw invalidOrderState();
     }
     return presentOrder(await this.settle(user, orderId));
+  }
+
+  /** Worker tiếp quản một đơn quá lease; claim DB ngăn hai Sales instance cùng xử lý. */
+  async recoverExpired(orderId: string): Promise<void> {
+    const owner = randomUUID();
+    if (!(await this.store.claim(orderId, owner))) return;
+    try {
+      const order = await this.store.loadForRecovery(orderId);
+      if (order.status === 'CREATING') {
+        await this.recoverCreation(order, owner);
+      } else if (order.status === 'CANCELLING') {
+        await this.inventory.state(order.id);
+        await this.inventory.release(order.id);
+        await this.store.finishCancellation(order, owner, order.createdBy);
+      }
+    } finally {
+      await this.store.releaseClaim(orderId, owner);
+    }
+  }
+
+  /** Kho đã bán đủ bộ tem thì chốt snapshot; mọi trạng thái khác được release trước khi hủy. */
+  private async recoverCreation(order: OrderRecord, owner: string): Promise<void> {
+    const state = await this.inventory.state(order.id);
+    const soldTags = state.soldItems.map((item) => item.tagCode).sort();
+    const correctBranch = state.soldItems.every((item) => item.branchId === order.branchId);
+    const soldAll =
+      !state.released &&
+      correctBranch &&
+      JSON.stringify(soldTags) === JSON.stringify(order.requestedTagCodes);
+    if (soldAll) {
+      try {
+        const deducted = await this.inventory.deduct(order);
+        await this.store.finishCreation(order, owner, deducted);
+        return;
+      } catch (error) {
+        if (
+          !(error instanceof BusinessError) ||
+          !['INVALID_STATE', 'ITEM_NOT_AVAILABLE'].includes(error.code)
+        ) {
+          throw error;
+        }
+      }
+    }
+    const failure = creationFailure(
+      new BusinessError('SERVICE_UNAVAILABLE', 'Đơn bị gián đoạn trước khi chốt', 503),
+      order.requestedTagCodes,
+    );
+    const cancelling = await this.store.beginCancellation(order, order.createdBy, failure, owner);
+    await this.inventory.release(order.id);
+    await this.store.finishCancellation(cancelling, owner, order.createdBy);
   }
 
   /** Poll có hạn, không giữ connection khi chờ; lease quá hạn được request mới tiếp quản sau crash. */

@@ -9,8 +9,9 @@ import {
   type ReleaseStockRequest,
   releaseStockRequestSchema,
   type ReleaseStockResponse,
+  type StockOrderStateResponse,
 } from '@jewelry/contracts';
-import { Body, Controller, HttpCode, Post } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Post } from '@nestjs/common';
 import { ItemSalesService } from './item-sales.service';
 
 /**
@@ -44,5 +45,11 @@ export class InternalStockController {
     @Body(new ZodValidationPipe(releaseStockRequestSchema)) body: ReleaseStockRequest,
   ): Promise<ReleaseStockResponse> {
     return this.itemSales.releaseItemsForOrder(body.orderId);
+  }
+
+  /** Sales đọc dấu release và những chiếc đã bán cho đơn trước khi phục hồi sau crash. */
+  @Get('orders/:orderId')
+  state(@Param('orderId', new ParseUUIDPipe()) orderId: string): Promise<StockOrderStateResponse> {
+    return this.itemSales.getOrderState(orderId);
   }
 }

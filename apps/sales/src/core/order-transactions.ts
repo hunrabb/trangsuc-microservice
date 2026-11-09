@@ -1,5 +1,5 @@
 import { outbox, runWithLockRetry } from '@jewelry/common';
-import type { ROUTING_KEYS } from '@jewelry/contracts';
+import { ROUTING_KEYS } from '@jewelry/contracts';
 import type { OrderStatus, Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { invalidOrderState, type OrderRecord, type Transaction } from './order-record';
@@ -63,6 +63,21 @@ export async function emitOrderEvent(
       code: order.code,
       total: order.total.toFixed(2),
       tagCodes: order.requestedTagCodes,
+      ...(eventType === ROUTING_KEYS.ORDER_PAID
+        ? {
+            paidAt: order.updatedAt.toISOString(),
+            // Đơn cũ chưa có snapshot vốn: báo thiếu dữ liệu, không ghi vốn bằng 0 giả.
+            items: order.items.map((item) => ({
+              tagCode: item.tagCode,
+              variantId: item.variantId,
+              metalId: item.metalId,
+              productName: item.productName,
+              metalWeight: item.metalWeight.toFixed(4),
+              price: item.price.toFixed(2),
+              costPrice: item.variantId === null ? null : item.costPrice.toFixed(2),
+            })),
+          }
+        : {}),
     },
   });
 }

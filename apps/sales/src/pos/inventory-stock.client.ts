@@ -1,9 +1,11 @@
 import { BusinessError, callInternal, ConfigService } from '@jewelry/common';
 import {
   type DeductStockResponse,
+  type StockOrderStateResponse,
   deductStockResponseSchema,
   quoteStockResponseSchema,
   releaseStockResponseSchema,
+  stockOrderStateResponseSchema,
 } from '@jewelry/contracts';
 import { Injectable } from '@nestjs/common';
 import type { Env } from '../config/env';
@@ -71,6 +73,20 @@ export class InventoryStockClient {
     const response = releaseStockResponseSchema.parse(await this.post('release', { orderId }));
     if (response.orderId !== orderId)
       throw new BusinessError('SERVICE_UNAVAILABLE', 'Kho trả sai orderId', 503);
+  }
+
+  /** Đọc snapshot kho theo orderId; worker không suy đoán kết quả từ timeout của deduct. */
+  async state(orderId: string): Promise<StockOrderStateResponse> {
+    const base = this.config.get('INVENTORY_URL', { infer: true });
+    const response = await callInternal({
+      url: `${base.replace(/\/$/, '')}/internal/stock/orders/${orderId}`,
+      timeoutMs: 3000,
+    });
+    const state = stockOrderStateResponseSchema.parse(response);
+    if (state.orderId !== orderId) {
+      throw new BusinessError('SERVICE_UNAVAILABLE', 'Kho trả sai orderId', 503);
+    }
+    return state;
   }
 
   /** Cả ba POST đều gọi lặp an toàn; correlationId được HTTP client chung chuyển tiếp. */

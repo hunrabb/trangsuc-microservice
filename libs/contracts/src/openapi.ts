@@ -1,3 +1,36 @@
+import {
+  buybackStatusSchema,
+  createBuybackSchema,
+  updateBuybackSchema,
+  submitBuybackSchema,
+  cancelBuybackSchema,
+  buybackDetailSchema,
+  buybackPageSchema,
+  buybackQuerySchema,
+} from './buyback-api';
+import {
+  onlinePaymentAdminViewSchema,
+  confirmOnlinePaymentSchema,
+  requestOnlineRefundSchema,
+  onlinePaymentViewSchema,
+  onlineOrderPaidSchema,
+  paymentInventoryResultSchema,
+} from './online-payment';
+import {
+  createOnlineOrderSchema,
+  onlineOrderViewSchema,
+  onlineCartSchema,
+  onlineOrderCreatedSchema,
+  stockReservedSchema,
+  stockReserveFailedSchema,
+  stockReservationExpiredSchema,
+} from './online-checkout';
+import {
+  shopProductSchema,
+  shopPageSchema,
+  onlineWarehouseSchema,
+  onlineBufferSchema,
+} from './shop-api';
 import { z } from 'zod';
 import { branchRoleSchema, roleSchema } from './auth';
 import {
@@ -36,6 +69,7 @@ import {
   deductStockResponseSchema,
   releaseStockRequestSchema,
   releaseStockResponseSchema,
+  stockOrderStateResponseSchema,
 } from './inventory-internal-api';
 import {
   addReceiptLineRequestSchema,
@@ -115,6 +149,14 @@ export const authOpenApiSchemas = (): Record<string, unknown> =>
 
 /** Tên trong `components/schemas` của docs/api/inventory.openapi.yaml → schema zod. */
 const INVENTORY_OPENAPI_SCHEMAS = {
+  OnlineOrderPaid: onlineOrderPaidSchema,
+  PaymentInventoryResult: paymentInventoryResultSchema,
+  OnlineOrderCreated: onlineOrderCreatedSchema,
+  StockReserved: stockReservedSchema,
+  StockReserveFailed: stockReserveFailedSchema,
+  StockReservationExpired: stockReservationExpiredSchema,
+  OnlineWarehouse: onlineWarehouseSchema,
+  OnlineBuffer: onlineBufferSchema,
   ErrorResponse: errorResponseSchema,
   Metal: metalSchema,
   CreateMetalRequest: createMetalRequestSchema,
@@ -151,6 +193,7 @@ const INVENTORY_OPENAPI_SCHEMAS = {
   DeductStockResponse: deductStockResponseSchema,
   ReleaseStockRequest: releaseStockRequestSchema,
   ReleaseStockResponse: releaseStockResponseSchema,
+  StockOrderStateResponse: stockOrderStateResponseSchema,
 };
 
 export const inventoryOpenApiSchemas = (): Record<string, unknown> =>
@@ -159,7 +202,19 @@ export const inventoryOpenApiSchemas = (): Record<string, unknown> =>
 /** Hợp đồng POS cùng một nguồn zod cho sales, client và OpenAPI. */
 export const salesOpenApiSchemas = (): Record<string, unknown> =>
   toOpenApiSchemas({
+    BuybackStatus: buybackStatusSchema,
+    CreateBuyback: createBuybackSchema,
+    UpdateBuyback: updateBuybackSchema,
+    SubmitBuyback: submitBuybackSchema,
+    CancelBuyback: cancelBuybackSchema,
+    BuybackDetail: buybackDetailSchema,
+    BuybackPage: buybackPageSchema,
+    BuybackQuery: buybackQuerySchema,
     ErrorResponse: errorResponseSchema,
+    ConfirmOnlinePayment: confirmOnlinePaymentSchema,
+    RequestOnlineRefund: requestOnlineRefundSchema,
+    OnlinePayment: onlinePaymentViewSchema,
+    OnlinePaymentAdmin: onlinePaymentAdminViewSchema,
     CreatePosOrderRequest: createPosOrderRequestSchema,
     CreatePosCustomerRequest: createPosCustomerRequestSchema,
     PosCustomer: posCustomerSchema,
@@ -167,4 +222,14 @@ export const salesOpenApiSchemas = (): Record<string, unknown> =>
     PosOrderStatus: posOrderStatusSchema,
     PosOrderItem: posOrderItemSchema,
     PosOrder: posOrderSchema,
+  });
+
+export const shopOpenApiSchemas = (): Record<string, unknown> =>
+  toOpenApiSchemas({
+    CreateOnlineOrder: createOnlineOrderSchema,
+    OnlineOrderView: onlineOrderViewSchema,
+    OnlineCart: onlineCartSchema,
+    ShopProduct: shopProductSchema,
+    ShopPage: shopPageSchema,
+    ErrorResponse: errorResponseSchema,
   });

@@ -48,6 +48,25 @@ export function rateLimitsFor(
   body: Buffer | undefined,
   userId?: string,
 ): RateLimit[] {
+  if (
+    ['GET', 'HEAD'].includes(method) &&
+    /^\/shop\/products(?:\/|$)/.test(normalizePath(servicePath))
+  ) {
+    return [{ key: `catalog:ip:${clientIp}`, limit: 120, ttlMs: MINUTE_MS }];
+  }
+  if (/^\/shop\/orders(?:\/|$)/.test(normalizePath(servicePath))) {
+    if (method === 'POST') return [{ key: `checkout:ip:${clientIp}`, limit: 10, ttlMs: MINUTE_MS }];
+    if (['GET', 'HEAD'].includes(method))
+      return [{ key: `online-order:ip:${clientIp}`, limit: 120, ttlMs: MINUTE_MS }];
+  }
+  if (
+    method === 'POST' &&
+    /^\/admin\/branches\/[^/]+\/online-orders\/[^/]+\/payments(?:\/|$)/.test(
+      normalizePath(servicePath),
+    )
+  ) {
+    return [{ key: `payment-admin:ip:${clientIp}`, limit: 20, ttlMs: MINUTE_MS }];
+  }
   if (method !== 'POST') {
     return [];
   }

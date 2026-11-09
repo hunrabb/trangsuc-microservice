@@ -1,6 +1,8 @@
 /** Tên exchange/queue trong infra/rabbitmq/definitions.json. Service không tự khai báo topology. */
 export const EVENTS_EXCHANGE = 'domain.events';
 export const DEAD_LETTER_EXCHANGE = 'dlx';
+/** Bản sao chỉ để quan sát; thư trong các DLQ gốc không bị lấy ra để hiển thị. */
+export const DLQ_OBSERVER_QUEUE = 'report.dlq.observer';
 
 export const QUEUES = {
   INVENTORY: 'inventory.events',
@@ -32,4 +34,10 @@ export const MESSAGE_HEADERS = {
   ERROR_REASON: 'x-error-reason',
   /** Queue chính nơi thư bị lỗi. */
   FAILED_QUEUE: 'x-failed-queue',
+  /** Routing key lúc outbox gửi lần đầu, giữ qua retry; chỉ hiển thị, không dùng để replay. */
+  ORIGINAL_ROUTING_KEY: 'x-original-routing-key',
+  /** ID tuỳ chọn cho nguồn ngoài; consumer chung để observer tự tạo ID ổn định từ messageId. */
+  DLQ_COPY_ID: 'x-dlq-copy-id',
+  /** Liên kết một lần replay với thư quay lại DLQ nếu xử lý vẫn lỗi. */
+  REPLAY_ATTEMPT_ID: 'x-replay-attempt-id',
 } as const;

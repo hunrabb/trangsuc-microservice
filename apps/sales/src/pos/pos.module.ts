@@ -6,10 +6,17 @@ import { PosCustomersController } from './pos-customers.controller';
 import { PosCustomersService } from './pos-customers.service';
 import { PosOrdersController } from './pos-orders.controller';
 import { PosOrdersService } from './pos-orders.service';
+import { PosRecoveryWorker } from './pos-recovery.worker';
 
 @Module({
   imports: [PrismaModule],
   controllers: [PosOrdersController, PosCustomersController],
-  providers: [OrderStore, InventoryStockClient, PosOrdersService, PosCustomersService],
+  providers: [
+    OrderStore,
+    InventoryStockClient,
+    PosOrdersService,
+    PosCustomersService,
+    PosRecoveryWorker,
+  ],
 })
 export class PosModule {}

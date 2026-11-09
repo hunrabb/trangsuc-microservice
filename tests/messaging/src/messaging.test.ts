@@ -43,6 +43,7 @@ import {
   startService,
   TEST_MESSAGE_HEADER,
   TEST_ROUTING_KEY,
+  testToken,
   type TestDb,
   waitFor,
 } from './support.ts';
@@ -65,6 +66,9 @@ describe('outbox + consumer trên hạ tầng thật', () => {
   const cleanups: (() => Promise<void>)[] = [];
   /** eventId mà service thật (`report`) đã ghi vào `ProcessedEvent` trong test. */
   const reportProcessed: string[] = [];
+  const inventoryProcessed: string[] = [];
+  const deferredStockEvents: string[] = [];
+  const reportOrderIds: string[] = [];
 
   const removeTestData = async () => {
     await drainTestMessages();
@@ -74,6 +78,21 @@ describe('outbox + consumer trên hạ tầng thật', () => {
     await db.processedEvent.deleteMany({
       where: { consumer: 'report', eventId: { in: reportProcessed } },
     });
+    await inventoryDb.processedEvent.deleteMany({
+      where: { consumer: 'inventory', eventId: { in: inventoryProcessed } },
+    });
+    for (const eventId of deferredStockEvents) {
+      await db.$executeRawUnsafe(
+        'DELETE FROM "report"."DeferredStockEvent" WHERE "eventId" = $1::uuid',
+        eventId,
+      );
+    }
+    for (const orderId of reportOrderIds) {
+      await db.$executeRawUnsafe(
+        'DELETE FROM "report"."OrderRevenue" WHERE "orderId" = $1::uuid',
+        orderId,
+      );
+    }
   };
 
   const snapshot = async () => {
@@ -87,6 +106,12 @@ describe('outbox + consumer trên hạ tầng thật', () => {
       reportOutbox: await count(db),
       inventoryOutbox: await count(inventoryDb),
       reportProcessed: await db.processedEvent.count(TEST_PROCESSED),
+      deferredStockEvents: await db.$queryRawUnsafe<{ count: number }[]>(
+        'SELECT count(*)::integer AS count FROM "report"."DeferredStockEvent"',
+      ),
+      orderRevenue: await db.$queryRawUnsafe<{ count: number }[]>(
+        'SELECT count(*)::integer AS count FROM "report"."OrderRevenue"',
+      ),
     };
   };
 
@@ -561,9 +586,14 @@ describe('outbox + consumer trên hạ tầng thật', () => {
 
     await newWorker(slow, { sendWindowMs: 50 }).tick();
 
-    assert.equal(published.length, 1);
+    // Máy bận có thể hết cửa sổ 50 ms ngay sau khi claim: 0 hoặc 1 thư đều đúng giới hạn.
+    assert.ok(published.length <= 1);
     const rows = await db.outboxEvent.findMany(TEST_ROWS);
-    assert.deepEqual(rows.map((row) => row.status).sort(), ['PENDING', 'PENDING', 'PUBLISHED']);
+    assert.equal(rows.filter((row) => row.status === 'PUBLISHED').length, published.length);
+    assert.equal(
+      rows.filter((row) => row.status === 'PENDING').length,
+      ids.length - published.length,
+    );
     assert.equal(Math.max(...rows.map((row) => row.attempts)), 0);
     const held = await db.$queryRawUnsafe<{ count: bigint }[]>(
       `SELECT count(*) FROM "report"."OutboxEvent"
@@ -851,6 +881,423 @@ describe('outbox + consumer trên hạ tầng thật', () => {
       );
       assert.ok(lines(inventory).every((line) => line.service === 'inventory'));
       assert.ok(lines(report).every((line) => line.service === 'report'));
+    });
+
+    it('POS events tới Inventory và stock.changed tới Report, giao trùng không ghi hai lần', async () => {
+      const orderId = randomUUID();
+      reportOrderIds.push(orderId);
+      const branchId = randomUUID();
+      const payload = {
+        orderId,
+        branchId,
+        channel: 'POS' as const,
+        code: `POS${randomUUID().replaceAll('-', '')}`,
+        total: '3500000.00',
+        tagCodes: ['POSTEST-EVENT'],
+      };
+      for (const eventType of [
+        ROUTING_KEYS.ORDER_CREATED,
+        ROUTING_KEYS.ORDER_PAID,
+        ROUTING_KEYS.ORDER_CANCELLED,
+      ]) {
+        const eventId = await db.$transaction((tx: never) =>
+          outbox.add(tx as OutboxTx, {
+            eventType,
+            aggregateType: TEST_AGGREGATE,
+            aggregateId: orderId,
+            payload:
+              eventType === ROUTING_KEYS.ORDER_PAID
+                ? {
+                    ...payload,
+                    paidAt: new Date().toISOString(),
+                    items: [
+                      {
+                        tagCode: 'POSTEST-EVENT',
+                        variantId: randomUUID(),
+                        metalId: randomUUID(),
+                        productName: 'Mẫu kiểm thử',
+                        metalWeight: '1.0000',
+                        price: '3500000.00',
+                        costPrice: '3000000.00',
+                      },
+                    ],
+                  }
+                : payload,
+          }),
+        );
+        inventoryProcessed.push(eventId);
+        if (eventType !== ROUTING_KEYS.ORDER_CREATED) reportProcessed.push(eventId);
+        if (eventType === ROUTING_KEYS.ORDER_PAID) {
+          await waitFor(
+            async () =>
+              (await db.processedEvent.count({
+                where: { consumer: 'report', eventId },
+              })) === 1,
+            15_000,
+            'paid được ghi trước thư huỷ không hợp lệ',
+          );
+        }
+      }
+      const stockEventId = await inventoryDb.$transaction((tx: never) =>
+        outbox.add(tx as OutboxTx, {
+          eventType: ROUTING_KEYS.STOCK_CHANGED,
+          aggregateType: TEST_AGGREGATE,
+          aggregateId: orderId,
+          payload: { orderId, branchId, reason: 'SOLD', tagCodes: ['POSTEST-EVENT'] },
+        }),
+      );
+      reportProcessed.push(stockEventId);
+      deferredStockEvents.push(stockEventId);
+
+      await waitFor(
+        async () =>
+          (await inventoryDb.processedEvent.count({
+            where: { consumer: 'inventory', eventId: { in: inventoryProcessed } },
+          })) === 3 &&
+          (await db.processedEvent.count({
+            where: { consumer: 'report', eventId: { in: reportProcessed } },
+          })) === 3,
+        15_000,
+        'POS events qua RabbitMQ',
+      );
+      const countDeferred = () =>
+        db.$queryRawUnsafe<{ count: number }[]>(
+          'SELECT count(*)::integer AS count FROM "report"."DeferredStockEvent" WHERE "eventId" = $1::uuid',
+          stockEventId,
+        );
+      assert.equal((await countDeferred())[0]?.count, 1);
+      const tombstone = await db.$queryRawUnsafe<{ status: string; revenue: string }[]>(
+        'SELECT status, revenue::text FROM "report"."OrderRevenue" WHERE "orderId" = $1::uuid',
+        orderId,
+      );
+      // Hai event terminal cùng một đơn là bất hợp lệ từ POS; thư huỷ tới sau
+      // không được biến doanh thu đã thu tiền thành hoàn tiền giả.
+      assert.deepEqual(tombstone, [{ status: 'PAID', revenue: '3500000.00' }]);
+      const rabbit = await connect();
+      const original = await inventoryDb.$queryRawUnsafe<
+        { payload: unknown; correlationId: string; createdAt: Date }[]
+      >(
+        'SELECT "payload", "correlationId", "createdAt" FROM "inventory"."OutboxEvent" WHERE "id" = $1::uuid',
+        stockEventId,
+      );
+      await rabbit.publish({
+        exchange: EVENTS_EXCHANGE,
+        routingKey: ROUTING_KEYS.STOCK_CHANGED,
+        content: Buffer.from(
+          JSON.stringify({
+            eventId: stockEventId,
+            eventType: ROUTING_KEYS.STOCK_CHANGED,
+            occurredAt: original[0]!.createdAt.toISOString(),
+            correlationId: original[0]!.correlationId,
+            payload: original[0]!.payload,
+          }),
+        ),
+        messageId: stockEventId,
+      });
+      await emptyQueue(QUEUE);
+      assert.equal((await countDeferred())[0]?.count, 1);
+    });
+
+    it('order.paid gửi ba lần với eventId khác nhau vẫn chỉ ghi một doanh thu và một dòng bán', async () => {
+      const orderId = randomUUID();
+      const branchId = randomUUID();
+      reportOrderIds.push(orderId);
+      const payload = {
+        orderId,
+        branchId,
+        channel: 'POS' as const,
+        code: `POS${randomUUID().replaceAll('-', '')}`,
+        total: '3500000.00',
+        tagCodes: ['POSTEST-REVENUE'],
+        paidAt: '2026-11-08T18:00:00.000Z',
+        items: [
+          {
+            tagCode: 'POSTEST-REVENUE',
+            variantId: randomUUID(),
+            metalId: randomUUID(),
+            productName: 'Nhẫn kiểm thử',
+            metalWeight: '1.0000',
+            price: '3500000.00',
+            costPrice: '3000000.00',
+          },
+        ],
+      };
+      const paidEventIds: string[] = [];
+      for (let repeat = 0; repeat < 3; repeat += 1) {
+        const eventId = await db.$transaction((tx: never) =>
+          outbox.add(tx as OutboxTx, {
+            eventType: ROUTING_KEYS.ORDER_PAID,
+            aggregateType: TEST_AGGREGATE,
+            aggregateId: orderId,
+            payload,
+          }),
+        );
+        reportProcessed.push(eventId);
+        paidEventIds.push(eventId);
+      }
+      await waitFor(
+        async () =>
+          (await db.processedEvent.count({
+            where: { consumer: 'report', eventId: { in: paidEventIds } },
+          })) === paidEventIds.length,
+        15_000,
+        'ba event paid được xử lý',
+      );
+      const rows = await db.$queryRawUnsafe<
+        {
+          branchId: string;
+          localDate: string;
+          revenue: string;
+          cogs: string;
+          lineCount: number;
+        }[]
+      >(
+        `SELECT revenue."branchId", revenue."localDate", revenue.revenue::text,
+          revenue.cogs::text, count(line."tagCode")::integer AS "lineCount"
+         FROM "report"."OrderRevenue" revenue
+         LEFT JOIN "report"."OrderLineSales" line ON line."orderId" = revenue."orderId"
+         WHERE revenue."orderId" = $1::uuid
+         GROUP BY revenue."orderId"`,
+        orderId,
+      );
+      assert.deepEqual(rows, [
+        {
+          branchId,
+          localDate: '2026-11-09',
+          revenue: '3500000.00',
+          cogs: '3000000.00',
+          lineCount: 1,
+        },
+      ]);
+      const filter = `from=2026-11-09&to=2026-11-09&branchId=${branchId}`;
+      const managerToken = await testToken('MANAGER', branchId);
+      const daily = await fetch(`http://127.0.0.1:${report.port}/admin/daily?${filter}`, {
+        headers: { authorization: `Bearer ${managerToken}` },
+      });
+      assert.equal(daily.status, 200);
+      const result = (await daily.json()) as {
+        rows: { revenue: string; cogs: string; orderCount: number }[];
+      };
+      assert.deepEqual(
+        result.rows.map(({ revenue, cogs, orderCount }) => ({ revenue, cogs, orderCount })),
+        [{ revenue: '3500000.00', cogs: '3000000.00', orderCount: 1 }],
+      );
+      const otherBranch = await fetch(
+        `http://127.0.0.1:${report.port}/admin/daily?from=2026-11-09&to=2026-11-09&branchId=${randomUUID()}`,
+        { headers: { authorization: `Bearer ${managerToken}` } },
+      );
+      assert.equal(otherBranch.status, 403);
+      const staff = await fetch(`http://127.0.0.1:${report.port}/admin/daily?${filter}`, {
+        headers: { authorization: `Bearer ${await testToken('STAFF', branchId)}` },
+      });
+      assert.equal(staff.status, 403);
+      const admin = await fetch(
+        `http://127.0.0.1:${report.port}/admin/daily?from=2026-11-09&to=2026-11-09`,
+        { headers: { authorization: `Bearer ${await testToken('ADMIN', null)}` } },
+      );
+      assert.equal(admin.status, 200);
+      const allBranches = (await admin.json()) as { rows: { branchId: string }[] };
+      assert.ok(allBranches.rows.some((row) => row.branchId === branchId));
+      const top = await fetch(`http://127.0.0.1:${report.port}/admin/top-products?${filter}`, {
+        headers: { authorization: `Bearer ${managerToken}` },
+      });
+      assert.equal(top.status, 200);
+      const products = (await top.json()) as { productName: string; quantity: number }[];
+      assert.deepEqual(
+        products.map(({ productName, quantity }) => ({ productName, quantity })),
+        [{ productName: 'Nhẫn kiểm thử', quantity: 1 }],
+      );
+    });
+
+    it('order.cancelled đến trước paid giữ doanh thu bằng 0', async () => {
+      const orderId = randomUUID();
+      const branchId = randomUUID();
+      reportOrderIds.push(orderId);
+      const base = {
+        orderId,
+        branchId,
+        channel: 'POS' as const,
+        code: `POS${randomUUID().replaceAll('-', '')}`,
+        total: '1000.00',
+        tagCodes: ['POSTEST-LATE'],
+      };
+      const cancelledId = await db.$transaction((tx: never) =>
+        outbox.add(tx as OutboxTx, {
+          eventType: ROUTING_KEYS.ORDER_CANCELLED,
+          aggregateType: TEST_AGGREGATE,
+          aggregateId: orderId,
+          payload: base,
+        }),
+      );
+      reportProcessed.push(cancelledId);
+      await waitFor(
+        async () =>
+          (await db.processedEvent.count({
+            where: { consumer: 'report', eventId: cancelledId },
+          })) === 1,
+        15_000,
+        'huỷ tới trước',
+      );
+      const paidId = await db.$transaction((tx: never) =>
+        outbox.add(tx as OutboxTx, {
+          eventType: ROUTING_KEYS.ORDER_PAID,
+          aggregateType: TEST_AGGREGATE,
+          aggregateId: orderId,
+          payload: {
+            ...base,
+            paidAt: new Date().toISOString(),
+            items: [
+              {
+                tagCode: 'POSTEST-LATE',
+                variantId: randomUUID(),
+                metalId: randomUUID(),
+                productName: 'Mẫu kiểm thử',
+                metalWeight: '1.0000',
+                price: '1000.00',
+                costPrice: '500.00',
+              },
+            ],
+          },
+        }),
+      );
+      reportProcessed.push(paidId);
+      await waitFor(
+        async () =>
+          (await db.processedEvent.count({
+            where: { consumer: 'report', eventId: paidId },
+          })) === 1,
+        15_000,
+        'paid tới muộn',
+      );
+      const rows = await db.$queryRawUnsafe<{ status: string; revenue: string }[]>(
+        'SELECT status, revenue::text FROM "report"."OrderRevenue" WHERE "orderId" = $1::uuid',
+        orderId,
+      );
+      assert.deepEqual(rows, [{ status: 'CANCELLED', revenue: '0.00' }]);
+    });
+
+    it('order.paid sai tổng tiền vào DLQ và không ghi doanh thu', async () => {
+      const orderId = randomUUID();
+      const branchId = randomUUID();
+      const correlationId = randomUUID();
+      const eventId = await runWithCorrelationId(correlationId, () =>
+        db.$transaction((tx: never) =>
+          outbox.add(tx as OutboxTx, {
+            eventType: ROUTING_KEYS.ORDER_PAID,
+            aggregateType: TEST_AGGREGATE,
+            aggregateId: orderId,
+            payload: {
+              orderId,
+              branchId,
+              channel: 'POS',
+              code: `POS${randomUUID().replaceAll('-', '')}`,
+              total: '2000.00',
+              tagCodes: ['POSTEST-INVALID'],
+              paidAt: new Date().toISOString(),
+              items: [
+                {
+                  tagCode: 'POSTEST-INVALID',
+                  variantId: randomUUID(),
+                  metalId: randomUUID(),
+                  productName: 'Mẫu kiểm thử',
+                  metalWeight: '1.0000',
+                  price: '1000.00',
+                  costPrice: '500.00',
+                },
+              ],
+            },
+          }),
+        ),
+      );
+      inventoryProcessed.push(eventId);
+      await waitFor(
+        async () =>
+          (await peekQueue(DLQ)).some((message) => message.properties.message_id === eventId),
+        15_000,
+        'thư paid sai vào DLQ',
+      );
+      const rows = await db.$queryRawUnsafe<{ count: number }[]>(
+        'SELECT count(*)::integer AS count FROM "report"."OrderRevenue" WHERE "orderId" = $1::uuid',
+        orderId,
+      );
+      assert.equal(rows[0]?.count, 0);
+      assert.equal(
+        await db.processedEvent.count({
+          where: { eventId, consumer: 'report' },
+        }),
+        0,
+      );
+      const failed = (await peekQueue(DLQ)).find(
+        (message) => message.properties.message_id === eventId,
+      );
+      assert.equal(failed?.properties.headers?.[MESSAGE_HEADERS.CORRELATION_ID], correlationId);
+    });
+
+    it('Report dừng rồi khởi động lại: thư paid chờ trong queue được xử lý một lần', async () => {
+      await new Promise<void>((resolve) => {
+        report.child.once('close', () => resolve());
+        report.child.kill();
+      });
+      const eventId = randomUUID();
+      const orderId = randomUUID();
+      const branchId = randomUUID();
+      reportProcessed.push(eventId);
+      inventoryProcessed.push(eventId);
+      reportOrderIds.push(orderId);
+      const rabbit = await connect();
+      await rabbit.publish({
+        exchange: EVENTS_EXCHANGE,
+        routingKey: ROUTING_KEYS.ORDER_PAID,
+        messageId: eventId,
+        content: Buffer.from(
+          JSON.stringify({
+            eventId,
+            eventType: ROUTING_KEYS.ORDER_PAID,
+            occurredAt: new Date().toISOString(),
+            correlationId: randomUUID(),
+            payload: {
+              orderId,
+              branchId,
+              channel: 'POS',
+              code: `POS${randomUUID().replaceAll('-', '')}`,
+              total: '1000.00',
+              tagCodes: ['POSTEST-OFFLINE'],
+              paidAt: new Date().toISOString(),
+              items: [
+                {
+                  tagCode: 'POSTEST-OFFLINE',
+                  variantId: randomUUID(),
+                  metalId: randomUUID(),
+                  productName: 'Mẫu kiểm thử',
+                  metalWeight: '1.0000',
+                  price: '1000.00',
+                  costPrice: '500.00',
+                },
+              ],
+            },
+          }),
+        ),
+      });
+      await waitFor(
+        async () =>
+          (await peekQueue(QUEUE)).some((message) => message.properties.message_id === eventId),
+        10_000,
+        'thư bền vững khi Report dừng',
+      );
+      report = await startService('report');
+      await waitFor(
+        async () =>
+          (await db.processedEvent.count({
+            where: { consumer: 'report', eventId },
+          })) === 1,
+        15_000,
+        'Report đuổi kịp sau restart',
+      );
+      const rows = await db.$queryRawUnsafe<{ revenue: string }[]>(
+        'SELECT revenue::text FROM "report"."OrderRevenue" WHERE "orderId" = $1::uuid',
+        orderId,
+      );
+      assert.deepEqual(rows, [{ revenue: '1000.00' }]);
     });
 
     it('dừng RabbitMQ: /health/ready trả 503; bật lại: tự về 200', async () => {

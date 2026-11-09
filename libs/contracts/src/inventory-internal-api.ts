@@ -53,6 +53,10 @@ export const deductedItemSchema = z.object({
   laborFee: z.string(),
   metalSellPricePerChi: z.string(),
   price: z.string(),
+  /** Giá vốn chiếc tại lúc deduct; sales chỉ chép snapshot này, không đọc database kho. */
+  costPrice: z.string(),
+  variantId: z.uuid(),
+  metalId: z.uuid(),
 });
 
 export const deductStockResponseSchema = z.object({
@@ -72,6 +76,13 @@ export const releaseStockResponseSchema = z.object({
     .describe('Rỗng nếu đơn không còn chiếc nào đang giữ (gọi lặp)'),
 });
 
+// Trạng thái bền vững dùng để Sales phục hồi sau khi mất phản hồi HTTP.
+export const stockOrderStateResponseSchema = z.object({
+  orderId: z.uuid(),
+  released: z.boolean(),
+  soldItems: z.array(z.object({ tagCode: z.string(), branchId: z.uuid() })),
+});
+
 export type QuoteStockRequest = z.infer<typeof quoteStockRequestSchema>;
 export type QuoteItem = z.infer<typeof quoteItemSchema>;
 export type QuoteStockResponse = z.infer<typeof quoteStockResponseSchema>;
@@ -80,3 +91,4 @@ export type DeductedItem = z.infer<typeof deductedItemSchema>;
 export type DeductStockResponse = z.infer<typeof deductStockResponseSchema>;
 export type ReleaseStockRequest = z.infer<typeof releaseStockRequestSchema>;
 export type ReleaseStockResponse = z.infer<typeof releaseStockResponseSchema>;
+export type StockOrderStateResponse = z.infer<typeof stockOrderStateResponseSchema>;

@@ -1,6 +1,6 @@
 openapi: 3.1.0
 info:
-  title: Sales POS API
+  title: Sales POS, Online Payments and Buyback Intake API
   version: 1.0.0
   description: >-
     Đường ở gateway. Chỉ ADMIN toàn hệ thống hoặc STAFF/MANAGER đúng chi nhánh.
@@ -10,6 +10,279 @@ info:
 security:
   - bearerAuth: []
 paths:
+  /api/admin/sales/branches/{branchId}/buybacks:
+    post:
+      operationId: createBuybackIntake
+      summary: Tạo phiếu DRAFT; cùng actor/branch/key và nội dung chuẩn hoá trả cùng phiếu
+      x-roles: [ADMIN, MANAGER, STAFF]
+      description: >-
+        Chỉ tiếp nhận thông tin, không kiểm định/định giá/chi tiền/nhập kho/chuyển quyền sở hữu.
+        Mỗi dòng là một món, tối đa 20; trọng lượng chỉ là khai báo hoặc đo ban đầu, đơn vị chỉ.
+        STORE_TAG là tham chiếu chưa xác minh. Cache-Control no-store; token backoffice bắt buộc.
+      parameters:
+        - { in: path, name: branchId, required: true, schema: { type: string, format: uuid } }
+        - { in: header, name: Idempotency-Key, required: true, schema: { type: string, minLength: 1, maxLength: 200 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateBuyback' }
+      responses:
+        '201':
+          description: Snapshot phiếu hiện tại; không trả idempotency key/hash. PUT thay mới ID dòng khi còn DRAFT.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BuybackDetail' }
+        '400': { description: VALIDATION_FAILED hoặc UUID/header không hợp lệ; không nhận giá/status/actor từ client }
+        '401': { description: Cần token nhân viên backoffice }
+        '403': { description: FORBIDDEN; không có quyền chi nhánh hoặc STAFF sửa phiếu người khác }
+        '404': { description: NOT_FOUND trong phạm vi chi nhánh/actor được phép }
+        '409': { description: VERSION_CONFLICT hoặc INVALID_STATE; tải lại phiếu trước khi thao tác }
+        '422': { description: IDEMPOTENCY_KEY_REUSED khi tạo lại cùng key nhưng nội dung khác }
+        '503': { description: SERVICE_UNAVAILABLE khi hết thời gian chờ khoá }
+    get:
+      operationId: listBuybackIntakes
+      summary: Danh sách trong chi nhánh theo receivedAt DESC rồi id DESC
+      x-roles: [ADMIN, MANAGER, STAFF]
+      description: >-
+        Chỉ tiếp nhận thông tin, không kiểm định/định giá/chi tiền/nhập kho/chuyển quyền sở hữu.
+        Mỗi dòng là một món, tối đa 20; trọng lượng chỉ là khai báo hoặc đo ban đầu, đơn vị chỉ.
+        STORE_TAG là tham chiếu chưa xác minh. Cache-Control no-store; token backoffice bắt buộc.
+      parameters:
+        - { in: path, name: branchId, required: true, schema: { type: string, format: uuid } }
+        - { in: query, name: page, schema: { type: integer, minimum: 1, maximum: 10000, default: 1 } }
+        - { in: query, name: pageSize, schema: { type: integer, minimum: 1, maximum: 50, default: 20 } }
+        - { in: query, name: status, schema: { $ref: '#/components/schemas/BuybackStatus' } }
+        - { in: query, name: from, description: 'receivedAt >= from, UTC; from <= to', schema: { type: string, format: date-time } }
+        - { in: query, name: to, description: 'receivedAt <= to, UTC', schema: { type: string, format: date-time } }
+      responses:
+        '200':
+          description: Snapshot phiếu hiện tại; không trả idempotency key/hash. PUT thay mới ID dòng khi còn DRAFT.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BuybackPage' }
+        '400': { description: VALIDATION_FAILED hoặc UUID/header không hợp lệ; không nhận giá/status/actor từ client }
+        '401': { description: Cần token nhân viên backoffice }
+        '403': { description: FORBIDDEN; không có quyền chi nhánh hoặc STAFF sửa phiếu người khác }
+        '404': { description: NOT_FOUND trong phạm vi chi nhánh/actor được phép }
+        '409': { description: VERSION_CONFLICT hoặc INVALID_STATE; tải lại phiếu trước khi thao tác }
+        '422': { description: IDEMPOTENCY_KEY_REUSED khi tạo lại cùng key nhưng nội dung khác }
+        '503': { description: SERVICE_UNAVAILABLE khi hết thời gian chờ khoá }
+  /api/admin/sales/branches/{branchId}/buybacks/by-key:
+    get:
+      operationId: getBuybackIntakeByKey
+      summary: Tra key của chính actor trong chi nhánh; không đưa key vào URL
+      x-roles: [ADMIN, MANAGER, STAFF]
+      description: >-
+        Chỉ tiếp nhận thông tin, không kiểm định/định giá/chi tiền/nhập kho/chuyển quyền sở hữu.
+        Mỗi dòng là một món, tối đa 20; trọng lượng chỉ là khai báo hoặc đo ban đầu, đơn vị chỉ.
+        STORE_TAG là tham chiếu chưa xác minh. Cache-Control no-store; token backoffice bắt buộc.
+      parameters:
+        - { in: path, name: branchId, required: true, schema: { type: string, format: uuid } }
+        - { in: header, name: Idempotency-Key, required: true, schema: { type: string, minLength: 1, maxLength: 200 } }
+      responses:
+        '200':
+          description: Snapshot phiếu hiện tại; không trả idempotency key/hash. PUT thay mới ID dòng khi còn DRAFT.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BuybackDetail' }
+        '400': { description: VALIDATION_FAILED hoặc UUID/header không hợp lệ; không nhận giá/status/actor từ client }
+        '401': { description: Cần token nhân viên backoffice }
+        '403': { description: FORBIDDEN; không có quyền chi nhánh hoặc STAFF sửa phiếu người khác }
+        '404': { description: NOT_FOUND trong phạm vi chi nhánh/actor được phép }
+        '409': { description: VERSION_CONFLICT hoặc INVALID_STATE; tải lại phiếu trước khi thao tác }
+        '422': { description: IDEMPOTENCY_KEY_REUSED khi tạo lại cùng key nhưng nội dung khác }
+        '503': { description: SERVICE_UNAVAILABLE khi hết thời gian chờ khoá }
+  /api/admin/sales/branches/{branchId}/buybacks/{id}:
+    get:
+      operationId: getBuybackIntake
+      summary: Xem phiếu và tối đa 50 audit gần nhất theo version giảm dần
+      x-roles: [ADMIN, MANAGER, STAFF]
+      description: >-
+        Chỉ tiếp nhận thông tin, không kiểm định/định giá/chi tiền/nhập kho/chuyển quyền sở hữu.
+        Mỗi dòng là một món, tối đa 20; trọng lượng chỉ là khai báo hoặc đo ban đầu, đơn vị chỉ.
+        STORE_TAG là tham chiếu chưa xác minh. Cache-Control no-store; token backoffice bắt buộc.
+      parameters:
+        - { in: path, name: branchId, required: true, schema: { type: string, format: uuid } }
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Snapshot phiếu hiện tại; không trả idempotency key/hash. PUT thay mới ID dòng khi còn DRAFT.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BuybackDetail' }
+        '400': { description: VALIDATION_FAILED hoặc UUID/header không hợp lệ; không nhận giá/status/actor từ client }
+        '401': { description: Cần token nhân viên backoffice }
+        '403': { description: FORBIDDEN; không có quyền chi nhánh hoặc STAFF sửa phiếu người khác }
+        '404': { description: NOT_FOUND trong phạm vi chi nhánh/actor được phép }
+        '409': { description: VERSION_CONFLICT hoặc INVALID_STATE; tải lại phiếu trước khi thao tác }
+        '422': { description: IDEMPOTENCY_KEY_REUSED khi tạo lại cùng key nhưng nội dung khác }
+        '503': { description: SERVICE_UNAVAILABLE khi hết thời gian chờ khoá }
+    put:
+      operationId: updateBuybackIntake
+      summary: Thay toàn bộ nội dung DRAFT; STAFF chỉ sửa phiếu của mình
+      x-roles: [ADMIN, MANAGER, STAFF]
+      description: >-
+        Chỉ tiếp nhận thông tin, không kiểm định/định giá/chi tiền/nhập kho/chuyển quyền sở hữu.
+        Mỗi dòng là một món, tối đa 20; trọng lượng chỉ là khai báo hoặc đo ban đầu, đơn vị chỉ.
+        STORE_TAG là tham chiếu chưa xác minh. Cache-Control no-store; token backoffice bắt buộc.
+      parameters:
+        - { in: path, name: branchId, required: true, schema: { type: string, format: uuid } }
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateBuyback' }
+      responses:
+        '200':
+          description: Snapshot phiếu hiện tại; không trả idempotency key/hash. PUT thay mới ID dòng khi còn DRAFT.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BuybackDetail' }
+        '400': { description: VALIDATION_FAILED hoặc UUID/header không hợp lệ; không nhận giá/status/actor từ client }
+        '401': { description: Cần token nhân viên backoffice }
+        '403': { description: FORBIDDEN; không có quyền chi nhánh hoặc STAFF sửa phiếu người khác }
+        '404': { description: NOT_FOUND trong phạm vi chi nhánh/actor được phép }
+        '409': { description: VERSION_CONFLICT hoặc INVALID_STATE; tải lại phiếu trước khi thao tác }
+        '422': { description: IDEMPOTENCY_KEY_REUSED khi tạo lại cùng key nhưng nội dung khác }
+        '503': { description: SERVICE_UNAVAILABLE khi hết thời gian chờ khoá }
+  /api/admin/sales/branches/{branchId}/buybacks/{id}/submit:
+    post:
+      operationId: submitBuybackIntake
+      summary: DRAFT sang PENDING_APPRAISAL; STAFF chỉ gửi phiếu của mình
+      x-roles: [ADMIN, MANAGER, STAFF]
+      description: >-
+        Chỉ tiếp nhận thông tin, không kiểm định/định giá/chi tiền/nhập kho/chuyển quyền sở hữu.
+        Mỗi dòng là một món, tối đa 20; trọng lượng chỉ là khai báo hoặc đo ban đầu, đơn vị chỉ.
+        STORE_TAG là tham chiếu chưa xác minh. Cache-Control no-store; token backoffice bắt buộc.
+      parameters:
+        - { in: path, name: branchId, required: true, schema: { type: string, format: uuid } }
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SubmitBuyback' }
+      responses:
+        '200':
+          description: Snapshot phiếu hiện tại; không trả idempotency key/hash. PUT thay mới ID dòng khi còn DRAFT.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BuybackDetail' }
+        '400': { description: VALIDATION_FAILED hoặc UUID/header không hợp lệ; không nhận giá/status/actor từ client }
+        '401': { description: Cần token nhân viên backoffice }
+        '403': { description: FORBIDDEN; không có quyền chi nhánh hoặc STAFF sửa phiếu người khác }
+        '404': { description: NOT_FOUND trong phạm vi chi nhánh/actor được phép }
+        '409': { description: VERSION_CONFLICT hoặc INVALID_STATE; tải lại phiếu trước khi thao tác }
+        '422': { description: IDEMPOTENCY_KEY_REUSED khi tạo lại cùng key nhưng nội dung khác }
+        '503': { description: SERVICE_UNAVAILABLE khi hết thời gian chờ khoá }
+  /api/admin/sales/branches/{branchId}/buybacks/{id}/cancel:
+    post:
+      operationId: cancelBuybackIntake
+      summary: STAFF huỷ DRAFT của mình; MANAGER/ADMIN huỷ DRAFT hoặc PENDING_APPRAISAL
+      x-roles: [ADMIN, MANAGER, STAFF]
+      description: >-
+        Chỉ tiếp nhận thông tin, không kiểm định/định giá/chi tiền/nhập kho/chuyển quyền sở hữu.
+        Mỗi dòng là một món, tối đa 20; trọng lượng chỉ là khai báo hoặc đo ban đầu, đơn vị chỉ.
+        STORE_TAG là tham chiếu chưa xác minh. Cache-Control no-store; token backoffice bắt buộc.
+      parameters:
+        - { in: path, name: branchId, required: true, schema: { type: string, format: uuid } }
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CancelBuyback' }
+      responses:
+        '200':
+          description: Snapshot phiếu hiện tại; không trả idempotency key/hash. PUT thay mới ID dòng khi còn DRAFT.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BuybackDetail' }
+        '400': { description: VALIDATION_FAILED hoặc UUID/header không hợp lệ; không nhận giá/status/actor từ client }
+        '401': { description: Cần token nhân viên backoffice }
+        '403': { description: FORBIDDEN; không có quyền chi nhánh hoặc STAFF sửa phiếu người khác }
+        '404': { description: NOT_FOUND trong phạm vi chi nhánh/actor được phép }
+        '409': { description: VERSION_CONFLICT hoặc INVALID_STATE; tải lại phiếu trước khi thao tác }
+        '422': { description: IDEMPOTENCY_KEY_REUSED khi tạo lại cùng key nhưng nội dung khác }
+        '503': { description: SERVICE_UNAVAILABLE khi hết thời gian chờ khoá }
+  /api/admin/sales/branches/{branchId}/online-orders/{orderId}/payments/confirm:
+    post:
+      operationId: confirmOnlineBankReceipt
+      summary: ADMIN hoặc MANAGER đúng chi nhánh xác minh tiền nhận từ sao kê
+      x-roles: [ADMIN, MANAGER]
+      description: >-
+        Xác nhận thủ công có trách nhiệm sau khi kiểm chứng tiền vào tài khoản doanh nghiệp.
+        Không dành cho khách và không phải webhook. Currency VND và số tiền phải khớp giá backend.
+        bankTxnRef là reference ngân hàng có namespace tài khoản; evidenceRef tham chiếu dòng sao kê.
+        Receipt và outbox order.paid lưu atomically. Đơn chỉ CONFIRMED sau phản hồi Inventory.
+        Giao dịch đến muộn hoặc giao dịch thực bổ sung được lưu REFUND_PENDING, chưa hoàn tiền.
+      parameters:
+        - { in: path, name: branchId, required: true, schema: { type: string, format: uuid } }
+        - { in: path, name: orderId, required: true, schema: { type: string, format: uuid } }
+        - { in: header, name: Idempotency-Key, required: true, schema: { type: string, minLength: 1, maxLength: 200 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ConfirmOnlinePayment' }
+      responses:
+        '200':
+          description: Giao dịch bền vững hoặc kết quả idempotent; Cache-Control no-store
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OnlinePayment' }
+        '400': { description: Body/header/currency không hợp lệ }
+        '401': { description: Cần token nhân viên }
+        '403': { description: Không đúng quyền ADMIN/MANAGER chi nhánh }
+        '404': { description: Không có đơn ở chi nhánh }
+        '409': { description: PAYMENT_AMOUNT_MISMATCH hoặc PAYMENT_REFERENCE_CONFLICT hoặc PAYMENT_RECONCILIATION_REQUIRED }
+        '422': { description: IDEMPOTENCY_KEY_REUSED }
+        '429': { description: Vượt 20 payment POST/phút/IP }
+  /api/admin/sales/branches/{branchId}/online-orders/{orderId}/payments:
+    get:
+      operationId: listOnlinePaymentsForReconciliation
+      summary: Xem tối đa 50 receipt mới nhất để đối soát thủ công
+      x-roles: [ADMIN, MANAGER]
+      parameters:
+        - { in: path, name: branchId, required: true, schema: { type: string, format: uuid } }
+        - { in: path, name: orderId, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Dữ liệu chỉ dành cho nhân viên có quyền; Cache-Control no-store
+          content:
+            application/json:
+              schema: { type: array, maxItems: 50, items: { $ref: '#/components/schemas/OnlinePaymentAdmin' } }
+        '401': { description: Cần token nhân viên }
+        '403': { description: Không có quyền }
+        '404': { description: Không có đơn tại chi nhánh }
+  /api/admin/sales/branches/{branchId}/online-orders/{orderId}/payments/{paymentId}/refund-request:
+    post:
+      operationId: requestOnlineRefund
+      summary: Ghi yêu cầu hoàn tiền; không chuyển tiền hoặc xác nhận đã hoàn
+      x-roles: [ADMIN, MANAGER]
+      parameters:
+        - { in: path, name: branchId, required: true, schema: { type: string, format: uuid } }
+        - { in: path, name: orderId, required: true, schema: { type: string, format: uuid } }
+        - { in: path, name: paymentId, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RequestOnlineRefund' }
+      responses:
+        '200':
+          description: REFUND_PENDING; retry không tạo yêu cầu lần hai và không có REFUNDED
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OnlinePayment' }
+        '400': { description: Body không hợp lệ }
+        '401': { description: Cần token nhân viên }
+        '403': { description: Không có quyền }
+        '404': { description: Không có đơn/giao dịch tại chi nhánh }
+        '429': { description: Vượt 20 payment POST/phút/IP }
+
   /api/pos/orders:
     post:
       operationId: createPosOrder
@@ -222,6 +495,629 @@ components:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
   schemas:
+    BuybackStatus:
+      type: "string"
+      enum:
+        - "DRAFT"
+        - "PENDING_APPRAISAL"
+        - "CANCELLED"
+    CreateBuyback:
+      type: "object"
+      properties:
+        customer:
+          anyOf:
+            - type: "object"
+              properties:
+                customerId:
+                  type: "string"
+                  format: "uuid"
+                  pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              required:
+                - "customerId"
+              additionalProperties: false
+            - type: "object"
+              properties:
+                name:
+                  type: "string"
+                  minLength: 1
+                  maxLength: 150
+                phone:
+                  type: "string"
+                  minLength: 9
+                  maxLength: 32
+              required:
+                - "name"
+                - "phone"
+              additionalProperties: false
+        notes:
+          default: null
+          anyOf:
+            - type: "string"
+              minLength: 1
+              maxLength: 2000
+            - type: "null"
+        items:
+          minItems: 1
+          maxItems: 20
+          type: "array"
+          items:
+            type: "object"
+            properties:
+              source:
+                type: "string"
+                enum:
+                  - "STORE_TAG"
+                  - "EXTERNAL"
+              referenceTagCode:
+                default: null
+                description: "Bắt buộc với STORE_TAG, phải null với EXTERNAL; chỉ là tham chiếu chưa xác minh"
+                anyOf:
+                  - type: "string"
+                    minLength: 1
+                    maxLength: 100
+                  - type: "null"
+              assetKind:
+                type: "string"
+                enum:
+                  - "GOLD"
+                  - "SILVER"
+                  - "JEWELRY"
+              description:
+                type: "string"
+                minLength: 1
+                maxLength: 1000
+              condition:
+                type: "string"
+                minLength: 1
+                maxLength: 1000
+              declaredWeight:
+                default: null
+                description: "Trọng lượng khách khai, đơn vị chỉ; chưa kiểm định"
+                anyOf:
+                  - type: "string"
+                    pattern: "^\\d{1,8}(\\.\\d{1,4})?$"
+                    description: "Trọng lượng (chỉ), chuỗi thập phân"
+                  - type: "null"
+              initialMeasuredWeight:
+                default: null
+                description: "Số đo ban đầu, đơn vị chỉ; chưa xác nhận kiểm định"
+                anyOf:
+                  - type: "string"
+                    pattern: "^\\d{1,8}(\\.\\d{1,4})?$"
+                    description: "Trọng lượng (chỉ), chuỗi thập phân"
+                  - type: "null"
+              declaredPurity:
+                default: null
+                description: "Hàm lượng khách khai, không phải kết quả kiểm định"
+                anyOf:
+                  - type: "string"
+                    minLength: 1
+                    maxLength: 100
+                  - type: "null"
+              notes:
+                default: null
+                anyOf:
+                  - type: "string"
+                    minLength: 1
+                    maxLength: 1000
+                  - type: "null"
+            required:
+              - "source"
+              - "referenceTagCode"
+              - "assetKind"
+              - "description"
+              - "condition"
+              - "declaredWeight"
+              - "initialMeasuredWeight"
+              - "declaredPurity"
+              - "notes"
+            additionalProperties: false
+      required:
+        - "customer"
+        - "notes"
+        - "items"
+      additionalProperties: false
+    UpdateBuyback:
+      type: "object"
+      properties:
+        customer:
+          anyOf:
+            - type: "object"
+              properties:
+                customerId:
+                  type: "string"
+                  format: "uuid"
+                  pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              required:
+                - "customerId"
+              additionalProperties: false
+            - type: "object"
+              properties:
+                name:
+                  type: "string"
+                  minLength: 1
+                  maxLength: 150
+                phone:
+                  type: "string"
+                  minLength: 9
+                  maxLength: 32
+              required:
+                - "name"
+                - "phone"
+              additionalProperties: false
+        notes:
+          default: null
+          anyOf:
+            - type: "string"
+              minLength: 1
+              maxLength: 2000
+            - type: "null"
+        items:
+          minItems: 1
+          maxItems: 20
+          type: "array"
+          items:
+            type: "object"
+            properties:
+              source:
+                type: "string"
+                enum:
+                  - "STORE_TAG"
+                  - "EXTERNAL"
+              referenceTagCode:
+                default: null
+                description: "Bắt buộc với STORE_TAG, phải null với EXTERNAL; chỉ là tham chiếu chưa xác minh"
+                anyOf:
+                  - type: "string"
+                    minLength: 1
+                    maxLength: 100
+                  - type: "null"
+              assetKind:
+                type: "string"
+                enum:
+                  - "GOLD"
+                  - "SILVER"
+                  - "JEWELRY"
+              description:
+                type: "string"
+                minLength: 1
+                maxLength: 1000
+              condition:
+                type: "string"
+                minLength: 1
+                maxLength: 1000
+              declaredWeight:
+                default: null
+                description: "Trọng lượng khách khai, đơn vị chỉ; chưa kiểm định"
+                anyOf:
+                  - type: "string"
+                    pattern: "^\\d{1,8}(\\.\\d{1,4})?$"
+                    description: "Trọng lượng (chỉ), chuỗi thập phân"
+                  - type: "null"
+              initialMeasuredWeight:
+                default: null
+                description: "Số đo ban đầu, đơn vị chỉ; chưa xác nhận kiểm định"
+                anyOf:
+                  - type: "string"
+                    pattern: "^\\d{1,8}(\\.\\d{1,4})?$"
+                    description: "Trọng lượng (chỉ), chuỗi thập phân"
+                  - type: "null"
+              declaredPurity:
+                default: null
+                description: "Hàm lượng khách khai, không phải kết quả kiểm định"
+                anyOf:
+                  - type: "string"
+                    minLength: 1
+                    maxLength: 100
+                  - type: "null"
+              notes:
+                default: null
+                anyOf:
+                  - type: "string"
+                    minLength: 1
+                    maxLength: 1000
+                  - type: "null"
+            required:
+              - "source"
+              - "referenceTagCode"
+              - "assetKind"
+              - "description"
+              - "condition"
+              - "declaredWeight"
+              - "initialMeasuredWeight"
+              - "declaredPurity"
+              - "notes"
+            additionalProperties: false
+        version:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
+      required:
+        - "customer"
+        - "notes"
+        - "items"
+        - "version"
+      additionalProperties: false
+    SubmitBuyback:
+      type: "object"
+      properties:
+        version:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
+      required:
+        - "version"
+      additionalProperties: false
+    CancelBuyback:
+      type: "object"
+      properties:
+        version:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
+        reason:
+          type: "string"
+          minLength: 5
+          maxLength: 500
+      required:
+        - "version"
+        - "reason"
+      additionalProperties: false
+    BuybackDetail:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        code:
+          type: "string"
+          maxLength: 50
+        branchId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        createdBy:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        customerId:
+          anyOf:
+            - type: "string"
+              format: "uuid"
+              pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            - type: "null"
+        customerName:
+          type: "string"
+          maxLength: 150
+        status:
+          $ref: "#/components/schemas/BuybackStatus"
+        version:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
+        receivedAt:
+          type: "string"
+          format: "date-time"
+          pattern: "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+        updatedAt:
+          type: "string"
+          format: "date-time"
+          pattern: "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+        submittedAt:
+          anyOf:
+            - type: "string"
+              format: "date-time"
+              pattern: "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+            - type: "null"
+        cancelledAt:
+          anyOf:
+            - type: "string"
+              format: "date-time"
+              pattern: "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+            - type: "null"
+        itemCount:
+          type: "integer"
+          minimum: 1
+          maximum: 20
+        customerPhone:
+          type: "string"
+          pattern: "^0\\d{9,10}$"
+        notes:
+          anyOf:
+            - type: "string"
+              maxLength: 2000
+            - type: "null"
+        cancellationReason:
+          anyOf:
+            - type: "string"
+              maxLength: 500
+            - type: "null"
+        items:
+          minItems: 1
+          maxItems: 20
+          type: "array"
+          items:
+            type: "object"
+            properties:
+              source:
+                type: "string"
+                enum:
+                  - "STORE_TAG"
+                  - "EXTERNAL"
+              referenceTagCode:
+                default: null
+                description: "Bắt buộc với STORE_TAG, phải null với EXTERNAL; chỉ là tham chiếu chưa xác minh"
+                anyOf:
+                  - type: "string"
+                    minLength: 1
+                    maxLength: 100
+                  - type: "null"
+              assetKind:
+                type: "string"
+                enum:
+                  - "GOLD"
+                  - "SILVER"
+                  - "JEWELRY"
+              description:
+                type: "string"
+                minLength: 1
+                maxLength: 1000
+              condition:
+                type: "string"
+                minLength: 1
+                maxLength: 1000
+              declaredWeight:
+                default: null
+                description: "Trọng lượng khách khai, đơn vị chỉ; chưa kiểm định"
+                anyOf:
+                  - type: "string"
+                    pattern: "^\\d{1,8}(\\.\\d{1,4})?$"
+                    description: "Trọng lượng (chỉ), chuỗi thập phân"
+                  - type: "null"
+              initialMeasuredWeight:
+                default: null
+                description: "Số đo ban đầu, đơn vị chỉ; chưa xác nhận kiểm định"
+                anyOf:
+                  - type: "string"
+                    pattern: "^\\d{1,8}(\\.\\d{1,4})?$"
+                    description: "Trọng lượng (chỉ), chuỗi thập phân"
+                  - type: "null"
+              declaredPurity:
+                default: null
+                description: "Hàm lượng khách khai, không phải kết quả kiểm định"
+                anyOf:
+                  - type: "string"
+                    minLength: 1
+                    maxLength: 100
+                  - type: "null"
+              notes:
+                default: null
+                anyOf:
+                  - type: "string"
+                    minLength: 1
+                    maxLength: 1000
+                  - type: "null"
+              id:
+                type: "string"
+                format: "uuid"
+                pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              position:
+                type: "integer"
+                minimum: 1
+                maximum: 20
+            required:
+              - "source"
+              - "referenceTagCode"
+              - "assetKind"
+              - "description"
+              - "condition"
+              - "declaredWeight"
+              - "initialMeasuredWeight"
+              - "declaredPurity"
+              - "notes"
+              - "id"
+              - "position"
+            additionalProperties: false
+        latestAudit:
+          maxItems: 50
+          type: "array"
+          items:
+            type: "object"
+            properties:
+              id:
+                type: "string"
+                format: "uuid"
+                pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              actorId:
+                type: "string"
+                format: "uuid"
+                pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              branchId:
+                type: "string"
+                format: "uuid"
+                pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              action:
+                type: "string"
+                enum:
+                  - "CREATED"
+                  - "UPDATED"
+                  - "SUBMITTED"
+                  - "CANCELLED"
+              fromStatus:
+                anyOf:
+                  - $ref: "#/components/schemas/BuybackStatus"
+                  - type: "null"
+              toStatus:
+                $ref: "#/components/schemas/BuybackStatus"
+              fromVersion:
+                anyOf:
+                  - type: "integer"
+                    exclusiveMinimum: 0
+                    maximum: 9007199254740991
+                  - type: "null"
+              toVersion:
+                type: "integer"
+                exclusiveMinimum: 0
+                maximum: 9007199254740991
+              createdAt:
+                type: "string"
+                format: "date-time"
+                pattern: "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+            required:
+              - "id"
+              - "actorId"
+              - "branchId"
+              - "action"
+              - "fromStatus"
+              - "toStatus"
+              - "fromVersion"
+              - "toVersion"
+              - "createdAt"
+            additionalProperties: false
+      required:
+        - "id"
+        - "code"
+        - "branchId"
+        - "createdBy"
+        - "customerId"
+        - "customerName"
+        - "status"
+        - "version"
+        - "receivedAt"
+        - "updatedAt"
+        - "submittedAt"
+        - "cancelledAt"
+        - "itemCount"
+        - "customerPhone"
+        - "notes"
+        - "cancellationReason"
+        - "items"
+        - "latestAudit"
+      additionalProperties: false
+    BuybackPage:
+      type: "object"
+      properties:
+        items:
+          type: "array"
+          items:
+            type: "object"
+            properties:
+              id:
+                type: "string"
+                format: "uuid"
+                pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              code:
+                type: "string"
+                maxLength: 50
+              branchId:
+                type: "string"
+                format: "uuid"
+                pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              createdBy:
+                type: "string"
+                format: "uuid"
+                pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              customerId:
+                anyOf:
+                  - type: "string"
+                    format: "uuid"
+                    pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  - type: "null"
+              customerName:
+                type: "string"
+                maxLength: 150
+              status:
+                $ref: "#/components/schemas/BuybackStatus"
+              version:
+                type: "integer"
+                exclusiveMinimum: 0
+                maximum: 9007199254740991
+              receivedAt:
+                type: "string"
+                format: "date-time"
+                pattern: "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              updatedAt:
+                type: "string"
+                format: "date-time"
+                pattern: "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              submittedAt:
+                anyOf:
+                  - type: "string"
+                    format: "date-time"
+                    pattern: "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                  - type: "null"
+              cancelledAt:
+                anyOf:
+                  - type: "string"
+                    format: "date-time"
+                    pattern: "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                  - type: "null"
+              itemCount:
+                type: "integer"
+                minimum: 1
+                maximum: 20
+            required:
+              - "id"
+              - "code"
+              - "branchId"
+              - "createdBy"
+              - "customerId"
+              - "customerName"
+              - "status"
+              - "version"
+              - "receivedAt"
+              - "updatedAt"
+              - "submittedAt"
+              - "cancelledAt"
+              - "itemCount"
+            additionalProperties: false
+        total:
+          type: "integer"
+          minimum: 0
+          maximum: 9007199254740991
+          description: "Tổng số dòng khớp, không chỉ trang này"
+        page:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
+        pageSize:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
+      required:
+        - "items"
+        - "total"
+        - "page"
+        - "pageSize"
+      additionalProperties: false
+    BuybackQuery:
+      type: "object"
+      properties:
+        page:
+          default: 1
+          type: "integer"
+          minimum: 1
+          maximum: 10000
+        pageSize:
+          default: 20
+          type: "integer"
+          minimum: 1
+          maximum: 50
+        status:
+          $ref: "#/components/schemas/BuybackStatus"
+        from:
+          type: "string"
+          format: "date-time"
+          pattern: "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+        to:
+          type: "string"
+          format: "date-time"
+          pattern: "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+      required:
+        - "page"
+        - "pageSize"
+      additionalProperties: false
     ErrorResponse:
       type: "object"
       properties:
@@ -244,11 +1140,24 @@ components:
             - "LAST_ADMIN"
             - "METAL_PRICE_NOT_SET"
             - "ITEM_NOT_AVAILABLE"
+            - "RESERVATION_EXPIRED"
+            - "RESERVATION_RELEASED"
+            - "PRICE_NOT_AVAILABLE"
+            - "PAYMENT_AMOUNT_MISMATCH"
+            - "PAYMENT_REFERENCE_CONFLICT"
+            - "PAYMENT_RECONCILIATION_REQUIRED"
             - "INVALID_ITEM_STATE"
             - "IDEMPOTENCY_KEY_REUSED"
             - "PAYLOAD_TOO_LARGE"
             - "RATE_LIMITED"
             - "SERVICE_UNAVAILABLE"
+            - "INVALID_DLQ_REQUEST"
+            - "DLQ_NOT_FOUND"
+            - "DLQ_NOT_REPLAYABLE"
+            - "DLQ_REPLAY_BUSY"
+            - "DLQ_PUBLISH_UNCONFIRMED"
+            - "DLQ_PUBLISH_FAILED"
+            - "DLQ_AUDIT_UNCONFIRMED"
             - "INTERNAL_ERROR"
         message:
           type: "string"
@@ -263,6 +1172,120 @@ components:
         - "code"
         - "message"
         - "correlationId"
+      additionalProperties: false
+    ConfirmOnlinePayment:
+      type: "object"
+      properties:
+        bankTxnRef:
+          type: "string"
+          minLength: 1
+          maxLength: 200
+          pattern: "^[A-Za-z0-9._:/-]+$"
+        amount:
+          type: "string"
+          pattern: "^\\d{1,18}\\.\\d{2}$"
+        currency:
+          type: "string"
+          const: "VND"
+        evidenceRef:
+          type: "string"
+          minLength: 5
+          maxLength: 500
+      required:
+        - "bankTxnRef"
+        - "amount"
+        - "currency"
+        - "evidenceRef"
+      additionalProperties: false
+    RequestOnlineRefund:
+      type: "object"
+      properties:
+        reason:
+          type: "string"
+          minLength: 5
+          maxLength: 500
+      required:
+        - "reason"
+      additionalProperties: false
+    OnlinePayment:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        orderId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        amount:
+          type: "string"
+          pattern: "^\\d{1,18}\\.\\d{2}$"
+        currency:
+          type: "string"
+          const: "VND"
+        status:
+          type: "string"
+          enum:
+            - "RECEIVED"
+            - "INVENTORY_CONFIRMED"
+            - "RECONCILIATION_REQUIRED"
+            - "REFUND_PENDING"
+        receivedAt:
+          type: "string"
+          format: "date-time"
+          pattern: "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+      required:
+        - "id"
+        - "orderId"
+        - "amount"
+        - "currency"
+        - "status"
+        - "receivedAt"
+      additionalProperties: false
+    OnlinePaymentAdmin:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        orderId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        amount:
+          type: "string"
+          pattern: "^\\d{1,18}\\.\\d{2}$"
+        currency:
+          type: "string"
+          const: "VND"
+        status:
+          type: "string"
+          enum:
+            - "RECEIVED"
+            - "INVENTORY_CONFIRMED"
+            - "RECONCILIATION_REQUIRED"
+            - "REFUND_PENDING"
+        receivedAt:
+          type: "string"
+          format: "date-time"
+          pattern: "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+        bankTxnRef:
+          type: "string"
+          maxLength: 200
+        evidenceRef:
+          type: "string"
+          maxLength: 500
+      required:
+        - "id"
+        - "orderId"
+        - "amount"
+        - "currency"
+        - "status"
+        - "receivedAt"
+        - "bankTxnRef"
+        - "evidenceRef"
       additionalProperties: false
     CreatePosOrderRequest:
       type: "object"

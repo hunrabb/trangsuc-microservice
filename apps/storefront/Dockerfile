@@ -9,6 +9,7 @@ ARG NGINX_VERSION=1.30.6
 # ---------------------------------------------------------------- Tầng build
 FROM node:${NODE_VERSION}-slim AS build
 ARG PNPM_VERSION
+ARG VITE_STORE_NAME=""
 RUN npm install -g pnpm@${PNPM_VERSION}
 WORKDIR /app
 
@@ -17,7 +18,7 @@ RUN pnpm fetch
 
 COPY . .
 RUN pnpm install --offline --frozen-lockfile --filter "@jewelry/storefront..." --filter "."
-RUN pnpm --filter @jewelry/storefront build
+RUN pnpm --filter @jewelry/contracts build && pnpm --filter @jewelry/storefront build
 
 # ---------------------------------------------------------------- Tầng chạy: web server file tĩnh
 # Frontend không có Prisma nên dùng được bản alpine nhẹ.

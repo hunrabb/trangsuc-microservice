@@ -358,6 +358,23 @@ Customer 1 ──< Order (→ auth.Branch, → inventory.Warehouse)
 | Payment | orderId, type (`PAYMENT`, `REFUND`), amount, status (`PENDING`, `CONFIRMED`, `REFUND_PENDING`, `REFUNDED`), bankTransactionId, confirmedBy, confirmedAt |  |
 | ReturnOrder / ReturnItem | orderId, reason, refundAmount / variantId, quantity | Trả hàng |
 
+### 5.3.1 Tiếp nhận thu mua — Task 7.1
+
+Sales sở hữu `BuybackIntake` (chi nhánh, actor JWT, liên hệ khách snapshot, version/key/hash),
+`BuybackIntakeItem` (1–20 món, GOLD/SILVER/JEWELRY, mô tả, tình trạng, tem tham chiếu chưa xác minh,
+trọng lượng khách khai và số đo ban đầu Decimal(12,4) theo chỉ, hàm lượng khách khai),
+và `BuybackIntakeAudit` chỉ append. FK khách hàng/items/audit chỉ nằm trong Sales; không có FK xuyên service.
+Không dùng AuditLog POS vì bảng đó bắt buộc orderId.
+
+Lifecycle intake: `DRAFT → PENDING_APPRAISAL`, hoặc huỷ thành `CANCELLED`.
+STAFF chỉ sửa/gửi/huỷ DRAFT của mình; MANAGER đúng chi nhánh và ADMIN toàn hệ thống được thao tác DRAFT
+và huỷ PENDING_APPRAISAL. Không sửa phiếu sau khi gửi kiểm định. Cập nhật dùng row lock/version,
+transaction ghi audit; tạo phiếu idempotent theo branch/actor/key. Chưa kiểm định, định giá, PAYOUT,
+nhập kho, chuyển quyền sở hữu hoặc chống tái mua ở cấp giao dịch.
+
+API private đi qua `/api/admin/sales/branches/{branchId}/buybacks`; backend/contracts và migration
+được mô tả trong [phase7-progress.md](phase7-progress.md). Migration/locking trên PostgreSQL thật chưa xác minh.
+
 ### 5.4 Schema `report`
 
 | Bảng | Cột chính | Ghi chú |

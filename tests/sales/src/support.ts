@@ -1,9 +1,9 @@
 // Hạ tầng test riêng: HTTP thật tới controller đã build, Postgres thật; không bật worker RabbitMQ.
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
-import type { AddressInfo } from 'node:net';
+import { createServer, type AddressInfo } from 'node:net';
 import { resolve } from 'node:path';
 import { GlobalExceptionFilter, JwtAuthModule } from '@jewelry/common';
 import {
@@ -73,9 +73,12 @@ const warehouseId = randomUUID();
 export const usedKeys: string[] = [];
 export const createdCustomerIds: string[] = [];
 export const inventoryCalls: string[] = [];
-export const faults = { releaseFailures: 0, deductFailures: 0 };
+export const faults = { releaseFailures: 0, deductFailures: 0, stateFailures: 0 };
 export let inventoryUrl: string;
 export const salesUrls: string[] = [];
+export let gatewayUrl: string;
+export const recoveryWorkers: { scan(): Promise<void> }[] = [];
+let gatewayProcess: ChildProcess | undefined;
 let baseline: unknown;
 let nextInventoryCommitPause: { entered: () => void; resume: Promise<void> } | undefined;
 
@@ -164,6 +167,60 @@ async function startListening(app: HttpApplication): Promise<string> {
   return `http://127.0.0.1:${app.getHttpServer().address().port}`;
 }
 
+/** Cổng riêng để Gateway bản build thật không đụng tiến trình dev trên máy. */
+async function freePort(): Promise<number> {
+  return new Promise((resolvePort, reject) => {
+    const server = createServer();
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', () => {
+      const address = server.address();
+      if (typeof address !== 'object' || address === null) {
+        server.close();
+        reject(new Error('Không lấy được cổng test Gateway'));
+        return;
+      }
+      server.close(() => resolvePort(address.port));
+    });
+  });
+}
+
+/** Gateway kiểm JWT và chuyển đúng Idempotency-Key tới Sales HTTP thật. */
+async function startGateway(): Promise<void> {
+  const port = await freePort();
+  gatewayUrl = `http://127.0.0.1:${port}`;
+  gatewayProcess = spawn(process.execPath, [resolve(root, 'apps/gateway/dist/main.js')], {
+    cwd: resolve(root, 'apps/gateway'),
+    env: {
+      PATH: process.env.PATH,
+      NODE_ENV: 'test',
+      PORT: String(port),
+      AUTH_URL: 'http://127.0.0.1:1',
+      INVENTORY_URL: inventoryUrl,
+      SALES_URL: salesUrls[0]!,
+      REPORT_URL: 'http://127.0.0.1:1',
+      JWT_PUBLIC_KEY_PATH: keys.publicKeyPath,
+      JWT_ISSUER: TEST_ISSUER,
+      JWT_AUDIENCE_BACKOFFICE: TEST_AUDIENCE_BACKOFFICE,
+      JWT_AUDIENCE_SHOP: TEST_AUDIENCE_SHOP,
+    },
+    stdio: ['ignore', 'ignore', 'pipe'],
+  });
+  let startupError = '';
+  gatewayProcess.stderr?.on('data', (chunk: Buffer) => {
+    startupError += chunk.toString().slice(0, 500);
+  });
+  const deadline = Date.now() + 15_000;
+  while (Date.now() < deadline) {
+    try {
+      if ((await fetch(`${gatewayUrl}/health/live`)).ok) return;
+    } catch {
+      if (gatewayProcess.exitCode !== null || gatewayProcess.signalCode !== null) break;
+    }
+    await new Promise<void>((resolveWait) => setTimeout(resolveWait, 100));
+  }
+  throw new Error(`Gateway test không sẵn sàng: ${startupError.slice(-500)}`);
+}
+
 /** Inventory controller và service thật; middleware chỉ gây lỗi mạng có chủ đích cho ca retry. */
 async function startInventory(): Promise<void> {
   const { InternalStockController } = inventoryRequire('./dist/stock/internal-stock.controller.js');
@@ -187,6 +244,11 @@ async function startInventory(): Promise<void> {
       response
         .status(503)
         .json({ code: 'SERVICE_UNAVAILABLE', message: 'Kho bận', correlationId: randomUUID() });
+    } else if (request.path.includes('/internal/stock/orders/') && faults.stateFailures > 0) {
+      faults.stateFailures -= 1;
+      response
+        .status(503)
+        .json({ code: 'SERVICE_UNAVAILABLE', message: 'Kho bận', correlationId: randomUUID() });
     } else next();
   });
   inventoryUrl = await startListening(app);
@@ -199,6 +261,7 @@ async function startSales(): Promise<void> {
   const { PosCustomersController } = salesRequire('./dist/pos/pos-customers.controller.js');
   const { PosCustomersService } = salesRequire('./dist/pos/pos-customers.service.js');
   const { PosOrdersService } = salesRequire('./dist/pos/pos-orders.service.js');
+  const { PosRecoveryWorker } = salesRequire('./dist/pos/pos-recovery.worker.js');
   const { OrderStore } = salesRequire('./dist/core/order-store.js');
   const { InventoryStockClient } = salesRequire('./dist/pos/inventory-stock.client.js');
   class SalesTestModule {}
@@ -225,10 +288,14 @@ async function startSales(): Promise<void> {
       OrderStore,
       InventoryStockClient,
       PosOrdersService,
+      PosRecoveryWorker,
       PosCustomersService,
     ],
   })(SalesTestModule);
   const app = await createApplication(SalesTestModule);
+  recoveryWorkers.push(
+    (app as HttpApplication & { get<T>(type: unknown): T }).get(PosRecoveryWorker),
+  );
   salesUrls.push(await startListening(app));
 }
 
@@ -270,11 +337,21 @@ export async function setup(): Promise<void> {
   await startInventory();
   await startSales();
   await startSales();
+  await startGateway();
 }
 
 /** Chỉ xoá theo UUID/key đã tạo bởi lần chạy này, rồi so sánh số dòng với mốc trước test. */
 export async function cleanup(): Promise<void> {
   try {
+    if (gatewayProcess !== undefined) {
+      const child = gatewayProcess;
+      if (child.exitCode === null && child.signalCode === null) {
+        await new Promise<void>((resolveDone) => {
+          child.once('close', () => resolveDone());
+          child.kill();
+        });
+      }
+    }
     await Promise.all(applications.map((app) => app.close()));
     const orders = await salesDatabase.order.findMany({
       where: { idempotencyKey: { in: usedKeys } },

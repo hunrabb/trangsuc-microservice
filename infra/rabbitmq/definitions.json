@@ -91,6 +91,15 @@
       }
     },
     {
+      "name": "report.dlq.observer",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "classic"
+      }
+    },
+    {
       "name": "inventory.events.retry.5s",
       "vhost": "/",
       "durable": true,
@@ -285,6 +294,22 @@
       "vhost": "/",
       "destination": "report.events",
       "destination_type": "queue",
+      "routing_key": "order.paid",
+      "arguments": {}
+    },
+    {
+      "source": "domain.events",
+      "vhost": "/",
+      "destination": "report.events",
+      "destination_type": "queue",
+      "routing_key": "order.cancelled",
+      "arguments": {}
+    },
+    {
+      "source": "domain.events",
+      "vhost": "/",
+      "destination": "report.events",
+      "destination_type": "queue",
       "routing_key": "order.completed",
       "arguments": {}
     },
@@ -302,6 +327,14 @@
       "destination": "report.events",
       "destination_type": "queue",
       "routing_key": "stock.changed",
+      "arguments": {}
+    },
+    {
+      "source": "domain.events",
+      "vhost": "/",
+      "destination": "report.events",
+      "destination_type": "queue",
+      "routing_key": "inventory.snapshot.closed",
       "arguments": {}
     },
     {
@@ -329,6 +362,30 @@
       "arguments": {}
     },
     {
+      "source": "dlx",
+      "vhost": "/",
+      "destination": "report.dlq.observer",
+      "destination_type": "queue",
+      "routing_key": "inventory.events.dlq",
+      "arguments": {}
+    },
+    {
+      "source": "dlx",
+      "vhost": "/",
+      "destination": "report.dlq.observer",
+      "destination_type": "queue",
+      "routing_key": "sales.events.dlq",
+      "arguments": {}
+    },
+    {
+      "source": "dlx",
+      "vhost": "/",
+      "destination": "report.dlq.observer",
+      "destination_type": "queue",
+      "routing_key": "report.events.dlq",
+      "arguments": {}
+    },
+    {
       "source": "domain.events",
       "vhost": "/",
       "destination": "report.events",
@@ -342,6 +399,30 @@
       "destination": "sales.events",
       "destination_type": "queue",
       "routing_key": "metal_price.changed",
+      "arguments": {}
+    },
+    {
+      "source": "domain.events",
+      "vhost": "/",
+      "destination": "sales.events",
+      "destination_type": "queue",
+      "routing_key": "product.snapshot",
+      "arguments": {}
+    },
+    {
+      "source": "domain.events",
+      "vhost": "/",
+      "destination": "sales.events",
+      "destination_type": "queue",
+      "routing_key": "stock.availability_changed",
+      "arguments": {}
+    },
+    {
+      "source": "domain.events",
+      "vhost": "/",
+      "destination": "sales.events",
+      "destination_type": "queue",
+      "routing_key": "stock.payment_result",
       "arguments": {}
     }
   ]

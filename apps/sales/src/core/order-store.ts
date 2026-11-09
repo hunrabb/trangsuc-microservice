@@ -119,6 +119,23 @@ export class OrderStore {
     return order;
   }
 
+  /** Chọn tối đa một lô đơn đã quá lease; nhiều instance cùng thấy lô vẫn phải claim từng đơn. */
+  listExpiredOperations(): Promise<{ id: string }[]> {
+    return this.prisma.$queryRaw<{ id: string }[]>`
+      SELECT "id" FROM "sales"."Order"
+      WHERE "status" IN ('CREATING', 'CANCELLING')
+        AND COALESCE("operationUntil", "updatedAt" + interval '60 seconds') < now()
+      ORDER BY "updatedAt" ASC LIMIT 20`;
+  }
+
+  /** Worker chỉ đọc đơn đã giành lease; không đi qua API người dùng hay bỏ qua kiểm quyền ở controller. */
+  loadForRecovery(orderId: string): Promise<OrderRecord> {
+    return this.prisma.order.findUniqueOrThrow({
+      where: { id: orderId },
+      include: { items: true },
+    });
+  }
+
   /** Lease UPDATE nguyên tử, dùng giờ DB; chỉ request thắng được chạy bước HTTP tiếp theo. */
   async claim(orderId: string, owner: string): Promise<boolean> {
     const rows = await this.prisma.$queryRaw<{ id: string }[]>`
@@ -172,6 +189,9 @@ export class OrderStore {
           laborFee: item.laborFee,
           metalPriceAtSale: item.metalSellPricePerChi,
           price: item.price,
+          costPrice: item.costPrice,
+          variantId: item.variantId,
+          metalId: item.metalId,
         })),
       });
       await emitOrderEvent(transaction, updated, ROUTING_KEYS.ORDER_CREATED);

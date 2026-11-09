@@ -26,6 +26,7 @@ import {
   canManageCatalog,
   canManageUsers,
   canUsePos,
+  canViewReports,
   isAdmin,
 } from '../auth/permissions.ts';
 import { useSession } from '../auth/session-context.tsx';
@@ -127,6 +128,18 @@ export function AppLayout() {
       label: 'Đổi mật khẩu',
       icon: <KeyIcon />,
       visible: canChangeOwnPassword(branches),
+    },
+    {
+      to: '/thu-loi',
+      label: 'Thư lỗi DLQ',
+      icon: <ChecklistIcon />,
+      visible: isAdmin(branches),
+    },
+    {
+      to: '/bao-cao',
+      label: 'Báo cáo',
+      icon: <ChecklistIcon />,
+      visible: canViewReports(branches),
     },
   ];
 

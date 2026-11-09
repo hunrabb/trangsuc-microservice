@@ -83,6 +83,8 @@ export const updateCategoryRequestSchema = z.strictObject({
 });
 
 export const productSchema = z.object({
+  publishedOnline: z.boolean(),
+  imageUrl: z.string().nullable(),
   id: z.uuid(),
   categoryId: z.uuid(),
   name: z.string(),
@@ -96,6 +98,13 @@ export const createProductRequestSchema = z.strictObject({
   description: z.string().optional(),
 });
 export const updateProductRequestSchema = z.strictObject({
+  publishedOnline: z.boolean().optional(),
+  imageUrl: z
+    .url()
+    .max(2048)
+    .refine((url) => url.startsWith('https://'))
+    .nullable()
+    .optional(),
   version,
   categoryId: z.uuid().optional(),
   name: nonEmpty.optional(),

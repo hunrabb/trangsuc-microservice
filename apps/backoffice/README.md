@@ -97,6 +97,30 @@ và đơn đang chờ tiền mới hiện QR. Không cấu hình thì không d�
 không có webhook hoặc tự động thu tiền.
 Đơn cũ có mã chứa dấu gạch không dựng QR theo định dạng mới; giao diện hiện thông tin chuyển khoản để đối chiếu tay.
 
+## Báo cáo (Task 5.5)
+
+Trang `/bao-cao` dành cho ADMIN/MANAGER, dùng Report API hiện có qua gateway.
+MANAGER chỉ chọn chi nhánh có role MANAGER trong `/me`; ADMIN chọn tất cả hoặc một
+chi nhánh (tải đủ các trang danh sách, kể cả chi nhánh lịch sử đã ngừng hoạt động).
+Backend vẫn kiểm quyền. Query key chứa user, scope, ngày và chi nhánh; không giữ dữ liệu
+chi nhánh trước trên bộ lọc mới. Trang có tổng doanh thu, giá vốn/lợi nhuận, doanh thu
+ngày, top sản phẩm và nhập–xuất–tồn theo chiếc/chỉ/vốn; bảng rộng cuộn trong khung.
+
+Giá trị tiền giữ dạng chuỗi, tổng dùng BigInt đơn vị xu. Thiếu COGS hiển thị chưa xác
+định; `complete=false` không hiển thị dòng tồn kho, kể cả payload có rows. Khi xem toàn
+hệ thống, cảnh báo phạm vi chỉ gồm kho đã có bản chốt. Loading/lỗi/rỗng có trạng thái
+riêng, có nút thử lại. Ngày theo Việt Nam; mặc định đầu tháng đến hôm nay.
+
+Mỗi phần có nút tải Excel với cùng bộ lọc. `api.requestResponse` dùng chung token/refresh
+với API JSON, không đưa token vào URL hoặc storage mới. File được kiểm MIME + chữ ký ZIP,
+filename lấy từ Content-Disposition nếu hợp lệ, fallback tên xlsx an toàn. HTTP JSON
+error không bị tải thành file. Excel tối đa 31 ngày theo giới hạn backend; quá khoảng
+thì nút bị khoá và hướng dẫn thu hẹp bộ lọc. Object URL được thu hồi sau khi bắt đầu tải.
+
+Test riêng: `pnpm --filter @jewelry/backoffice test:reports` (filter/permission, API/download,
+render React/Mantine SSR; không khởi động Auth/POS hay test toàn monorepo). SSR không
+thay thế kiểm tra tương tác, responsive và hộp tải file trên trình duyệt thực.
+
 ## Chạy phát triển
 
 Yêu cầu Node và pnpm theo phiên bản trong `.nvmrc` và `package.json` ở root. Cần gateway/auth cùng Postgres và
