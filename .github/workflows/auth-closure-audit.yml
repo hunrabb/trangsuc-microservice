@@ -1,0 +1,43 @@
+name: Auth closure registry audit
+
+on:
+  push:
+    branches: [feat/k8s-phase4]
+    paths: [.github/workflows/auth-closure-audit.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  metadata:
+    if: github.repository == 'hunrabb/trangsuc-auth-build'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Read current private package metadata without building or publishing
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api "repos/${GITHUB_REPOSITORY}" --jq .private | grep -x true
+          api=/users/hunrabb/packages/container/trangsuc-microservice-auth-private
+          gh api "$api" > "$RUNNER_TEMP/package.json"
+          jq '{name,visibility,repository:.repository.full_name}' "$RUNNER_TEMP/package.json"
+          jq -e '.name == "trangsuc-microservice-auth-private" and .visibility == "private" and (.repository == null or .repository.full_name == "hunrabb/trangsuc-auth-build")' "$RUNNER_TEMP/package.json"
+          gh api "${api}/versions" > "$RUNNER_TEMP/versions.json"
+          mkdir -p closure-metadata
+          jq '{name,visibility,repository:.repository.full_name}' "$RUNNER_TEMP/package.json" > closure-metadata/package.json
+          jq '[.[] | select(.metadata.container.tags | index("sha-fcc003d9fd8d3ed87901cf22adc88b23e37ab077")) | {digest:.name,tags:.metadata.container.tags}]' \
+            "$RUNNER_TEMP/versions.json" > closure-metadata/version.json
+          jq -e 'length == 1 and .[0].digest == "sha256:c3caa0f5f924ac7282064e6bc588b27a3c1961a783ee6d8ec95821307af9db90"' closure-metadata/version.json
+          cat closure-metadata/package.json closure-metadata/version.json >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: auth-closure-registry-metadata
+          path: closure-metadata/
+          retention-days: 7
+          if-no-files-found: error
