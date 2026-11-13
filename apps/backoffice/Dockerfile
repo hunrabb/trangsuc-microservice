@@ -27,7 +27,7 @@ ENV VITE_POS_BANK_NAME=${VITE_POS_BANK_NAME}
 
 COPY . .
 RUN pnpm install --offline --frozen-lockfile --filter "@jewelry/backoffice..." --filter "."
-RUN pnpm --filter @jewelry/backoffice build
+RUN pnpm --filter @jewelry/contracts build && pnpm --filter @jewelry/backoffice build
 
 # ---------------------------------------------------------------- Tầng chạy: web server file tĩnh
 # Frontend không có Prisma nên dùng được bản alpine nhẹ.

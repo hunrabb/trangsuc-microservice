@@ -8,6 +8,7 @@
     "prisma.config.ts"
   ],
   "scripts": {
+    "test:stock-summary": "node test/stock-summary.test.mjs",
     "build": "nest build",
     "dev": "nest start --watch",
     "start": "node dist/main.js",

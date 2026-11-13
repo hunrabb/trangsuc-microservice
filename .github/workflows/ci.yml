@@ -65,6 +65,15 @@ jobs:
           docker compose up -d --wait postgres rabbitmq
           docker compose run --rm rabbitmq-setup
 
+      # Cấu hình tách DB đang ở chế độ chuẩn bị; CI hiện vẫn kiểm thử stack legacy.
+      - name: Kiểm tra cấu hình Compose bốn DB độc lập
+        run: |
+          docker compose -f docker-compose.db-separated.yml config -q
+          docker compose --env-file .env -p jewelry-db-separation-test \
+            -f infra/postgres/separation/compose.test.yml config -q
+          python3 infra/postgres/separation/verify-compose.py
+          bash -n infra/postgres/service-init/01-init.sh infra/postgres/separation/test-restore.sh
+
       - name: Test hạ tầng (outbox, consumer, retry, DLQ, phiên đăng nhập)
         run: pnpm test:infra
 

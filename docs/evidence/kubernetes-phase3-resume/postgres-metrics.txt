@@ -1,0 +1,14 @@
+jewelry-pg-2|streaming|async|0
+postgres|client backend|active|1
+postgres|logical replication launcher||1
+streaming_replica|walsender|active|1
+|archiver||1
+|autovacuum launcher||1
+|background writer||1
+|checkpointer||1
+|walwriter||1
+144 MB
+auth_db|8363031
+inventory_db|9214999
+report_db|8543255
+sales_db|9526295

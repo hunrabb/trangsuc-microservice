@@ -54,7 +54,7 @@ export function rateLimitsFor(
   ) {
     return [{ key: `catalog:ip:${clientIp}`, limit: 120, ttlMs: MINUTE_MS }];
   }
-  if (/^\/shop\/orders(?:\/|$)/.test(normalizePath(servicePath))) {
+  if (/^\/shop\/(?:orders|my-orders)(?:\/|$)/.test(normalizePath(servicePath))) {
     if (method === 'POST') return [{ key: `checkout:ip:${clientIp}`, limit: 10, ttlMs: MINUTE_MS }];
     if (['GET', 'HEAD'].includes(method))
       return [{ key: `online-order:ip:${clientIp}`, limit: 120, ttlMs: MINUTE_MS }];
@@ -71,6 +71,8 @@ export function rateLimitsFor(
     return [];
   }
   switch (normalizePath(servicePath)) {
+    case '/shop/auth/register':
+    case '/shop/auth/login':
     case '/auth/login':
       return [
         { key: `login:ip+email:${clientIp}:${emailOf(body)}`, limit: 5, ttlMs: MINUTE_MS },
@@ -83,6 +85,7 @@ export function rateLimitsFor(
         { key: `change-password:user:${userId}`, limit: 5, ttlMs: 15 * MINUTE_MS },
         { key: `change-password:ip:${clientIp}`, limit: 20, ttlMs: MINUTE_MS },
       ];
+    case '/shop/auth/refresh':
     case '/auth/refresh':
       return [{ key: `refresh:ip:${clientIp}`, limit: 60, ttlMs: MINUTE_MS }];
     default:

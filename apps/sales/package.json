@@ -22,7 +22,9 @@
     "test:catalog": "node test/catalog.test.mjs",
     "test:online": "node test/online-checkout.test.mjs",
     "test:online-payments": "node test/online-payments.test.mjs",
-    "test:buybacks": "node test/buybacks.test.mjs"
+    "test:buybacks": "node test/buybacks.test.mjs",
+    "test:buyback-appraisal": "node test/buyback-appraisal.test.mjs",
+    "test:buyback-settlement": "node test/buyback-settlement.test.mjs"
   },
   "dependencies": {
     "@jewelry/common": "workspace:*",

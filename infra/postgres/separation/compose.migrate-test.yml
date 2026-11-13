@@ -1,0 +1,18 @@
+# Gộp sau compose.test.yml để chạy từng migration job trên DB/volume test đã restore.
+services:
+  auth-migrate:
+    extends:
+      file: ../../../docker-compose.db-separated.yml
+      service: auth-migrate
+  inventory-migrate:
+    extends:
+      file: ../../../docker-compose.db-separated.yml
+      service: inventory-migrate
+  sales-migrate:
+    extends:
+      file: ../../../docker-compose.db-separated.yml
+      service: sales-migrate
+  report-migrate:
+    extends:
+      file: ../../../docker-compose.db-separated.yml
+      service: report-migrate

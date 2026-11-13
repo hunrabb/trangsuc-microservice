@@ -100,9 +100,13 @@ export const createProductRequestSchema = z.strictObject({
 export const updateProductRequestSchema = z.strictObject({
   publishedOnline: z.boolean().optional(),
   imageUrl: z
-    .url()
-    .max(2048)
-    .refine((url) => url.startsWith('https://'))
+    .union([
+      z
+        .url()
+        .max(2048)
+        .refine((url) => url.startsWith('https://')),
+      z.string().regex(/^\/catalog-images\/[a-f0-9]{64}\.(?:jpg|jpeg|png|webp)$/),
+    ])
     .nullable()
     .optional(),
   version,
@@ -192,7 +196,7 @@ export const listReceiptsQuerySchema = paginationQuerySchema.extend({
 export const receiptPageSchema = pageOf(receiptSchema);
 
 // ---------------------------------------------------------------- Tồn kho
-export const itemStatusSchema = z.enum(['IN_STOCK', 'RESERVED', 'SOLD']);
+export const itemStatusSchema = z.enum(['IN_STOCK', 'RESERVED', 'SOLD', 'PENDING_MELT']);
 
 export const itemSchema = z.object({
   id: z.uuid(),
@@ -255,42 +259,6 @@ export type ItemPage = z.infer<typeof itemPageSchema>;
 export type ItemWithPrice = z.infer<typeof itemWithPriceSchema>;
 export type ListItemsQuery = z.infer<typeof listItemsQuerySchema>;
 
-// ---------------------------------------------------------------- Kiểm kê
-export const stockCountStatusSchema = z.enum(['OPEN', 'CLOSED']);
-
-export const createStockCountRequestSchema = z.strictObject({ branchId: z.uuid() });
-
-export const scanStockCountRequestSchema = z.strictObject({ tagCode: nonEmpty.max(64) });
-
-/** `MATCHED`: chiếc dự kiến, vừa quét thấy. `ALREADY_SCANNED`: quét lại. `EXTRA`: không thuộc kho, ghi vào danh sách thừa. */
-export const scanResultSchema = z.object({
-  tagCode: z.string(),
-  result: z.enum(['MATCHED', 'ALREADY_SCANNED', 'EXTRA']),
-});
-
-export const stockCountSummarySchema = z.object({
-  id: z.uuid(),
-  code: z.string(),
-  branchId: z.uuid(),
-  status: stockCountStatusSchema,
-  createdBy: z.uuid(),
-  closedBy: z.uuid().nullable(),
-  closedAt: z.iso.datetime().nullable(),
-  version,
-  expectedCount: z.number().int().nonnegative().describe('Số chiếc dự kiến lúc mở phiên'),
-  scannedCount: z.number().int().nonnegative(),
-  notScannedCount: z.number().int().nonnegative().describe('Chưa quét, phiên còn mở'),
-  missingCount: z.number().int().nonnegative().describe('Thiếu: không quét được khi đóng phiên'),
-  movedCount: z
-    .number()
-    .int()
-    .nonnegative()
-    .describe('Đã bán hoặc đang giữ trong lúc kiểm kê, không tính thiếu'),
-  extraCount: z.number().int().nonnegative().describe('Thừa: quét được nhưng không thuộc kho'),
-  missingTagCodes: z.array(z.string()),
-  extraTagCodes: z.array(z.string()),
-});
-
 // ---------------------------------------------------------------- Dữ liệu tem
 /** Dữ liệu để frontend dựng tem. Giá tạm tính = `null` nếu kim loại chưa có giá. */
 export const itemLabelSchema = z.object({
@@ -305,8 +273,28 @@ export const itemLabelSchema = z.object({
   estimatedPrice: z.string().nullable(),
 });
 
-export type CreateStockCountRequest = z.infer<typeof createStockCountRequestSchema>;
-export type ScanStockCountRequest = z.infer<typeof scanStockCountRequestSchema>;
-export type ScanResult = z.infer<typeof scanResultSchema>;
-export type StockCountSummary = z.infer<typeof stockCountSummarySchema>;
 export type ItemLabel = z.infer<typeof itemLabelSchema>;
+
+/** Tổng hợp mỗi biến thể trong một chi nhánh, tính từ từng JewelryItem. */
+export const stockSummaryQuerySchema = paginationQuerySchema.extend({
+  branchId: z.uuid(),
+  variantId: z.uuid().optional(),
+});
+export const stockSummarySchema = z.object({
+  branchId: z.uuid(),
+  branchName: z.string(),
+  variantId: z.uuid(),
+  productName: z.string(),
+  variantName: z.string(),
+  sku: z.string(),
+  metalName: z.string(),
+  total: z.number().int().nonnegative(),
+  available: z.number().int().nonnegative(),
+  reserved: z.number().int().nonnegative(),
+  sold: z.number().int().nonnegative(),
+  pendingMelt: z.number().int().nonnegative(),
+  other: z.number().int().nonnegative(),
+});
+export const stockSummaryPageSchema = pageOf(stockSummarySchema);
+export type StockSummaryQuery = z.infer<typeof stockSummaryQuerySchema>;
+export type StockSummaryPage = z.infer<typeof stockSummaryPageSchema>;

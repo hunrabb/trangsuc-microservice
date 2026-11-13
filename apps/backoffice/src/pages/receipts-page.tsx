@@ -17,7 +17,7 @@ import { Link, useNavigate } from 'react-router';
 import { describeError } from '../api/messages.ts';
 import { inventoryApi } from '../api/inventory-endpoints.ts';
 import { inventoryKeys } from '../api/inventory-queries.ts';
-import { hasRoleAtBranch } from '../auth/permissions.ts';
+import { canManageReceipts } from '../auth/permissions.ts';
 import { useSession } from '../auth/session-context.tsx';
 import { ErrorAlert } from '../components/error-alert.tsx';
 import { PlusIcon } from '../components/icons.tsx';
@@ -28,7 +28,7 @@ const PAGE_SIZE = 20;
 const ALL_STATUSES = 'all';
 
 /**
- * Danh sách phiếu nhập của chi nhánh đang làm việc. MANAGER và STAFF của chi nhánh tạo được phiếu nháp; vào từng
+ * Danh sách phiếu nhập của chi nhánh đang làm việc. Chỉ ADMIN chọn chi nhánh và tạo phiếu nháp; vào từng
  * phiếu (`receipt-detail-page.tsx`) để thêm chiếc và duyệt.
  */
 export function ReceiptsPage() {
@@ -61,8 +61,7 @@ export function ReceiptsPage() {
     onError: (error) => notifications.show({ color: 'red', message: describeError(error) }),
   });
 
-  const canCreate =
-    me !== undefined && hasRoleAtBranch(me.branches, branchId, ['MANAGER', 'STAFF']);
+  const canCreate = me !== undefined && canManageReceipts(me.branches);
   const totalPages = Math.max(1, Math.ceil((receipts.data?.total ?? 0) / PAGE_SIZE));
 
   return (

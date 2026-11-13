@@ -1,3 +1,4 @@
+import { DemoPayment } from '../components/demo-payment.tsx';
 import { useEffect, useState, type FormEvent } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router';
@@ -26,6 +27,15 @@ export function OrderStatus({ order }: { order: ShopOrder }) {
         </p>
       )}
       {failure && order.status === 'CANCELLED' && <p className="order-failure">{failure}</p>}
+      {order.status === 'CANCELLED' &&
+        order.failureCode === 'RESERVATION_EXPIRED' &&
+        order.expiresAt && (
+          <p className="order-failure">
+            Đơn cũ đã hết hạn lúc{' '}
+            {new Date(order.expiresAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}{' '}
+            (giờ Việt Nam). Mở lại liên kết không bắt đầu lượt giữ hàng mới.
+          </p>
+        )}
       <ol className="order-timeline">
         {['Tiếp nhận yêu cầu', 'Giữ sản phẩm', 'Xác minh thanh toán', 'Xác nhận đơn'].map(
           (label, i) => (
@@ -44,34 +54,9 @@ export function OrderStatus({ order }: { order: ShopOrder }) {
   );
 }
 export function PaymentGuidance({ order }: { order: ShopOrder }) {
-  if (order.status !== 'AWAITING_PAYMENT') return null;
-  return (
-    <section className="payment-guidance">
-      <Icon name="shield" size={25} />
-      <div>
-        <h2>Chờ hướng dẫn chuyển khoản được xác nhận</h2>
-        <p>
-          Thông tin tài khoản nhận và mã QR chưa được cung cấp cho đơn này. Vui lòng chờ hướng dẫn
-          chính thức từ cửa hàng trước khi chuyển khoản.
-        </p>
-        <dl>
-          <div>
-            <dt>Số tiền của đơn</dt>
-            <dd>{money(order.total)}</dd>
-          </div>
-          <div>
-            <dt>Mã tham chiếu đơn</dt>
-            <dd className="breakable">{order.code}</dd>
-          </div>
-        </dl>
-        <p className="fine-print">
-          Nhân viên sẽ xác minh khoản tiền nhận được. Hiện chưa có tính năng gửi chứng từ trên
-          website.
-        </p>
-      </div>
-    </section>
-  );
+  return <DemoPayment order={order} />;
 }
+
 function Countdown({ expiresAt }: { expiresAt: string }) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => {

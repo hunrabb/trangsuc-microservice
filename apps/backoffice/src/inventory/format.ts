@@ -30,6 +30,7 @@ export const ITEM_STATUS_LABELS = {
   IN_STOCK: 'Trong kho',
   RESERVED: 'Đang giữ',
   SOLD: 'Đã bán',
+  PENDING_MELT: 'Chờ nấu lại',
 } as const;
 
 export const RECEIPT_STATUS_LABELS = { DRAFT: 'Nháp', APPROVED: 'Đã duyệt' } as const;

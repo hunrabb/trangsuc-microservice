@@ -1,0 +1,93 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: phase3-runtime-db-probe
+  namespace: jewelry-demo
+spec:
+  restartPolicy: Never
+  activeDeadlineSeconds: 90
+  terminationGracePeriodSeconds: 3
+  automountServiceAccountToken: false
+  nodeSelector:
+    kubernetes.io/hostname: jewelry-lab-worker
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+  - name: runtime-db-check
+    image: jewelry/auth-migrate:phase3-1b063775fb93
+    imagePullPolicy: Never
+    command:
+    - node
+    - --max-old-space-size=64
+    - -e
+    - 'const f=require(''node:fs''),a=require(''node:assert/strict'');const base=f.realpathSync(''/app/node_modules/@prisma/adapter-pg'');const
+      {Client}=require(require.resolve(''pg'',{paths:[base]}));
+
+      (async()=>{for(const app of [''auth'',''inventory'',''sales'',''report'']){const
+      raw=process.env[app.toUpperCase()+''_DATABASE_URL''];const c=new Client({connectionString:raw,connectionTimeoutMillis:5000});await
+      c.connect();try{const r=(await c.query(''SELECT current_user,current_database(),pg_is_in_recovery(),(SELECT
+      ssl FROM pg_stat_ssl WHERE pid=pg_backend_pid()) AS tls'')).rows[0];a.equal(r.current_user,app+''_user'');a.equal(r.current_database,app+''_db'');a.equal(r.pg_is_in_recovery,false);a.equal(r.tls,true);const
+      t=(await c.query(''SELECT tablename FROM pg_tables WHERE schemaname=$1 AND tablename<>$2
+      ORDER BY tablename LIMIT 1'',[app,''_prisma_migrations''])).rows[0].tablename;await
+      c.query(''SELECT 1 FROM "''+app+''"."''+t.replaceAll(''"'',''""'')+''" WHERE
+      false'');a.equal((await c.query(''SELECT has_table_privilege(current_user,$1,$2)
+      AS ok'',[app+''._prisma_migrations'',''UPDATE''])).rows[0].ok,false);}finally{await
+      c.end()}
+
+      for(const other of [''auth'',''inventory'',''sales'',''report'',''postgres'',''template0'',''template1'']){if(other===app)continue;const
+      u=new URL(raw);u.pathname=''/''+([''postgres'',''template0'',''template1''].includes(other)?other:other+''_db'');const
+      n=new Client({connectionString:u.toString(),connectionTimeoutMillis:5000});let
+      denied=false;try{await n.connect()}catch(e){a.ok([''42501'',''55000''].includes(e.code));denied=true}finally{await
+      n.end().catch(()=>{})}a.ok(denied)}console.log(''PASS runtime pg TLS/schema/isolation:
+      ''+app)} })().catch(e=>{console.error(''Runtime check failed:'',e.code||e.name);process.exitCode=1});'
+    env:
+    - name: AUTH_DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: auth-runtime-creds
+          key: DATABASE_URL
+    - name: INVENTORY_DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: inventory-runtime-creds
+          key: DATABASE_URL
+    - name: SALES_DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: sales-runtime-creds
+          key: DATABASE_URL
+    - name: REPORT_DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: report-runtime-creds
+          key: DATABASE_URL
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        cpu: 250m
+        memory: 128Mi
+    securityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+        - ALL
+    volumeMounts:
+    - name: pg-ca
+      mountPath: /run/secrets/postgres
+      readOnly: true
+  volumes:
+  - name: pg-ca
+    secret:
+      secretName: jewelry-pg-ca
+      defaultMode: 288
+      items:
+      - key: ca.crt
+        path: ca.crt

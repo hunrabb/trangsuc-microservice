@@ -1,0 +1,33 @@
+# Project test riêng: dùng đúng cấu hình bốn DB nhưng không tạo app/RabbitMQ/network cố định của jewelry.
+# Luôn gọi với -p jewelry-db-separation-test để volume không trùng dữ liệu chính.
+services:
+  auth-postgres:
+    extends:
+      file: ../../../docker-compose.db-separated.yml
+      service: auth-postgres
+    ports:
+      - '127.0.0.1:15433:5432'
+  inventory-postgres:
+    extends:
+      file: ../../../docker-compose.db-separated.yml
+      service: inventory-postgres
+    ports:
+      - '127.0.0.1:15434:5432'
+  sales-postgres:
+    extends:
+      file: ../../../docker-compose.db-separated.yml
+      service: sales-postgres
+    ports:
+      - '127.0.0.1:15435:5432'
+  report-postgres:
+    extends:
+      file: ../../../docker-compose.db-separated.yml
+      service: report-postgres
+    ports:
+      - '127.0.0.1:15436:5432'
+
+volumes:
+  auth_pg_data:
+  inventory_pg_data:
+  sales_pg_data:
+  report_pg_data:

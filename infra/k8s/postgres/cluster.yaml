@@ -1,0 +1,53 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: jewelry-pg
+  namespace: jewelry-demo
+  labels:
+    app.kubernetes.io/part-of: jewelry-demo
+spec:
+  instances: 2
+  imageName: ghcr.io/cloudnative-pg/postgresql:16.15-system-trixie@sha256:1546be7d23066aaf9eb75b07df17c843c98483cede7afdbaf01dca785fb3bf60
+  enableSuperuserAccess: false
+  storage:
+    storageClass: jewelry-demo-local
+    size: 5Gi
+  resources:
+    requests:
+      cpu: 200m
+      memory: 384Mi
+    limits:
+      cpu: 1000m
+      memory: 768Mi
+  affinity:
+    enablePodAntiAffinity: true
+    podAntiAffinityType: required
+    topologyKey: kubernetes.io/hostname
+    nodeSelector:
+      jewelry-lab-worker: 'true'
+  bootstrap:
+    initdb:
+      database: auth_db
+      owner: auth_migrator
+      secret:
+        name: auth-migration-creds
+  postgresql:
+    parameters:
+      max_connections: '128'
+      shared_buffers: 128MB
+      work_mem: 2MB
+      maintenance_work_mem: 32MB
+      max_wal_size: 512MB
+      min_wal_size: 80MB
+      wal_keep_size: 128MB
+      max_slot_wal_keep_size: 512MB
+      wal_level: replica
+      max_parallel_workers: '2'
+      max_worker_processes: '8'
+  replicationSlots:
+    highAvailability:
+      enabled: true
+  failoverDelay: 10
+  startDelay: 120
+  stopDelay: 60
+  switchoverDelay: 60

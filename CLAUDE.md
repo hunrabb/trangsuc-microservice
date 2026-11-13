@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Hệ thống quản lý chuỗi cửa hàng **trang sức** (vàng, bạc, trang sức thời trang): chi nhánh, nhân viên, sản phẩm, giá vàng theo ngày, nhập kho, kiểm kê, tồn kho, bán tại quầy (POS), bán online qua website, thu mua và đổi hàng, báo cáo.
+Hệ thống quản lý chuỗi cửa hàng **trang sức** (vàng, bạc, trang sức thời trang): chi nhánh, nhân viên, sản phẩm, giá vàng theo ngày, nhập kho, tồn kho, bán tại quầy (POS), bán online qua website, thu mua và đổi hàng, báo cáo.
 
 File này là luật chung cho mọi phiên làm việc. Prompt của từng việc nói **làm gì**; file này nói **làm thế nào cho đúng**.
 
@@ -18,7 +18,7 @@ Thiết kế không nói tới một chuyện → **không tự đoán**: chọn
 |---|---|---|
 | `gateway` | — | Cửa vào duy nhất: kiểm tra JWT, rate limit, định tuyến |
 | `auth` | `auth` | Chi nhánh, nhân viên, tài khoản khách, vai trò, đăng nhập, token |
-| `inventory` | `inventory` | Kim loại, giá kim loại, sản phẩm, biến thể, hàng có tem, kho, tồn kho, nhập hàng, kiểm kê, giữ hàng, chọn chi nhánh cho đơn online |
+| `inventory` | `inventory` | Kim loại, giá kim loại, sản phẩm, biến thể, hàng có tem, kho, tồn kho, nhập hàng, giữ hàng, chọn chi nhánh cho đơn online |
 | `sales` | `sales` | Hoá đơn POS, đơn online, khách hàng, bản sao danh mục chỉ đọc cho website, thanh toán chuyển khoản, hoàn tiền, thu mua, đổi hàng, trả hàng |
 | `report` | `report` | Bảng tổng hợp doanh thu, lợi nhuận, tồn kho |
 
@@ -148,7 +148,7 @@ Chưa có (làm ở giai đoạn sau): `prisma db seed` (chưa có seed), `pnpm 
 - Thu mua: giá thu = `metalWeight × buyPrice` − khấu trừ theo cấu hình. Đổi hàng = một hoá đơn có `OrderItem` (bán) và `TradeInItem` (thu vào).
 - Đơn online chọn **một** chi nhánh có đủ cả đơn, ưu tiên chi nhánh còn nhiều hàng nhất; không tách đơn. Số còn bán online = `onHand − reserved − onlineBuffer`.
 - Thanh toán: **chỉ chuyển khoản**. Nội dung chuyển khoản = `Order.code`. `BankTransaction.bankTxnRef` unique. Cửa hàng trả tiền cho khách → `Payment(type = PAYOUT)`.
-- Ghi `AuditLog` cho: đổi giá kim loại, sửa trọng lượng, điều chỉnh kiểm kê, huỷ hoá đơn, thu mua.
+- Ghi `AuditLog` cho: đổi giá kim loại, sửa trọng lượng, thay đổi tồn kho, huỷ hoá đơn, thu mua.
 
 ## 10. API
 

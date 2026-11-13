@@ -1,5 +1,7 @@
 import { type AuthUser, CurrentUser, ZodValidationPipe } from '@jewelry/common';
 import {
+  type StockSummaryQuery,
+  stockSummaryQuerySchema,
   type ItemPage,
   type ItemWithPrice,
   type ListItemsQuery,
@@ -19,6 +21,14 @@ export class StockController {
     @Query(new ZodValidationPipe(listItemsQuerySchema)) query: ListItemsQuery,
   ): Promise<ItemPage> {
     return this.stock.list(user, query);
+  }
+
+  @Get('summary')
+  summary(
+    @CurrentUser() user: AuthUser,
+    @Query(new ZodValidationPipe(stockSummaryQuerySchema)) query: StockSummaryQuery,
+  ) {
+    return this.stock.summary(user, query);
   }
 
   @Get('by-tag/:tagCode')

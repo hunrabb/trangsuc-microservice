@@ -1,0 +1,39 @@
+# Apply after compose.test.yml and compose.migrate-test.yml, always with
+# -p jewelry-db-separation-test. Keeps the acceptance broker and apps separate
+# from the main jewelry project. Gateway and AMQP test access use loopback only.
+services:
+  rabbitmq:
+    extends:
+      file: ../../../docker-compose.db-separated.yml
+      service: rabbitmq
+    ports:
+      - '127.0.0.1:15677:5672'
+  rabbitmq-setup:
+    extends:
+      file: ../../../docker-compose.db-separated.yml
+      service: rabbitmq-setup
+  auth:
+    extends:
+      file: ../../../docker-compose.db-separated.yml
+      service: auth
+  inventory:
+    extends:
+      file: ../../../docker-compose.db-separated.yml
+      service: inventory
+  sales:
+    extends:
+      file: ../../../docker-compose.db-separated.yml
+      service: sales
+  report:
+    extends:
+      file: ../../../docker-compose.db-separated.yml
+      service: report
+  gateway:
+    extends:
+      file: ../../../docker-compose.db-separated.yml
+      service: gateway
+    ports: !override
+      - '127.0.0.1:13000:3000'
+
+volumes:
+  rabbitmq_data:

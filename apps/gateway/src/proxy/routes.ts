@@ -17,31 +17,94 @@ export interface ProxyRoute {
 
 /** Khớp theo thứ tự: tiền tố dài phải đứng trước tiền tố ngắn của nó (`/api/shop/auth` trước `/api/shop`). */
 export const PROXY_ROUTES: readonly ProxyRoute[] = [
-  { prefix: '/api/auth', service: 'auth', rewriteTo: '/auth', audience: null },
-  { prefix: '/api/pos', service: 'sales', rewriteTo: '/pos', audience: 'backoffice' },
+  // Xác thực nhân viên: /api/auth/... → Auth /auth/... (Gateway không yêu cầu token).
+  // Ví dụ: /api/auth/login khớp object này → Auth /auth/login.
   {
-    prefix: '/api/online-orders',
-    service: 'sales',
-    rewriteTo: '/online-orders',
-    audience: 'backoffice',
+    prefix: '/api/auth', // Khớp URL bắt đầu bằng tiền tố này, theo đoạn đường dẫn.
+    service: 'auth', // Service nhận request từ Gateway.
+    rewriteTo: '/auth', // Thay prefix bằng đường này; giữ phần URL phía sau.
+    audience: null, // Gateway không yêu cầu JWT; service vẫn tự kiểm quyền.
   },
-  { prefix: '/api/shop/auth', service: 'auth', rewriteTo: '/shop/auth', audience: null },
-  { prefix: '/api/shop', service: 'sales', rewriteTo: '/shop', audience: null },
-  { prefix: '/api/admin/auth', service: 'auth', rewriteTo: '/admin', audience: 'backoffice' },
+  // Bán tại quầy: /api/pos/... → Sales /pos/... (token nhân viên).
+  // Ví dụ: /api/pos/orders khớp object này → Sales /pos/orders.
   {
-    prefix: '/api/admin/inventory',
-    service: 'inventory',
-    rewriteTo: '/admin',
-    audience: 'backoffice',
+    prefix: '/api/pos', // Khớp URL bắt đầu bằng tiền tố này, theo đoạn đường dẫn.
+    service: 'sales', // Service nhận request từ Gateway.
+    rewriteTo: '/pos', // Thay prefix bằng đường này; giữ phần URL phía sau.
+    audience: 'backoffice', // Yêu cầu access token nhân viên.
   },
-  { prefix: '/api/admin/sales', service: 'sales', rewriteTo: '/admin', audience: 'backoffice' },
-  { prefix: '/api/admin/reports', service: 'report', rewriteTo: '/admin', audience: 'backoffice' },
+  // Nhân viên xử lý đơn online: /api/online-orders/... → Sales /online-orders/... (token nhân viên).
+  // Ví dụ: /api/online-orders/123 khớp object này → Sales /online-orders/123.
   {
-    prefix: '/webhooks/bank',
-    service: 'sales',
-    rewriteTo: '/webhooks/bank',
-    audience: null,
-    exact: true,
+    prefix: '/api/online-orders', // Khớp URL bắt đầu bằng tiền tố này, theo đoạn đường dẫn.
+    service: 'sales', // Service nhận request từ Gateway.
+    rewriteTo: '/online-orders', // Thay prefix bằng đường này; giữ phần URL phía sau.
+    audience: 'backoffice', // Yêu cầu access token nhân viên.
+  },
+  // Xác thực khách hàng: /api/shop/auth/... → Auth /shop/auth/... (Gateway không yêu cầu token).
+  // Ví dụ: /api/shop/auth/login khớp object này trước /api/shop → Auth /shop/auth/login.
+  {
+    prefix: '/api/shop/auth', // Khớp URL bắt đầu bằng tiền tố này, theo đoạn đường dẫn.
+    service: 'auth', // Service nhận request từ Gateway.
+    rewriteTo: '/shop/auth', // Thay prefix bằng đường này; giữ phần URL phía sau.
+    audience: null, // Gateway không yêu cầu JWT; service vẫn tự kiểm quyền.
+  },
+  // Đơn của khách đã đăng nhập: /api/shop/my-orders/... → Sales /shop/my-orders/... (token khách hàng).
+  // Ví dụ: /api/shop/my-orders/123 khớp object này trước /api/shop → Sales /shop/my-orders/123.
+  {
+    prefix: '/api/shop/my-orders', // Khớp URL bắt đầu bằng tiền tố này, theo đoạn đường dẫn.
+    service: 'sales', // Service nhận request từ Gateway.
+    rewriteTo: '/shop/my-orders', // Thay prefix bằng đường này; giữ phần URL phía sau.
+    audience: 'shop', // Yêu cầu access token khách hàng.
+  },
+  // API website khách hàng: /api/shop/... → Sales /shop/... (service tự kiểm quyền từng endpoint).
+  // Ví dụ: /api/shop/products khớp object này → Sales /shop/products.
+  {
+    prefix: '/api/shop', // Khớp URL bắt đầu bằng tiền tố này, theo đoạn đường dẫn.
+    service: 'sales', // Service nhận request từ Gateway.
+    rewriteTo: '/shop', // Thay prefix bằng đường này; giữ phần URL phía sau.
+    audience: null, // Gateway không yêu cầu JWT; service vẫn tự kiểm quyền.
+  },
+  // Quản trị chi nhánh, nhân viên: /api/admin/auth/... → Auth /admin/... (token nhân viên).
+  // Ví dụ: /api/admin/auth/users khớp object này → Auth /admin/users.
+  {
+    prefix: '/api/admin/auth', // Khớp URL bắt đầu bằng tiền tố này, theo đoạn đường dẫn.
+    service: 'auth', // Service nhận request từ Gateway.
+    rewriteTo: '/admin', // Thay prefix bằng đường này; giữ phần URL phía sau.
+    audience: 'backoffice', // Yêu cầu access token nhân viên.
+  },
+  // Quản trị hàng hoá, kho: /api/admin/inventory/... → Inventory /admin/... (token nhân viên).
+  // Ví dụ: /api/admin/inventory/items khớp object này → Inventory /admin/items.
+  {
+    prefix: '/api/admin/inventory', // Khớp URL bắt đầu bằng tiền tố này, theo đoạn đường dẫn.
+    service: 'inventory', // Service nhận request từ Gateway.
+    rewriteTo: '/admin', // Thay prefix bằng đường này; giữ phần URL phía sau.
+    audience: 'backoffice', // Yêu cầu access token nhân viên.
+  },
+  // Quản trị bán hàng: /api/admin/sales/... → Sales /admin/... (token nhân viên).
+  // Ví dụ: /api/admin/sales/buybacks khớp object này → Sales /admin/buybacks.
+  {
+    prefix: '/api/admin/sales', // Khớp URL bắt đầu bằng tiền tố này, theo đoạn đường dẫn.
+    service: 'sales', // Service nhận request từ Gateway.
+    rewriteTo: '/admin', // Thay prefix bằng đường này; giữ phần URL phía sau.
+    audience: 'backoffice', // Yêu cầu access token nhân viên.
+  },
+  // Báo cáo: /api/admin/reports/... → Report /admin/... (token nhân viên).
+  // Ví dụ: /api/admin/reports/revenue khớp object này → Report /admin/revenue.
+  {
+    prefix: '/api/admin/reports', // Khớp URL bắt đầu bằng tiền tố này, theo đoạn đường dẫn.
+    service: 'report', // Service nhận request từ Gateway.
+    rewriteTo: '/admin', // Thay prefix bằng đường này; giữ phần URL phía sau.
+    audience: 'backoffice', // Yêu cầu access token nhân viên.
+  },
+  // Webhook ngân hàng: /webhooks/bank → Sales /webhooks/bank (chỉ khớp đúng đường dẫn).
+  // Ví dụ: /webhooks/bank khớp; /webhooks/bank/123 không khớp object này vì exact: true.
+  {
+    prefix: '/webhooks/bank', // Khớp URL bắt đầu bằng tiền tố này, theo đoạn đường dẫn.
+    service: 'sales', // Service nhận request từ Gateway.
+    rewriteTo: '/webhooks/bank', // Thay prefix bằng đường này; giữ phần URL phía sau.
+    audience: null, // Gateway không yêu cầu JWT; service vẫn tự kiểm quyền.
+    exact: true, // Chỉ khớp đúng prefix, không nhận đường dẫn con.
   },
 ];
 

@@ -1,0 +1,38 @@
+[
+  {
+    "app": "auth",
+    "image": "jewelry/auth-migrate:dev",
+    "imageID": "sha256:1b063775fb934c9b7e8e4a4fb87a09b2916514480aa84a38efcc464a8203ac75",
+    "sourcePrisma": "7.10.1",
+    "imagePrisma": "7.10.1",
+    "migrations": 4,
+    "mismatches": []
+  },
+  {
+    "app": "inventory",
+    "image": "jewelry/inventory-migrate:dev",
+    "imageID": "sha256:4be09bc2651e4b6221b37bf71c53d1753851e00a7e9ad7bc76c128ca92a2416d",
+    "sourcePrisma": "7.10.1",
+    "imagePrisma": "7.10.1",
+    "migrations": 13,
+    "mismatches": []
+  },
+  {
+    "app": "sales",
+    "image": "jewelry/sales-migrate:dev",
+    "imageID": "sha256:28479898ff4d6fbd8224f7c149a80ce9bdfc012a1ddb4ee5278ce5cf6b3e5ea2",
+    "sourcePrisma": "7.10.1",
+    "imagePrisma": "7.10.1",
+    "migrations": 15,
+    "mismatches": []
+  },
+  {
+    "app": "report",
+    "image": "jewelry/report-migrate:dev",
+    "imageID": "sha256:a9e016d46a93b05bf74056cda6f96a61293276b7a8bd1a89d73e91f53d97f81a",
+    "sourcePrisma": "7.10.1",
+    "imagePrisma": "7.10.1",
+    "migrations": 7,
+    "mismatches": []
+  }
+]

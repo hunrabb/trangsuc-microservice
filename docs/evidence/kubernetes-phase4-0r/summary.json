@@ -1,0 +1,65 @@
+{
+  "verdict": "HOLD",
+  "baseline4_0UTC": "2026-11-13T05:51:42.949178+00:00",
+  "diagnosticStartUTC": "2026-11-13T05:59:22.714328+00:00",
+  "diagnosticFinalUTC": "2026-11-13T06:06:59.758100+00:00",
+  "newRestartsSince4_0": [
+    {
+      "pod": "cnpg-controller-manager-7df6db7d87-hx7hk",
+      "before": 1,
+      "current": 2,
+      "lastTermination": {
+        "containerID": "containerd://5c18b0137df54c9fe2351c95f5cc9818c1c627802b3031812cf0608774852106",
+        "exitCode": 1,
+        "finishedAt": "2026-11-13T05:55:35Z",
+        "reason": "Error",
+        "startedAt": "2026-11-13T05:21:48Z"
+      }
+    },
+    {
+      "pod": "kube-controller-manager-jewelry-lab-control-plane",
+      "before": 3,
+      "current": 4,
+      "lastTermination": {
+        "containerID": "containerd://8b55858c6cdc790ccd67b478c50ac9372d80240b0fa006adf3165325c90d2f46",
+        "exitCode": 1,
+        "finishedAt": "2026-11-13T05:55:33Z",
+        "reason": "Error",
+        "startedAt": "2026-11-13T05:21:48Z"
+      }
+    },
+    {
+      "pod": "kube-scheduler-jewelry-lab-control-plane",
+      "before": 3,
+      "current": 4,
+      "lastTermination": {
+        "containerID": "containerd://f7e3f7d3ce8d07cc90b35585f584e8ad7dbd02c44021807b2aff53b1e0517044",
+        "exitCode": 1,
+        "finishedAt": "2026-11-13T05:55:37Z",
+        "reason": "Error",
+        "startedAt": "2026-11-13T05:21:48Z"
+      }
+    }
+  ],
+  "restartCountsUnchangedDuringCollection": true,
+  "readyNodes": 3,
+  "runningReadyPods": 16,
+  "completedPods": 4,
+  "postgres": {
+    "currentPrimary": "jewelry-pg-1",
+    "readyInstances": 2,
+    "phase": "Cluster in healthy state",
+    "rwEndpoints": [
+      {
+        "target": "jewelry-pg-1",
+        "ready": true
+      }
+    ],
+    "replication": "jewelry-pg-2|streaming|async|0"
+  },
+  "dockerBaselineUnchanged": true,
+  "trackedDiffUnchanged": true,
+  "imagesBuiltOrLoaded": 0,
+  "resourcesAppliedOrModified": 0,
+  "longObservationStopped": "Recurrence at 05:55 UTC already present at first sample; only bounded diagnostic and final checks performed"
+}

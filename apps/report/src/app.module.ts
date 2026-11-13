@@ -26,10 +26,19 @@ import { ReportExportService } from './orders/report-export.service';
 import { DlqController } from './dlq/dlq.controller';
 import { DlqService } from './dlq/dlq.service';
 import { DlqObserver } from './dlq/dlq-observer';
+import { recordBuybackSettled, recordBuybackStocked } from './buybacks/buyback-events';
+import { BuybackReportsService } from './buybacks/buyback-reports.service';
 
 @Module({
   controllers: [ReportsController, DlqController],
-  providers: [ReportsService, StockReportsService, ReportExportService, DlqService, DlqObserver],
+  providers: [
+    ReportsService,
+    StockReportsService,
+    ReportExportService,
+    BuybackReportsService,
+    DlqService,
+    DlqObserver,
+  ],
   imports: [
     AppConfigModule.forRoot({ service: SERVICE_NAME, schema: envSchema }),
     CorrelationModule,
@@ -49,6 +58,8 @@ import { DlqObserver } from './dlq/dlq-observer';
           [ROUTING_KEYS.INVENTORY_SNAPSHOT_CLOSED]: recordInventorySnapshot as never,
           [ROUTING_KEYS.ORDER_PAID]: dispatchPaidOrder as never,
           [ROUTING_KEYS.ORDER_CANCELLED]: recordCancelledOrder as never,
+          [ROUTING_KEYS.BUYBACK_SETTLED]: recordBuybackSettled as never,
+          [ROUTING_KEYS.BUYBACK_STOCKED]: recordBuybackStocked as never,
         },
       },
     }),

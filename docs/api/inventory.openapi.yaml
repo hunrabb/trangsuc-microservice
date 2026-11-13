@@ -22,8 +22,94 @@ tags:
 - name: Danh mục và sản phẩm
 - name: Phiếu nhập
 - name: Tồn kho
-- name: Kiểm kê
 paths:
+  /internal/exchanges/reserve:
+    servers: [{ url: 'http://inventory:3000' }]
+    post:
+      operationId: reserveExchangeItem
+      x-internal: true
+      security: []
+      summary: Atomically reserve a tagged item for an exchange, idempotent by exchangeId
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReserveExchange' }
+      responses:
+        '200': { description: Frozen sale price and hold expiry, content: { application/json: { schema: { $ref: '#/components/schemas/ExchangeHold' } } } }
+        '409': { description: Item unavailable or price missing }
+  /internal/exchanges/{exchangeId}:
+    servers: [{ url: 'http://inventory:3000' }]
+    get:
+      operationId: getExchangeHold
+      x-internal: true
+      security: []
+      parameters:
+        - { name: exchangeId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Hold snapshot or null, content: { application/json: { schema: { anyOf: [ { $ref: '#/components/schemas/ExchangeHold' }, { type: 'null' } ] } } } }
+  /internal/exchanges/{exchangeId}/protect:
+    servers: [{ url: 'http://inventory:3000' }]
+    post:
+      operationId: protectPaidExchangeHold
+      x-internal: true
+      security: []
+      parameters:
+        - { name: exchangeId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Paid hold retained for bounded recovery, content: { application/json: { schema: { $ref: '#/components/schemas/ExchangeHold' } } } }
+        '409': { description: Hold expired or released }
+  /internal/exchanges/{exchangeId}/consume:
+    servers: [{ url: 'http://inventory:3000' }]
+    post:
+      operationId: consumeExchangeHold
+      x-internal: true
+      security: []
+      parameters:
+        - { name: exchangeId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Idempotent SOLD snapshot, content: { application/json: { schema: { $ref: '#/components/schemas/ExchangeHold' } } } }
+        '409': { description: Paid hold missing or expired }
+  /internal/exchanges/release:
+    servers: [{ url: 'http://inventory:3000' }]
+    post:
+      operationId: releaseExchangeHold
+      x-internal: true
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ExchangeRelease' }
+      responses:
+        '200': { description: Idempotent release or tombstone }
+        '409': { description: Payment protected or item consumed }
+  /internal/buyback-prices/{metalId}:
+    get:
+      operationId: internalBuybackPrice
+      summary: Current Inventory buy rate for the selected alloy; internal network only
+      security: []
+      x-internal: true
+      description: Gateway never routes /internal. Read only. No sellPrice fallback. Inventory time
+        chooses effective price; no purity multiplication.
+      parameters:
+        - in: path
+          name: metalId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Current buy price, source identity and capture time; unit VND_PER_CHI_ALLOY
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InventoryBuybackPrice"
+        "404":
+          description: Metal not found
+        "409":
+          description: "METAL_PRICE_NOT_SET: inactive metal or missing valid buy rate"
   /internal/stock/orders/{orderId}:
     servers: [{ url: 'http://inventory:3000' }]
     get:
@@ -936,11 +1022,9 @@ paths:
       tags:
       - Phiếu nhập
       summary: Danh sách phiếu nhập
-      description: Người không phải ADMIN bắt buộc có `branchId` của chi nhánh mình.
+      description: Chỉ ADMIN được xem phiếu nhập; dùng branchId để lọc chi nhánh nhận hàng.
       x-roles:
       - ADMIN
-      - MANAGER (chi nhánh của phiếu)
-      - STAFF (chi nhánh của phiếu)
       x-audience: store-backoffice
       security:
       - bearerAuth: []
@@ -1014,8 +1098,6 @@ paths:
       description: Chi nhánh chưa có kho → `404 NOT_FOUND`; kho ngừng hoạt động → `409 INVALID_STATE`.
       x-roles:
       - ADMIN
-      - MANAGER (chi nhánh của phiếu)
-      - STAFF (chi nhánh của phiếu)
       x-audience: store-backoffice
       security:
       - bearerAuth: []
@@ -1088,8 +1170,6 @@ paths:
       summary: Xem phiếu nhập
       x-roles:
       - ADMIN
-      - MANAGER (chi nhánh của phiếu)
-      - STAFF (chi nhánh của phiếu)
       x-audience: store-backoffice
       security:
       - bearerAuth: []
@@ -1142,8 +1222,6 @@ paths:
         duyệt.
       x-roles:
       - ADMIN
-      - MANAGER (chi nhánh của phiếu)
-      - STAFF (chi nhánh của phiếu)
       x-audience: store-backoffice
       security:
       - bearerAuth: []
@@ -1222,8 +1300,6 @@ paths:
       summary: Xoá dòng khỏi phiếu nháp
       x-roles:
       - ADMIN
-      - MANAGER (chi nhánh của phiếu)
-      - STAFF (chi nhánh của phiếu)
       x-audience: store-backoffice
       security:
       - bearerAuth: []
@@ -1284,7 +1360,6 @@ paths:
         cùng lúc) → `409 INVALID_STATE`. Phiếu rỗng hoặc mã tem trùng hàng đã có → `400 VALIDATION_FAILED`.'
       x-roles:
       - ADMIN
-      - MANAGER (chi nhánh của phiếu)
       x-audience: store-backoffice
       security:
       - bearerAuth: []
@@ -1343,6 +1418,47 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/admin/inventory/items/summary:
+    get:
+      operationId: getStockSummary
+      tags: [Tồn kho]
+      summary: Tổng hợp số chiếc theo biến thể trong một chi nhánh
+      description: >-
+        Bắt buộc branchId. ADMIN hoặc MANAGER/STAFF được phân công chi nhánh.
+        Khả dụng là IN_STOCK với kho, mẫu, danh mục, biến thể, kim loại hoạt động và có giá hiệu lực.
+        RESERVED chỉ tính giữ hiệu lực ACTIVE/PAID_HELD hoặc Exchange ACTIVE/PROTECTED chưa hết hạn.
+        Giữ hết hạn/chờ đối soát và hàng ngừng bán nằm ở other, không tính khả dụng.
+        SOLD phản ánh trạng thái Inventory, bao gồm POS đã trừ kho trước xác nhận thanh toán.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: branchId
+          required: true
+          schema: {type: string, format: uuid}
+        - in: query
+          name: variantId
+          schema: {type: string, format: uuid}
+        - in: query
+          name: page
+          schema: {type: integer, minimum: 1, default: 1}
+        - in: query
+          name: pageSize
+          schema: {type: integer, minimum: 1, maximum: 100, default: 20}
+      responses:
+        '200':
+          description: Một snapshot PostgreSQL, phân trang theo biến thể
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockSummaryPage'
+        '400':
+          description: Query không hợp lệ
+        '401':
+          description: Chưa đăng nhập
+        '403':
+          description: Không có quyền tại chi nhánh
+
   /api/admin/inventory/items:
     get:
       operationId: listItems
@@ -1488,264 +1604,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /api/admin/inventory/stock-counts:
-    post:
-      operationId: createStockCount
-      tags:
-      - Kiểm kê
-      summary: Mở phiên kiểm kê
-      description: Chụp danh sách chiếc `IN_STOCK` của kho lúc mở, không đổi trạng thái chiếc nào. Mỗi kho tối đa
-        một phiên đang mở → `409 INVALID_STATE`. Chi nhánh chưa có kho → `404`.
-      x-roles:
-      - ADMIN
-      - MANAGER (chi nhánh của phiên)
-      x-audience: store-backoffice
-      security:
-      - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateStockCountRequest'
-      responses:
-        '201':
-          description: Phiên đang mở, kèm danh sách chiếc dự kiến lúc đó
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/StockCountSummary'
-        '400':
-          description: 'Dữ liệu không hợp lệ: VALIDATION_FAILED'
-          x-error-codes:
-          - VALIDATION_FAILED
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '401':
-          description: 'Chưa xác thực: INVALID_TOKEN, TOKEN_EXPIRED'
-          x-error-codes:
-          - INVALID_TOKEN
-          - TOKEN_EXPIRED
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '403':
-          description: 'Không có quyền: FORBIDDEN'
-          x-error-codes:
-          - FORBIDDEN
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '404':
-          description: 'Không tìm thấy: NOT_FOUND'
-          x-error-codes:
-          - NOT_FOUND
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '409':
-          description: 'Xung đột: INVALID_STATE'
-          x-error-codes:
-          - INVALID_STATE
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-  /api/admin/inventory/stock-counts/{stockCountId}:
-    parameters:
-    - name: stockCountId
-      in: path
-      required: true
-      schema:
-        type: string
-        format: uuid
-    get:
-      operationId: getStockCount
-      tags:
-      - Kiểm kê
-      summary: Xem tổng kết phiên kiểm kê
-      x-roles:
-      - ADMIN
-      - MANAGER (chi nhánh của phiên)
-      - STAFF (chi nhánh của phiên)
-      x-audience: store-backoffice
-      security:
-      - bearerAuth: []
-      responses:
-        '200':
-          description: Số dự kiến, đã quét, thiếu, thừa và danh sách mã tem thiếu, thừa
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/StockCountSummary'
-        '401':
-          description: 'Chưa xác thực: INVALID_TOKEN, TOKEN_EXPIRED'
-          x-error-codes:
-          - INVALID_TOKEN
-          - TOKEN_EXPIRED
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '403':
-          description: 'Không có quyền: FORBIDDEN'
-          x-error-codes:
-          - FORBIDDEN
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '404':
-          description: 'Không tìm thấy: NOT_FOUND'
-          x-error-codes:
-          - NOT_FOUND
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-  /api/admin/inventory/stock-counts/{stockCountId}/scan:
-    parameters:
-    - name: stockCountId
-      in: path
-      required: true
-      schema:
-        type: string
-        format: uuid
-    post:
-      operationId: scanStockCount
-      tags:
-      - Kiểm kê
-      summary: Quét một mã tem
-      description: Mã không thuộc danh sách dự kiến → ghi vào danh sách thừa (`EXTRA`), không tự thêm vào kho. Phiên
-        đã đóng → `409 INVALID_STATE`.
-      x-roles:
-      - ADMIN
-      - MANAGER (chi nhánh của phiên)
-      - STAFF (chi nhánh của phiên)
-      x-audience: store-backoffice
-      security:
-      - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ScanStockCountRequest'
-      responses:
-        '200':
-          description: '`MATCHED`, `ALREADY_SCANNED` hoặc `EXTRA`'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ScanResult'
-        '400':
-          description: 'Dữ liệu không hợp lệ: VALIDATION_FAILED'
-          x-error-codes:
-          - VALIDATION_FAILED
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '401':
-          description: 'Chưa xác thực: INVALID_TOKEN, TOKEN_EXPIRED'
-          x-error-codes:
-          - INVALID_TOKEN
-          - TOKEN_EXPIRED
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '403':
-          description: 'Không có quyền: FORBIDDEN'
-          x-error-codes:
-          - FORBIDDEN
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '404':
-          description: 'Không tìm thấy: NOT_FOUND'
-          x-error-codes:
-          - NOT_FOUND
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '409':
-          description: 'Xung đột: INVALID_STATE'
-          x-error-codes:
-          - INVALID_STATE
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-  /api/admin/inventory/stock-counts/{stockCountId}/close:
-    parameters:
-    - name: stockCountId
-      in: path
-      required: true
-      schema:
-        type: string
-        format: uuid
-    post:
-      operationId: closeStockCount
-      tags:
-      - Kiểm kê
-      summary: Đóng phiên kiểm kê
-      description: 'Trong một transaction: chiếc dự kiến mà không quét được và còn `IN_STOCK` → `MISSING` kèm `StockMovement`
-        loại `COUNT_MISSING`; chiếc đã bán hoặc đang giữ trong lúc kiểm kê → không tính thiếu. Không đổi trạng thái
-        chiếc nào. Đóng phiên đã đóng → `409 INVALID_STATE`.'
-      x-roles:
-      - ADMIN
-      - MANAGER (chi nhánh của phiên)
-      x-audience: store-backoffice
-      security:
-      - bearerAuth: []
-      responses:
-        '200':
-          description: Đã đóng
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/StockCountSummary'
-        '401':
-          description: 'Chưa xác thực: INVALID_TOKEN, TOKEN_EXPIRED'
-          x-error-codes:
-          - INVALID_TOKEN
-          - TOKEN_EXPIRED
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '403':
-          description: 'Không có quyền: FORBIDDEN'
-          x-error-codes:
-          - FORBIDDEN
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '404':
-          description: 'Không tìm thấy: NOT_FOUND'
-          x-error-codes:
-          - NOT_FOUND
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '409':
-          description: 'Xung đột: INVALID_STATE'
-          x-error-codes:
-          - INVALID_STATE
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
   /api/admin/inventory/jewelry-items/{tagCode}/label:
     parameters:
     - name: tagCode
@@ -1805,6 +1663,257 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    StockSummaryQuery:
+      type: "object"
+      properties:
+        page:
+          default: 1
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
+        pageSize:
+          default: 20
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 100
+        branchId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        variantId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+      required:
+        - "page"
+        - "pageSize"
+        - "branchId"
+      additionalProperties: false
+    StockSummaryPage:
+      type: "object"
+      properties:
+        items:
+          type: "array"
+          items:
+            type: "object"
+            properties:
+              branchId:
+                type: "string"
+                format: "uuid"
+                pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              branchName:
+                type: "string"
+              variantId:
+                type: "string"
+                format: "uuid"
+                pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              productName:
+                type: "string"
+              variantName:
+                type: "string"
+              sku:
+                type: "string"
+              metalName:
+                type: "string"
+              total:
+                type: "integer"
+                minimum: 0
+                maximum: 9007199254740991
+              available:
+                type: "integer"
+                minimum: 0
+                maximum: 9007199254740991
+              reserved:
+                type: "integer"
+                minimum: 0
+                maximum: 9007199254740991
+              sold:
+                type: "integer"
+                minimum: 0
+                maximum: 9007199254740991
+              pendingMelt:
+                type: "integer"
+                minimum: 0
+                maximum: 9007199254740991
+              other:
+                type: "integer"
+                minimum: 0
+                maximum: 9007199254740991
+            required:
+              - "branchId"
+              - "branchName"
+              - "variantId"
+              - "productName"
+              - "variantName"
+              - "sku"
+              - "metalName"
+              - "total"
+              - "available"
+              - "reserved"
+              - "sold"
+              - "pendingMelt"
+              - "other"
+            additionalProperties: false
+        total:
+          type: "integer"
+          minimum: 0
+          maximum: 9007199254740991
+          description: "Tổng số dòng khớp, không chỉ trang này"
+        page:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
+        pageSize:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
+      required:
+        - "items"
+        - "total"
+        - "page"
+        - "pageSize"
+      additionalProperties: false
+    ReserveExchange:
+      type: "object"
+      properties:
+        exchangeId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        branchId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        tagCode:
+          type: "string"
+          minLength: 1
+          maxLength: 64
+      required:
+        - "exchangeId"
+        - "branchId"
+        - "tagCode"
+      additionalProperties: false
+    ExchangeHold:
+      type: "object"
+      properties:
+        exchangeId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        branchId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        status:
+          type: "string"
+          enum:
+            - "ACTIVE"
+            - "PROTECTED"
+            - "CONSUMED"
+            - "EXPIRED"
+            - "RELEASED"
+        tagCode:
+          type: "string"
+        itemId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        variantId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        metalId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        productName:
+          type: "string"
+        weight:
+          type: "string"
+        laborFee:
+          type: "string"
+        metalSellPricePerChi:
+          type: "string"
+        price:
+          type: "string"
+        costPrice:
+          type: "string"
+        expiresAt:
+          anyOf:
+            - type: "string"
+              format: "date-time"
+              pattern: "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+            - type: "null"
+      required:
+        - "exchangeId"
+        - "branchId"
+        - "status"
+        - "tagCode"
+        - "itemId"
+        - "variantId"
+        - "metalId"
+        - "productName"
+        - "weight"
+        - "laborFee"
+        - "metalSellPricePerChi"
+        - "price"
+        - "costPrice"
+        - "expiresAt"
+      additionalProperties: false
+    ExchangeRelease:
+      type: "object"
+      properties:
+        exchangeId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+      required:
+        - "exchangeId"
+      additionalProperties: false
+    InventoryBuybackPrice:
+      type: "object"
+      properties:
+        metalId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        metalCode:
+          type: "string"
+          minLength: 1
+        metalKind:
+          type: "string"
+          enum:
+            - "GOLD"
+            - "SILVER"
+        priceId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        buyPricePerChi:
+          type: "string"
+          pattern: "^\\d{1,13}(\\.\\d{1,2})?$"
+          description: "Số tiền (đồng), chuỗi thập phân"
+        unit:
+          type: "string"
+          const: "VND_PER_CHI_ALLOY"
+        effectiveFrom:
+          type: "string"
+          format: "date-time"
+          pattern: "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+        capturedAt:
+          type: "string"
+          format: "date-time"
+          pattern: "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+      required:
+        - "metalId"
+        - "metalCode"
+        - "metalKind"
+        - "priceId"
+        - "buyPricePerChi"
+        - "unit"
+        - "effectiveFrom"
+        - "capturedAt"
+      additionalProperties: false
     OnlineOrderPaid:
       type: "object"
       properties:
@@ -2094,6 +2203,10 @@ components:
             - "METHOD_NOT_ALLOWED"
             - "VERSION_CONFLICT"
             - "INVALID_STATE"
+            - "BUYBACK_POLICY_REQUIRED"
+            - "BUYBACK_APPRAISAL_INCOMPLETE"
+            - "BUYBACK_PRICE_INVALID"
+            - "BUYBACK_SEPARATE_APPROVER_REQUIRED"
             - "LAST_ADMIN"
             - "METAL_PRICE_NOT_SET"
             - "ITEM_NOT_AVAILABLE"
@@ -2388,9 +2501,12 @@ components:
           type: "boolean"
         imageUrl:
           anyOf:
-            - type: "string"
-              maxLength: 2048
-              format: "uri"
+            - anyOf:
+                - type: "string"
+                  maxLength: 2048
+                  format: "uri"
+                - type: "string"
+                  pattern: "^\\/catalog-images\\/[a-f0-9]{64}\\.(?:jpg|jpeg|png|webp)$"
             - type: "null"
         version:
           type: "integer"
@@ -2721,6 +2837,7 @@ components:
             - "IN_STOCK"
             - "RESERVED"
             - "SOLD"
+            - "PENDING_MELT"
         version:
           type: "integer"
           exclusiveMinimum: 0
@@ -2806,6 +2923,7 @@ components:
             - "IN_STOCK"
             - "RESERVED"
             - "SOLD"
+            - "PENDING_MELT"
         version:
           type: "integer"
           exclusiveMinimum: 0
@@ -2830,134 +2948,6 @@ components:
         - "version"
         - "sellPricePerChi"
         - "price"
-      additionalProperties: false
-    CreateStockCountRequest:
-      type: "object"
-      properties:
-        branchId:
-          type: "string"
-          format: "uuid"
-          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-      required:
-        - "branchId"
-      additionalProperties: false
-    ScanStockCountRequest:
-      type: "object"
-      properties:
-        tagCode:
-          type: "string"
-          minLength: 1
-          maxLength: 64
-      required:
-        - "tagCode"
-      additionalProperties: false
-    ScanResult:
-      type: "object"
-      properties:
-        tagCode:
-          type: "string"
-        result:
-          type: "string"
-          enum:
-            - "MATCHED"
-            - "ALREADY_SCANNED"
-            - "EXTRA"
-      required:
-        - "tagCode"
-        - "result"
-      additionalProperties: false
-    StockCountSummary:
-      type: "object"
-      properties:
-        id:
-          type: "string"
-          format: "uuid"
-          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-        code:
-          type: "string"
-        branchId:
-          type: "string"
-          format: "uuid"
-          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-        status:
-          type: "string"
-          enum:
-            - "OPEN"
-            - "CLOSED"
-        createdBy:
-          type: "string"
-          format: "uuid"
-          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-        closedBy:
-          anyOf:
-            - type: "string"
-              format: "uuid"
-              pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-            - type: "null"
-        closedAt:
-          anyOf:
-            - type: "string"
-              format: "date-time"
-              pattern: "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
-            - type: "null"
-        version:
-          type: "integer"
-          exclusiveMinimum: 0
-          maximum: 9007199254740991
-        expectedCount:
-          type: "integer"
-          minimum: 0
-          maximum: 9007199254740991
-          description: "Số chiếc dự kiến lúc mở phiên"
-        scannedCount:
-          type: "integer"
-          minimum: 0
-          maximum: 9007199254740991
-        notScannedCount:
-          type: "integer"
-          minimum: 0
-          maximum: 9007199254740991
-          description: "Chưa quét, phiên còn mở"
-        missingCount:
-          type: "integer"
-          minimum: 0
-          maximum: 9007199254740991
-          description: "Thiếu: không quét được khi đóng phiên"
-        movedCount:
-          type: "integer"
-          minimum: 0
-          maximum: 9007199254740991
-          description: "Đã bán hoặc đang giữ trong lúc kiểm kê, không tính thiếu"
-        extraCount:
-          type: "integer"
-          minimum: 0
-          maximum: 9007199254740991
-          description: "Thừa: quét được nhưng không thuộc kho"
-        missingTagCodes:
-          type: "array"
-          items:
-            type: "string"
-        extraTagCodes:
-          type: "array"
-          items:
-            type: "string"
-      required:
-        - "id"
-        - "code"
-        - "branchId"
-        - "status"
-        - "createdBy"
-        - "closedBy"
-        - "closedAt"
-        - "version"
-        - "expectedCount"
-        - "scannedCount"
-        - "notScannedCount"
-        - "missingCount"
-        - "movedCount"
-        - "extraCount"
-        - "missingTagCodes"
-        - "extraTagCodes"
       additionalProperties: false
     ItemLabel:
       type: "object"

@@ -69,7 +69,10 @@ export const hasRoleAtBranch = (
   (branchId !== null &&
     branches.some((entry) => entry.branchId === branchId && roles.includes(entry.role)));
 
-/** Trang kho theo chi nhánh (nhập hàng, tồn kho, kiểm kê): ADMIN, hoặc người có vai trò ở một chi nhánh. */
+/** Chỉ ADMIN lập và duyệt phiếu nhập, chọn chi nhánh nhận hàng. */
+export const canManageReceipts = (branches: readonly BranchRole[]): boolean => isAdmin(branches);
+
+/** Trang tồn kho theo chi nhánh: ADMIN, hoặc người có vai trò ở một chi nhánh. */
 export const canBranchStockAccess = (branches: readonly BranchRole[]): boolean =>
   isAdmin(branches) || branches.some((entry) => entry.branchId !== null);
 

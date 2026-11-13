@@ -29,7 +29,7 @@ Mục tiêu: không còn câu hỏi nghiệp vụ nào ảnh hưởng tới cấ
 - [ ] Cập nhật tài liệu thiết kế: mô hình hàng trang sức (Metal, MetalPrice, JewelryItem), chốt giá, thu mua/đổi, AuditLog, thay mọi ví dụ quần áo.
 - [ ] Thiết kế API: danh sách endpoint từng service (method, đường dẫn, body, response, mã lỗi, vai trò được gọi), viết thành file OpenAPI.
 - [ ] Liệt kê toàn bộ sự kiện và payload trong `libs/contracts`.
-- [ ] Danh sách màn hình: admin (chi nhánh, nhân viên, sản phẩm, giá vàng, nhập kho, in tem, kiểm kê, báo cáo), POS (bán, thu mua, đổi), website (danh mục, chi tiết, giỏ, thanh toán, tra đơn).
+- [ ] Danh sách màn hình: admin (chi nhánh, nhân viên, sản phẩm, giá vàng, nhập kho, in tem, báo cáo), POS (bán, thu mua, đổi), website (danh mục, chi tiết, giỏ, thanh toán, tra đơn).
 - [ ] Ghi các quyết định kiến trúc thành ADR ngắn (mỗi quyết định: bối cảnh, lựa chọn, lý do), ví dụ "bỏ điều chuyển hàng", "đơn online chọn kho nhiều hàng nhất".
 
 **Xong khi:** tài liệu thiết kế + OpenAPI + contracts đủ để giao một service cho Claude mà không phải đoán.
@@ -65,8 +65,7 @@ Mục tiêu: `docker compose up` là cả hệ thống lên, một request đi x
 - [ ] Kho: tự tạo khi nhận `branch.created`; `acceptsOnlineOrders`, `onlineBuffer`.
 - [ ] Nhập hàng: phiếu nhập có cả dòng hàng có tem (cân từng chiếc: tổng trọng lượng, trọng lượng đá, tiền công, giá vốn) và dòng hàng theo số lượng; duyệt bằng `version`; tạo `JewelryItem` hoặc cộng `InventoryItem`; ghi sổ kho.
 - [ ] In tem: mã tem, mẫu, tuổi vàng, trọng lượng.
-- [ ] Kiểm kê: quét tem → danh sách thiếu/thừa; hàng số lượng điều chỉnh theo chênh lệch.
-- [ ] AuditLog cho đổi giá, sửa trọng lượng, điều chỉnh kiểm kê.
+- [ ] AuditLog cho đổi giá, sửa trọng lượng, thay đổi tồn kho.
 - [ ] API nội bộ cho sales: `POST /internal/stock/deduct`, `POST /internal/stock/release` (idempotent theo `orderId`), `GET /internal/items/by-tag/:code`, `GET /internal/price-quote` (tính giá theo giá vàng hiện tại).
 
 **Xong khi:** test đồng thời: hai quản lý cùng duyệt một phiếu → chỉ một lần nhập; hai request cùng giữ một tem → một thắng; 50 request trừ một mẫu thời trang còn 10 → đúng 10 thành công, tồn = 0; CHECK chặn số âm.
@@ -126,8 +125,8 @@ Mục tiêu: `docker compose up` là cả hệ thống lên, một request đi x
 
 1. **Môi trường:** staging và production tách riêng (hai máy hoặc hai VPS), cùng Docker Compose, khác `.env`; reverse proxy (Caddy hoặc Nginx) cấp HTTPS cho gateway và website.
 2. **Quy trình phát hành:** CI build image có tag theo commit → deploy lên staging → chạy test e2e → deploy production; `prisma migrate deploy` chạy trước khi service mới nhận request; đổi format sự kiện chỉ theo kiểu thêm.
-3. **Nhập dữ liệu ban đầu:** chi nhánh, nhân viên, danh mục, mẫu; kiểm kê thật từng chi nhánh, cân và in tem mới cho mọi chiếc đang có; tồn hàng thời trang theo số đếm.
-4. **Đào tạo:** thu ngân (POS, thu mua, đổi), thủ kho (nhập, in tem, kiểm kê), quản lý (duyệt, giá vàng, báo cáo), nhân viên online (đóng gói, giao).
+3. **Nhập dữ liệu ban đầu:** chi nhánh, nhân viên, danh mục, mẫu; đối chiếu dữ liệu ban đầu từng chi nhánh, cân và in tem mới cho mọi chiếc đang có; tồn hàng thời trang theo số đếm.
+4. **Đào tạo:** thu ngân (POS, thu mua, đổi), thủ kho (nhập, in tem), quản lý (duyệt, giá vàng, báo cáo), nhân viên online (đóng gói, giao).
 5. **Chạy thử một chi nhánh** 1–2 tuần song song với cách làm cũ; mỗi tối so doanh thu và tồn kho giữa hai cách.
 6. **Mở dần:** các chi nhánh còn lại, rồi mới mở website bán online.
 7. **Sau go-live:** 2 tuần đầu xem đối soát và DLQ mỗi sáng; ghi lỗi và yêu cầu mới vào danh sách, xử lý theo đợt.

@@ -1,3 +1,4 @@
+import { accountToken } from './account.ts';
 import {
   shopPageSchema,
   shopProductSchema,
@@ -41,7 +42,10 @@ export function canRetryRead(count: number, error: unknown): boolean {
   return count < 1 && error instanceof ShopApiError && (error.status === 0 || error.status >= 500);
 }
 /** Cùng origin Gateway; không dùng cookie/backoffice token và không ghi request/secret vào log. */
-export function createShopApi(fetcher: typeof fetch = (...args) => fetch(...args)) {
+export function createShopApi(
+  fetcher: typeof fetch = (...args) => fetch(...args),
+  getAccountToken = accountToken,
+) {
   async function send<T>(
     path: string,
     schema: { parse(value: unknown): T },
@@ -64,7 +68,16 @@ export function createShopApi(fetcher: typeof fetch = (...args) => fetch(...args
       if (options.token)
         headers.Authorization = checkoutAuthorizationSchema.parse(`Checkout ${options.token}`);
       if (options.key) headers['Idempotency-Key'] = idempotencyKeySchema.parse(options.key);
-      const response = await fetcher(`/api/shop${path}`, {
+      let target = path;
+      if (path === '/orders' && options.method === 'POST') {
+        const bearer = await getAccountToken();
+        if (bearer) {
+          target = '/my-orders';
+          headers['X-Checkout-Authorization'] = headers.Authorization!;
+          headers.Authorization = `Bearer ${bearer}`;
+        }
+      }
+      const response = await fetcher(`/api/shop${target}`, {
         method: options.method ?? 'GET',
         credentials: 'omit',
         cache: 'no-store',

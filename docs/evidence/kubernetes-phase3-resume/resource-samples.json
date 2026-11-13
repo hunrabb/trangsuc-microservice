@@ -1,0 +1,2118 @@
+[
+  {
+    "stage": "3.3R-monitor",
+    "utc": "2026-11-13T04:14:00.357216+00:00",
+    "windows": {
+      "availableMiB": 3223,
+      "cpuPercent": 98,
+      "freeCGiB": 36.82
+    },
+    "linux": {
+      "availableMiB": 3584.0,
+      "usedMiB": 4308.5,
+      "swapKiB": 20392,
+      "pswpin": 612,
+      "pswpout": 4583,
+      "oom": 0,
+      "load": [
+        "8.81",
+        "5.39",
+        "4.42"
+      ],
+      "memoryPSI": "some avg10=0.00 avg60=0.02 avg300=0.00 total=16430655\nfull avg10=0.00 avg60=0.02 avg300=0.00 total=11808250"
+    }
+  },
+  {
+    "stage": "3.3R-monitor",
+    "utc": "2026-11-13T04:14:24.274770+00:00",
+    "windows": {
+      "availableMiB": 3419,
+      "cpuPercent": 63,
+      "freeCGiB": 36.82
+    },
+    "linux": {
+      "availableMiB": 3607.4,
+      "usedMiB": 4285.1,
+      "swapKiB": 20392,
+      "pswpin": 612,
+      "pswpout": 4583,
+      "oom": 0,
+      "load": [
+        "7.03",
+        "5.21",
+        "4.38"
+      ],
+      "memoryPSI": "some avg10=0.03 avg60=0.04 avg300=0.00 total=16460489\nfull avg10=0.03 avg60=0.04 avg300=0.00 total=11830970"
+    }
+  },
+  {
+    "stage": "3.3R-monitor",
+    "utc": "2026-11-13T04:14:43.982856+00:00",
+    "windows": {
+      "availableMiB": 3465,
+      "cpuPercent": 55,
+      "freeCGiB": 36.82
+    },
+    "linux": {
+      "availableMiB": 3530.4,
+      "usedMiB": 4362.1,
+      "swapKiB": 20392,
+      "pswpin": 612,
+      "pswpout": 4583,
+      "oom": 0,
+      "load": [
+        "5.10",
+        "4.88",
+        "4.29"
+      ],
+      "memoryPSI": "some avg10=0.00 avg60=0.02 avg300=0.00 total=16460489\nfull avg10=0.00 avg60=0.02 avg300=0.00 total=11830970"
+    }
+  },
+  {
+    "stage": "3.3R-monitor",
+    "utc": "2026-11-13T04:15:04.039605+00:00",
+    "windows": {
+      "availableMiB": 3458,
+      "cpuPercent": 46,
+      "freeCGiB": 36.82
+    },
+    "linux": {
+      "availableMiB": 3515.1,
+      "usedMiB": 4377.4,
+      "swapKiB": 20776,
+      "pswpin": 612,
+      "pswpout": 4630,
+      "oom": 0,
+      "load": [
+        "5.09",
+        "4.91",
+        "4.31"
+      ],
+      "memoryPSI": "some avg10=0.00 avg60=0.01 avg300=0.00 total=16474638\nfull avg10=0.00 avg60=0.01 avg300=0.00 total=11842210"
+    }
+  },
+  {
+    "stage": "3.3R-monitor",
+    "utc": "2026-11-13T04:15:23.784703+00:00",
+    "windows": {
+      "availableMiB": 3552,
+      "cpuPercent": 49,
+      "freeCGiB": 36.82
+    },
+    "linux": {
+      "availableMiB": 3559.1,
+      "usedMiB": 4333.5,
+      "swapKiB": 20776,
+      "pswpin": 612,
+      "pswpout": 4630,
+      "oom": 0,
+      "load": [
+        "4.14",
+        "4.70",
+        "4.26"
+      ],
+      "memoryPSI": "some avg10=0.00 avg60=0.01 avg300=0.00 total=16474638\nfull avg10=0.00 avg60=0.01 avg300=0.00 total=11842210"
+    }
+  },
+  {
+    "stage": "3.3R-monitor",
+    "utc": "2026-11-13T04:15:43.416679+00:00",
+    "windows": {
+      "availableMiB": 3449,
+      "cpuPercent": 56,
+      "freeCGiB": 36.82
+    },
+    "linux": {
+      "availableMiB": 3515.0,
+      "usedMiB": 4377.5,
+      "swapKiB": 20776,
+      "pswpin": 612,
+      "pswpout": 4630,
+      "oom": 0,
+      "load": [
+        "3.47",
+        "4.51",
+        "4.20"
+      ],
+      "memoryPSI": "some avg10=0.00 avg60=0.00 avg300=0.00 total=16480711\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=11848265"
+    }
+  },
+  {
+    "stage": "3.3R-monitor",
+    "utc": "2026-11-13T04:16:03.179034+00:00",
+    "windows": {
+      "availableMiB": 3461,
+      "cpuPercent": 43,
+      "freeCGiB": 36.82
+    },
+    "linux": {
+      "availableMiB": 3555.6,
+      "usedMiB": 4336.9,
+      "swapKiB": 20776,
+      "pswpin": 612,
+      "pswpout": 4630,
+      "oom": 0,
+      "load": [
+        "2.55",
+        "4.23",
+        "4.12"
+      ],
+      "memoryPSI": "some avg10=0.00 avg60=0.00 avg300=0.00 total=16483095\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=11850548"
+    }
+  },
+  {
+    "stage": "3.3R-monitor",
+    "utc": "2026-11-13T04:16:22.926714+00:00",
+    "windows": {
+      "availableMiB": 3524,
+      "cpuPercent": 78,
+      "freeCGiB": 36.82
+    },
+    "linux": {
+      "availableMiB": 3508.2,
+      "usedMiB": 4384.3,
+      "swapKiB": 20800,
+      "pswpin": 612,
+      "pswpout": 4630,
+      "oom": 0,
+      "load": [
+        "2.03",
+        "4.01",
+        "4.04"
+      ],
+      "memoryPSI": "some avg10=0.00 avg60=0.00 avg300=0.00 total=16492912\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=11859867"
+    }
+  },
+  {
+    "stage": "3.3R-monitor",
+    "utc": "2026-11-13T04:16:42.792886+00:00",
+    "windows": {
+      "availableMiB": 3462,
+      "cpuPercent": 15,
+      "freeCGiB": 36.82
+    },
+    "linux": {
+      "availableMiB": 3546.1,
+      "usedMiB": 4346.4,
+      "swapKiB": 21208,
+      "pswpin": 612,
+      "pswpout": 4669,
+      "oom": 0,
+      "load": [
+        "2.17",
+        "3.91",
+        "4.01"
+      ],
+      "memoryPSI": "some avg10=0.24 avg60=0.08 avg300=0.01 total=16568564\nfull avg10=0.24 avg60=0.08 avg300=0.01 total=11924634"
+    }
+  },
+  {
+    "stage": "3.3R-monitor",
+    "utc": "2026-11-13T04:17:02.816524+00:00",
+    "windows": {
+      "availableMiB": 3399,
+      "cpuPercent": 44,
+      "freeCGiB": 36.82
+    },
+    "linux": {
+      "availableMiB": 3531.6,
+      "usedMiB": 4360.9,
+      "swapKiB": 21208,
+      "pswpin": 612,
+      "pswpout": 4669,
+      "oom": 0,
+      "load": [
+        "2.09",
+        "3.77",
+        "3.96"
+      ],
+      "memoryPSI": "some avg10=0.03 avg60=0.05 avg300=0.01 total=16569623\nfull avg10=0.03 avg60=0.05 avg300=0.01 total=11925636"
+    }
+  },
+  {
+    "stage": "3.3R-monitor",
+    "utc": "2026-11-13T04:17:22.298260+00:00",
+    "windows": {
+      "availableMiB": 3475,
+      "cpuPercent": 68,
+      "freeCGiB": 36.82
+    },
+    "linux": {
+      "availableMiB": 3568.0,
+      "usedMiB": 4324.5,
+      "swapKiB": 21208,
+      "pswpin": 612,
+      "pswpout": 4669,
+      "oom": 0,
+      "load": [
+        "3.21",
+        "3.89",
+        "3.99"
+      ],
+      "memoryPSI": "some avg10=0.00 avg60=0.04 avg300=0.00 total=16571236\nfull avg10=0.00 avg60=0.04 avg300=0.00 total=11926372"
+    }
+  },
+  {
+    "stage": "3.3R-monitor",
+    "utc": "2026-11-13T04:17:42.281253+00:00",
+    "windows": {
+      "availableMiB": 3607,
+      "cpuPercent": 52,
+      "freeCGiB": 36.82
+    },
+    "linux": {
+      "availableMiB": 3508.5,
+      "usedMiB": 4384.0,
+      "swapKiB": 21328,
+      "pswpin": 612,
+      "pswpout": 4676,
+      "oom": 0,
+      "load": [
+        "2.27",
+        "3.61",
+        "3.90"
+      ],
+      "memoryPSI": "some avg10=0.00 avg60=0.02 avg300=0.00 total=16576695\nfull avg10=0.00 avg60=0.02 avg300=0.00 total=11931365"
+    }
+  },
+  {
+    "stage": "3.3R-monitor",
+    "utc": "2026-11-13T04:18:07.813619+00:00",
+    "windows": {
+      "availableMiB": 3540,
+      "cpuPercent": 33,
+      "freeCGiB": 36.82
+    },
+    "linux": {
+      "availableMiB": 3540.2,
+      "usedMiB": 4352.4,
+      "swapKiB": 21364,
+      "pswpin": 612,
+      "pswpout": 4678,
+      "oom": 0,
+      "load": [
+        "1.77",
+        "3.41",
+        "3.82"
+      ],
+      "memoryPSI": "some avg10=0.00 avg60=0.01 avg300=0.00 total=16588196\nfull avg10=0.00 avg60=0.01 avg300=0.00 total=11941107"
+    }
+  },
+  {
+    "stage": "3.3R-monitor",
+    "utc": "2026-11-13T04:18:27.423702+00:00",
+    "windows": {
+      "availableMiB": 3557,
+      "cpuPercent": 95,
+      "freeCGiB": 36.82
+    },
+    "linux": {
+      "availableMiB": 3529.1,
+      "usedMiB": 4363.4,
+      "swapKiB": 21364,
+      "pswpin": 612,
+      "pswpout": 4678,
+      "oom": 0,
+      "load": [
+        "1.81",
+        "3.30",
+        "3.78"
+      ],
+      "memoryPSI": "some avg10=0.00 avg60=0.00 avg300=0.00 total=16588196\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=11941107"
+    }
+  },
+  {
+    "stage": "3.3R-monitor",
+    "utc": "2026-11-13T04:18:47.656873+00:00",
+    "windows": {
+      "availableMiB": 3560,
+      "cpuPercent": 35,
+      "freeCGiB": 36.82
+    },
+    "linux": {
+      "availableMiB": 3550.6,
+      "usedMiB": 4341.9,
+      "swapKiB": 21364,
+      "pswpin": 612,
+      "pswpout": 4678,
+      "oom": 0,
+      "load": [
+        "1.55",
+        "3.15",
+        "3.72"
+      ],
+      "memoryPSI": "some avg10=0.00 avg60=0.00 avg300=0.00 total=16589595\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=11942456"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:19:07.513927+00:00",
+    "windows": {
+      "availableMiB": 3538,
+      "cpuPercent": 28,
+      "freeCGiB": 36.82
+    },
+    "linux": {
+      "availableMiB": 3530.7,
+      "usedMiB": 4361.9,
+      "swapKiB": 21364,
+      "pswpin": 612,
+      "pswpout": 4678,
+      "oom": 0,
+      "load": [
+        "1.40",
+        "3.01",
+        "3.66"
+      ],
+      "memoryPSI": "some avg10=0.00 avg60=0.00 avg300=0.00 total=16589595\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=11942456"
+    }
+  },
+  {
+    "stage": "3.3R",
+    "utc": "2026-11-13T04:19:10.226553+00:00",
+    "windows": {
+      "availableMiB": 3544,
+      "cpuPercent": 19,
+      "freeCGiB": 36.82
+    },
+    "linux": {
+      "availableMiB": 3520.7,
+      "usedMiB": 4371.8,
+      "swapKiB": 21364,
+      "pswpin": 612,
+      "pswpout": 4678,
+      "oom": 0,
+      "load": [
+        "1.40",
+        "3.01",
+        "3.66"
+      ],
+      "memoryPSI": "some avg10=0.00 avg60=0.00 avg300=0.00 total=16589595\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=11942456"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:19:27.245386+00:00",
+    "windows": {
+      "availableMiB": 3489,
+      "cpuPercent": 79,
+      "freeCGiB": 36.82
+    },
+    "linux": {
+      "availableMiB": 3525.8,
+      "usedMiB": 4366.8,
+      "swapKiB": 21880,
+      "pswpin": 612,
+      "pswpout": 4734,
+      "oom": 0,
+      "load": [
+        "2.64",
+        "3.16",
+        "3.69"
+      ],
+      "memoryPSI": "some avg10=0.00 avg60=0.00 avg300=0.00 total=16636587\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=11969743"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:19:47.825787+00:00",
+    "windows": {
+      "availableMiB": 3218,
+      "cpuPercent": 94,
+      "freeCGiB": 36.82
+    },
+    "linux": {
+      "availableMiB": 3523.7,
+      "usedMiB": 4368.8,
+      "swapKiB": 24000,
+      "pswpin": 617,
+      "pswpout": 5006,
+      "oom": 0,
+      "load": [
+        "3.15",
+        "3.25",
+        "3.71"
+      ],
+      "memoryPSI": "some avg10=0.30 avg60=0.13 avg300=0.03 total=16773424\nfull avg10=0.17 avg60=0.08 avg300=0.01 total=12055854"
+    }
+  },
+  {
+    "stage": "3.4",
+    "utc": "2026-11-13T04:19:54.945483+00:00",
+    "windows": {
+      "availableMiB": 3378,
+      "cpuPercent": 71,
+      "freeCGiB": 36.82
+    },
+    "linux": {
+      "availableMiB": 3502.7,
+      "usedMiB": 4389.8,
+      "swapKiB": 23992,
+      "pswpin": 617,
+      "pswpout": 5006,
+      "oom": 0,
+      "load": [
+        "2.98",
+        "3.21",
+        "3.70"
+      ],
+      "memoryPSI": "some avg10=0.16 avg60=0.12 avg300=0.03 total=16774350\nfull avg10=0.09 avg60=0.07 avg300=0.01 total=12056626"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:20:08.610194+00:00",
+    "windows": {
+      "availableMiB": 3390,
+      "cpuPercent": 65,
+      "freeCGiB": 36.82
+    },
+    "linux": {
+      "availableMiB": 3488.8,
+      "usedMiB": 4403.7,
+      "swapKiB": 23992,
+      "pswpin": 617,
+      "pswpout": 5006,
+      "oom": 0,
+      "load": [
+        "2.68",
+        "3.13",
+        "3.66"
+      ],
+      "memoryPSI": "some avg10=0.04 avg60=0.09 avg300=0.02 total=16778071\nfull avg10=0.02 avg60=0.05 avg300=0.01 total=12058696"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:20:28.455383+00:00",
+    "windows": {
+      "availableMiB": 3417,
+      "cpuPercent": 73,
+      "freeCGiB": 36.82
+    },
+    "linux": {
+      "availableMiB": 3445.9,
+      "usedMiB": 4446.6,
+      "swapKiB": 23992,
+      "pswpin": 617,
+      "pswpout": 5006,
+      "oom": 0,
+      "load": [
+        "2.15",
+        "2.98",
+        "3.60"
+      ],
+      "memoryPSI": "some avg10=0.00 avg60=0.06 avg300=0.02 total=16779106\nfull avg10=0.00 avg60=0.03 avg300=0.00 total=12059724"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:20:48.182305+00:00",
+    "windows": {
+      "availableMiB": 3420,
+      "cpuPercent": 48,
+      "freeCGiB": 36.82
+    },
+    "linux": {
+      "availableMiB": 3482.4,
+      "usedMiB": 4410.2,
+      "swapKiB": 23936,
+      "pswpin": 623,
+      "pswpout": 5006,
+      "oom": 0,
+      "load": [
+        "1.95",
+        "2.88",
+        "3.56"
+      ],
+      "memoryPSI": "some avg10=0.00 avg60=0.04 avg300=0.01 total=16791851\nfull avg10=0.00 avg60=0.02 avg300=0.00 total=12062521"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:21:08.242635+00:00",
+    "windows": {
+      "availableMiB": 3332,
+      "cpuPercent": 81,
+      "freeCGiB": 36.57
+    },
+    "linux": {
+      "availableMiB": 3503.2,
+      "usedMiB": 4389.4,
+      "swapKiB": 25048,
+      "pswpin": 626,
+      "pswpout": 5214,
+      "oom": 0,
+      "load": [
+        "3.96",
+        "3.29",
+        "3.68"
+      ],
+      "memoryPSI": "some avg10=0.66 avg60=0.26 avg300=0.06 total=17014685\nfull avg10=0.53 avg60=0.19 avg300=0.04 total=12246055"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:21:27.940639+00:00",
+    "windows": {
+      "availableMiB": 3260,
+      "cpuPercent": 100,
+      "freeCGiB": 36.57
+    },
+    "linux": {
+      "availableMiB": 3517.4,
+      "usedMiB": 4375.1,
+      "swapKiB": 26384,
+      "pswpin": 664,
+      "pswpout": 5495,
+      "oom": 0,
+      "load": [
+        "5.78",
+        "3.75",
+        "3.82"
+      ],
+      "memoryPSI": "some avg10=1.79 avg60=0.70 avg300=0.18 total=17484034\nfull avg10=1.51 avg60=0.57 avg300=0.14 total=12649487"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:21:49.758716+00:00",
+    "windows": {
+      "availableMiB": 3171,
+      "cpuPercent": 96,
+      "freeCGiB": 36.39
+    },
+    "linux": {
+      "availableMiB": 3437.0,
+      "usedMiB": 4455.6,
+      "swapKiB": 26736,
+      "pswpin": 704,
+      "pswpout": 5572,
+      "oom": 0,
+      "load": [
+        "10.28",
+        "4.89",
+        "4.19"
+      ],
+      "memoryPSI": "some avg10=2.15 avg60=1.30 avg300=0.37 total=18152077\nfull avg10=1.28 avg60=0.88 avg300=0.25 total=13116621"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:22:11.030723+00:00",
+    "windows": {
+      "availableMiB": 3082,
+      "cpuPercent": 63,
+      "freeCGiB": 36.04
+    },
+    "linux": {
+      "availableMiB": 3511.3,
+      "usedMiB": 4381.2,
+      "swapKiB": 27152,
+      "pswpin": 759,
+      "pswpout": 5664,
+      "oom": 0,
+      "load": [
+        "9.79",
+        "5.13",
+        "4.29"
+      ],
+      "memoryPSI": "some avg10=1.05 avg60=1.14 avg300=0.39 total=18425528\nfull avg10=0.55 avg60=0.72 avg300=0.25 total=13299380"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:22:31.591214+00:00",
+    "windows": {
+      "availableMiB": 3089,
+      "cpuPercent": 46,
+      "freeCGiB": 35.88
+    },
+    "linux": {
+      "availableMiB": 3482.6,
+      "usedMiB": 4410.0,
+      "swapKiB": 30096,
+      "pswpin": 915,
+      "pswpout": 6321,
+      "oom": 0,
+      "load": [
+        "8.35",
+        "5.11",
+        "4.30"
+      ],
+      "memoryPSI": "some avg10=1.37 avg60=1.24 avg300=0.46 total=18826471\nfull avg10=1.07 avg60=0.86 avg300=0.31 total=13617672"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:22:51.655930+00:00",
+    "windows": {
+      "availableMiB": 3151,
+      "cpuPercent": 32,
+      "freeCGiB": 35.79
+    },
+    "linux": {
+      "availableMiB": 3495.1,
+      "usedMiB": 4397.5,
+      "swapKiB": 30108,
+      "pswpin": 915,
+      "pswpout": 6321,
+      "oom": 0,
+      "load": [
+        "5.98",
+        "4.78",
+        "4.21"
+      ],
+      "memoryPSI": "some avg10=0.18 avg60=0.89 avg300=0.43 total=18839918\nfull avg10=0.14 avg60=0.61 avg300=0.29 total=13628378"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:23:11.600587+00:00",
+    "windows": {
+      "availableMiB": 3149,
+      "cpuPercent": 73,
+      "freeCGiB": 35.79
+    },
+    "linux": {
+      "availableMiB": 3498.4,
+      "usedMiB": 4394.1,
+      "swapKiB": 30116,
+      "pswpin": 919,
+      "pswpout": 6323,
+      "oom": 0,
+      "load": [
+        "4.55",
+        "4.53",
+        "4.14"
+      ],
+      "memoryPSI": "some avg10=0.02 avg60=0.63 avg300=0.40 total=18855651\nfull avg10=0.01 avg60=0.43 avg300=0.27 total=13640216"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:23:31.940870+00:00",
+    "windows": {
+      "availableMiB": 3148,
+      "cpuPercent": 59,
+      "freeCGiB": 35.79
+    },
+    "linux": {
+      "availableMiB": 3448.3,
+      "usedMiB": 4444.2,
+      "swapKiB": 30132,
+      "pswpin": 919,
+      "pswpout": 6327,
+      "oom": 0,
+      "load": [
+        "4.30",
+        "4.48",
+        "4.13"
+      ],
+      "memoryPSI": "some avg10=0.00 avg60=0.45 avg300=0.37 total=18859585\nfull avg10=0.00 avg60=0.31 avg300=0.25 total=13643023"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:23:51.865477+00:00",
+    "windows": {
+      "availableMiB": 3133,
+      "cpuPercent": 80,
+      "freeCGiB": 35.79
+    },
+    "linux": {
+      "availableMiB": 3478.3,
+      "usedMiB": 4414.3,
+      "swapKiB": 30300,
+      "pswpin": 919,
+      "pswpout": 6366,
+      "oom": 0,
+      "load": [
+        "3.83",
+        "4.36",
+        "4.10"
+      ],
+      "memoryPSI": "some avg10=0.00 avg60=0.32 avg300=0.34 total=18886190\nfull avg10=0.00 avg60=0.22 avg300=0.23 total=13659433"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:24:11.858488+00:00",
+    "windows": {
+      "availableMiB": 3127,
+      "cpuPercent": 54,
+      "freeCGiB": 35.79
+    },
+    "linux": {
+      "availableMiB": 3470.3,
+      "usedMiB": 4422.2,
+      "swapKiB": 30628,
+      "pswpin": 919,
+      "pswpout": 6439,
+      "oom": 0,
+      "load": [
+        "3.13",
+        "4.18",
+        "4.04"
+      ],
+      "memoryPSI": "some avg10=0.00 avg60=0.23 avg300=0.32 total=18897581\nfull avg10=0.00 avg60=0.15 avg300=0.21 total=13668377"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:24:31.701006+00:00",
+    "windows": {
+      "availableMiB": 3115,
+      "cpuPercent": 48,
+      "freeCGiB": 35.79
+    },
+    "linux": {
+      "availableMiB": 3465.9,
+      "usedMiB": 4426.6,
+      "swapKiB": 31608,
+      "pswpin": 919,
+      "pswpout": 6650,
+      "oom": 0,
+      "load": [
+        "2.55",
+        "3.97",
+        "3.97"
+      ],
+      "memoryPSI": "some avg10=0.00 avg60=0.16 avg300=0.29 total=18907237\nfull avg10=0.00 avg60=0.11 avg300=0.19 total=13676432"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:24:51.623552+00:00",
+    "windows": {
+      "availableMiB": 3139,
+      "cpuPercent": 24,
+      "freeCGiB": 35.79
+    },
+    "linux": {
+      "availableMiB": 3453.8,
+      "usedMiB": 4438.8,
+      "swapKiB": 31848,
+      "pswpin": 919,
+      "pswpout": 6701,
+      "oom": 0,
+      "load": [
+        "2.40",
+        "3.86",
+        "3.94"
+      ],
+      "memoryPSI": "some avg10=0.00 avg60=0.11 avg300=0.27 total=18916267\nfull avg10=0.00 avg60=0.07 avg300=0.18 total=13683239"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:25:11.462549+00:00",
+    "windows": {
+      "availableMiB": 3132,
+      "cpuPercent": 37,
+      "freeCGiB": 35.79
+    },
+    "linux": {
+      "availableMiB": 3489.2,
+      "usedMiB": 4403.3,
+      "swapKiB": 31848,
+      "pswpin": 919,
+      "pswpout": 6701,
+      "oom": 0,
+      "load": [
+        "2.35",
+        "3.75",
+        "3.90"
+      ],
+      "memoryPSI": "some avg10=0.00 avg60=0.08 avg300=0.25 total=18920567\nfull avg10=0.00 avg60=0.05 avg300=0.16 total=13687091"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:25:31.504996+00:00",
+    "windows": {
+      "availableMiB": 3135,
+      "cpuPercent": 27,
+      "freeCGiB": 35.79
+    },
+    "linux": {
+      "availableMiB": 3467.5,
+      "usedMiB": 4425.0,
+      "swapKiB": 31976,
+      "pswpin": 919,
+      "pswpout": 6730,
+      "oom": 0,
+      "load": [
+        "2.58",
+        "3.72",
+        "3.89"
+      ],
+      "memoryPSI": "some avg10=0.00 avg60=0.05 avg300=0.23 total=18928140\nfull avg10=0.00 avg60=0.03 avg300=0.15 total=13693520"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:25:51.395016+00:00",
+    "windows": {
+      "availableMiB": 3063,
+      "cpuPercent": 70,
+      "freeCGiB": 35.76
+    },
+    "linux": {
+      "availableMiB": 3509.2,
+      "usedMiB": 4383.3,
+      "swapKiB": 32132,
+      "pswpin": 922,
+      "pswpout": 6767,
+      "oom": 0,
+      "load": [
+        "2.56",
+        "3.64",
+        "3.86"
+      ],
+      "memoryPSI": "some avg10=0.00 avg60=0.03 avg300=0.21 total=18944709\nfull avg10=0.00 avg60=0.02 avg300=0.14 total=13707429"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:26:11.410150+00:00",
+    "windows": {
+      "availableMiB": 3127,
+      "cpuPercent": 29,
+      "freeCGiB": 35.76
+    },
+    "linux": {
+      "availableMiB": 3458.0,
+      "usedMiB": 4434.6,
+      "swapKiB": 32132,
+      "pswpin": 922,
+      "pswpout": 6767,
+      "oom": 0,
+      "load": [
+        "2.23",
+        "3.50",
+        "3.81"
+      ],
+      "memoryPSI": "some avg10=0.00 avg60=0.02 avg300=0.20 total=18944994\nfull avg10=0.00 avg60=0.01 avg300=0.13 total=13707714"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:26:31.339482+00:00",
+    "windows": {
+      "availableMiB": 3123,
+      "cpuPercent": 32,
+      "freeCGiB": 35.76
+    },
+    "linux": {
+      "availableMiB": 3433.5,
+      "usedMiB": 4459.1,
+      "swapKiB": 32132,
+      "pswpin": 922,
+      "pswpout": 6767,
+      "oom": 0,
+      "load": [
+        "2.76",
+        "3.54",
+        "3.82"
+      ],
+      "memoryPSI": "some avg10=0.00 avg60=0.01 avg300=0.18 total=18946851\nfull avg10=0.00 avg60=0.00 avg300=0.12 total=13708766"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:26:51.094473+00:00",
+    "windows": {
+      "availableMiB": 3117,
+      "cpuPercent": 26,
+      "freeCGiB": 35.76
+    },
+    "linux": {
+      "availableMiB": 3490.5,
+      "usedMiB": 4402.1,
+      "swapKiB": 32132,
+      "pswpin": 922,
+      "pswpout": 6767,
+      "oom": 0,
+      "load": [
+        "2.24",
+        "3.38",
+        "3.76"
+      ],
+      "memoryPSI": "some avg10=0.00 avg60=0.01 avg300=0.17 total=18961677\nfull avg10=0.00 avg60=0.00 avg300=0.11 total=13721526"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:27:10.853015+00:00",
+    "windows": {
+      "availableMiB": 3066,
+      "cpuPercent": 72,
+      "freeCGiB": 35.67
+    },
+    "linux": {
+      "availableMiB": 3478.6,
+      "usedMiB": 4413.9,
+      "swapKiB": 32596,
+      "pswpin": 922,
+      "pswpout": 6885,
+      "oom": 0,
+      "load": [
+        "2.61",
+        "3.39",
+        "3.75"
+      ],
+      "memoryPSI": "some avg10=0.62 avg60=0.20 avg300=0.20 total=19165242\nfull avg10=0.46 avg60=0.14 avg300=0.13 total=13869073"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:27:31.587586+00:00",
+    "windows": {
+      "availableMiB": 3007,
+      "cpuPercent": 69,
+      "freeCGiB": 35.6
+    },
+    "linux": {
+      "availableMiB": 3459.9,
+      "usedMiB": 4432.7,
+      "swapKiB": 33624,
+      "pswpin": 927,
+      "pswpout": 7126,
+      "oom": 0,
+      "load": [
+        "3.71",
+        "3.61",
+        "3.82"
+      ],
+      "memoryPSI": "some avg10=0.47 avg60=0.37 avg300=0.25 total=19402373\nfull avg10=0.23 avg60=0.20 avg300=0.15 total=14011825"
+    }
+  },
+  {
+    "stage": "3.5",
+    "utc": "2026-11-13T04:27:51.450487+00:00",
+    "windows": {
+      "availableMiB": 3168,
+      "cpuPercent": 95,
+      "freeCGiB": 35.6
+    },
+    "linux": {
+      "availableMiB": 3468.1,
+      "usedMiB": 4424.4,
+      "swapKiB": 33700,
+      "pswpin": 929,
+      "pswpout": 7148,
+      "oom": 0,
+      "load": [
+        "3.97",
+        "3.69",
+        "3.84"
+      ],
+      "memoryPSI": "some avg10=0.06 avg60=0.26 avg300=0.23 total=19460008\nfull avg10=0.03 avg60=0.14 avg300=0.13 total=14055686"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:27:51.931005+00:00",
+    "windows": {
+      "availableMiB": 3152,
+      "cpuPercent": 39,
+      "freeCGiB": 35.6
+    },
+    "linux": {
+      "availableMiB": 3459.4,
+      "usedMiB": 4433.1,
+      "swapKiB": 33700,
+      "pswpin": 929,
+      "pswpout": 7148,
+      "oom": 0,
+      "load": [
+        "4.69",
+        "3.84",
+        "3.89"
+      ],
+      "memoryPSI": "some avg10=0.06 avg60=0.26 avg300=0.23 total=19460008\nfull avg10=0.03 avg60=0.14 avg300=0.13 total=14055686"
+    }
+  },
+  {
+    "stage": "3.6",
+    "utc": "2026-11-13T04:27:59.262455+00:00",
+    "windows": {
+      "availableMiB": 3171,
+      "cpuPercent": 35,
+      "freeCGiB": 35.6
+    },
+    "linux": {
+      "availableMiB": 3425.8,
+      "usedMiB": 4466.7,
+      "swapKiB": 33700,
+      "pswpin": 929,
+      "pswpout": 7148,
+      "oom": 0,
+      "load": [
+        "4.80",
+        "3.88",
+        "3.90"
+      ],
+      "memoryPSI": "some avg10=0.02 avg60=0.23 avg300=0.22 total=19468631\nfull avg10=0.01 avg60=0.12 avg300=0.13 total=14058542"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:28:12.229624+00:00",
+    "windows": {
+      "availableMiB": 3127,
+      "cpuPercent": 98,
+      "freeCGiB": 35.6
+    },
+    "linux": {
+      "availableMiB": 3429.4,
+      "usedMiB": 4463.2,
+      "swapKiB": 34816,
+      "pswpin": 929,
+      "pswpout": 7393,
+      "oom": 0,
+      "load": [
+        "4.93",
+        "3.93",
+        "3.92"
+      ],
+      "memoryPSI": "some avg10=0.70 avg60=0.34 avg300=0.24 total=19676519\nfull avg10=0.33 avg60=0.16 avg300=0.14 total=14202183"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:28:32.699708+00:00",
+    "windows": {
+      "availableMiB": 2989,
+      "cpuPercent": 57,
+      "freeCGiB": 35.54
+    },
+    "linux": {
+      "availableMiB": 3266.6,
+      "usedMiB": 4626.0,
+      "swapKiB": 56912,
+      "pswpin": 1051,
+      "pswpout": 12183,
+      "oom": 0,
+      "load": [
+        "5.39",
+        "4.10",
+        "3.97"
+      ],
+      "memoryPSI": "some avg10=2.27 avg60=0.87 avg300=0.37 total=20152032\nfull avg10=1.73 avg60=0.60 avg300=0.24 total=14587751"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:28:53.301697+00:00",
+    "windows": {
+      "availableMiB": 3133,
+      "cpuPercent": 92,
+      "freeCGiB": 35.29
+    },
+    "linux": {
+      "availableMiB": 3282.4,
+      "usedMiB": 4610.1,
+      "swapKiB": 64212,
+      "pswpin": 1065,
+      "pswpout": 13490,
+      "oom": 0,
+      "load": [
+        "6.80",
+        "4.50",
+        "4.11"
+      ],
+      "memoryPSI": "some avg10=2.41 avg60=1.35 avg300=0.52 total=20793957\nfull avg10=1.68 avg60=0.88 avg300=0.33 total=15022810"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:29:14.156941+00:00",
+    "windows": {
+      "availableMiB": 3070,
+      "cpuPercent": 53,
+      "freeCGiB": 35.23
+    },
+    "linux": {
+      "availableMiB": 3349.8,
+      "usedMiB": 4542.7,
+      "swapKiB": 77156,
+      "pswpin": 1077,
+      "pswpout": 15576,
+      "oom": 0,
+      "load": [
+        "6.29",
+        "4.55",
+        "4.13"
+      ],
+      "memoryPSI": "some avg10=0.71 avg60=1.26 avg300=0.56 total=21068389\nfull avg10=0.44 avg60=0.80 avg300=0.35 total=15196280"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:29:34.181377+00:00",
+    "windows": {
+      "availableMiB": 2992,
+      "cpuPercent": 73,
+      "freeCGiB": 35.23
+    },
+    "linux": {
+      "availableMiB": 3330.8,
+      "usedMiB": 4561.7,
+      "swapKiB": 77140,
+      "pswpin": 1080,
+      "pswpout": 15576,
+      "oom": 0,
+      "load": [
+        "5.22",
+        "4.41",
+        "4.09"
+      ],
+      "memoryPSI": "some avg10=0.09 avg60=0.90 avg300=0.52 total=21082588\nfull avg10=0.05 avg60=0.57 avg300=0.33 total=15204369"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:29:54.370845+00:00",
+    "windows": {
+      "availableMiB": 2972,
+      "cpuPercent": 83,
+      "freeCGiB": 35.23
+    },
+    "linux": {
+      "availableMiB": 3412.9,
+      "usedMiB": 4479.6,
+      "swapKiB": 77844,
+      "pswpin": 1095,
+      "pswpout": 15612,
+      "oom": 0,
+      "load": [
+        "5.69",
+        "4.59",
+        "4.16"
+      ],
+      "memoryPSI": "some avg10=0.13 avg60=0.70 avg300=0.50 total=21172591\nfull avg10=0.07 avg60=0.43 avg300=0.31 total=15252565"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:30:14.452713+00:00",
+    "windows": {
+      "availableMiB": 2941,
+      "cpuPercent": 54,
+      "freeCGiB": 35.23
+    },
+    "linux": {
+      "availableMiB": 3441.1,
+      "usedMiB": 4451.4,
+      "swapKiB": 81760,
+      "pswpin": 1096,
+      "pswpout": 16024,
+      "oom": 0,
+      "load": [
+        "5.36",
+        "4.61",
+        "4.18"
+      ],
+      "memoryPSI": "some avg10=0.08 avg60=0.51 avg300=0.47 total=21231435\nfull avg10=0.07 avg60=0.33 avg300=0.29 total=15304006"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:30:35.114981+00:00",
+    "windows": {
+      "availableMiB": 2642,
+      "cpuPercent": 74,
+      "freeCGiB": 35.23
+    },
+    "linux": {
+      "availableMiB": 3365.6,
+      "usedMiB": 4526.9,
+      "swapKiB": 81768,
+      "pswpin": 1100,
+      "pswpout": 16028,
+      "oom": 0,
+      "load": [
+        "4.14",
+        "4.38",
+        "4.11"
+      ],
+      "memoryPSI": "some avg10=0.37 avg60=0.43 avg300=0.45 total=21316011\nfull avg10=0.19 avg60=0.26 avg300=0.28 total=15367359"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:30:55.836222+00:00",
+    "windows": {
+      "availableMiB": 2683,
+      "cpuPercent": 68,
+      "freeCGiB": 35.23
+    },
+    "linux": {
+      "availableMiB": 3423.2,
+      "usedMiB": 4469.4,
+      "swapKiB": 82216,
+      "pswpin": 1100,
+      "pswpout": 16137,
+      "oom": 0,
+      "load": [
+        "5.51",
+        "4.65",
+        "4.20"
+      ],
+      "memoryPSI": "some avg10=0.04 avg60=0.30 avg300=0.41 total=21319528\nfull avg10=0.02 avg60=0.18 avg300=0.26 total=15370852"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:31:16.219741+00:00",
+    "windows": {
+      "availableMiB": 2937,
+      "cpuPercent": 42,
+      "freeCGiB": 35.23
+    },
+    "linux": {
+      "availableMiB": 3430.8,
+      "usedMiB": 4461.8,
+      "swapKiB": 84052,
+      "pswpin": 1100,
+      "pswpout": 16566,
+      "oom": 0,
+      "load": [
+        "4.91",
+        "4.56",
+        "4.18"
+      ],
+      "memoryPSI": "some avg10=0.04 avg60=0.24 avg300=0.39 total=21354421\nfull avg10=0.00 avg60=0.13 avg300=0.24 total=15400818"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:31:36.070955+00:00",
+    "windows": {
+      "availableMiB": 2924,
+      "cpuPercent": 92,
+      "freeCGiB": 35.23
+    },
+    "linux": {
+      "availableMiB": 3295.6,
+      "usedMiB": 4597.0,
+      "swapKiB": 84072,
+      "pswpin": 1102,
+      "pswpout": 16572,
+      "oom": 0,
+      "load": [
+        "4.16",
+        "4.41",
+        "4.14"
+      ],
+      "memoryPSI": "some avg10=0.36 avg60=0.23 avg300=0.38 total=21447198\nfull avg10=0.18 avg60=0.12 avg300=0.22 total=15467144"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:31:56.700629+00:00",
+    "windows": {
+      "availableMiB": 2902,
+      "cpuPercent": 80,
+      "freeCGiB": 35.23
+    },
+    "linux": {
+      "availableMiB": 3373.0,
+      "usedMiB": 4519.6,
+      "swapKiB": 85724,
+      "pswpin": 1104,
+      "pswpout": 16965,
+      "oom": 0,
+      "load": [
+        "5.35",
+        "4.69",
+        "4.24"
+      ],
+      "memoryPSI": "some avg10=0.04 avg60=0.16 avg300=0.35 total=21489245\nfull avg10=0.02 avg60=0.08 avg300=0.21 total=15497249"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:32:17.151837+00:00",
+    "windows": {
+      "availableMiB": 2910,
+      "cpuPercent": 66,
+      "freeCGiB": 35.23
+    },
+    "linux": {
+      "availableMiB": 3385.7,
+      "usedMiB": 4506.8,
+      "swapKiB": 85676,
+      "pswpin": 1119,
+      "pswpout": 16967,
+      "oom": 0,
+      "load": [
+        "11.00",
+        "6.05",
+        "4.70"
+      ],
+      "memoryPSI": "some avg10=0.24 avg60=0.20 avg300=0.34 total=21588821\nfull avg10=0.16 avg60=0.11 avg300=0.20 total=15576225"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:32:37.358216+00:00",
+    "windows": {
+      "availableMiB": 2863,
+      "cpuPercent": 93,
+      "freeCGiB": 35.2
+    },
+    "linux": {
+      "availableMiB": 3302.5,
+      "usedMiB": 4590.0,
+      "swapKiB": 96924,
+      "pswpin": 1178,
+      "pswpout": 19540,
+      "oom": 0,
+      "load": [
+        "8.97",
+        "5.90",
+        "4.68"
+      ],
+      "memoryPSI": "some avg10=1.55 avg60=0.45 avg300=0.39 total=21839650\nfull avg10=1.11 avg60=0.30 avg300=0.24 total=15772513"
+    }
+  },
+  {
+    "stage": "3.7",
+    "utc": "2026-11-13T04:32:45.538735+00:00",
+    "windows": {
+      "availableMiB": 2737,
+      "cpuPercent": 63,
+      "freeCGiB": 35.2
+    },
+    "linux": {
+      "availableMiB": 3426.2,
+      "usedMiB": 4466.4,
+      "swapKiB": 99492,
+      "pswpin": 1178,
+      "pswpout": 20125,
+      "oom": 0,
+      "load": [
+        "9.30",
+        "6.02",
+        "4.72"
+      ],
+      "memoryPSI": "some avg10=0.87 avg60=0.43 avg300=0.38 total=21864145\nfull avg10=0.49 avg60=0.26 avg300=0.23 total=15777638"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:32:57.409002+00:00",
+    "windows": {
+      "availableMiB": 2786,
+      "cpuPercent": 98,
+      "freeCGiB": 35.2
+    },
+    "linux": {
+      "availableMiB": 3362.9,
+      "usedMiB": 4529.6,
+      "swapKiB": 99488,
+      "pswpin": 1178,
+      "pswpout": 20125,
+      "oom": 0,
+      "load": [
+        "8.89",
+        "6.07",
+        "4.76"
+      ],
+      "memoryPSI": "some avg10=2.43 avg60=0.74 avg300=0.45 total=22267761\nfull avg10=0.51 avg60=0.28 avg300=0.23 total=15880165"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:33:18.780807+00:00",
+    "windows": {
+      "availableMiB": 2800,
+      "cpuPercent": 68,
+      "freeCGiB": 35.2
+    },
+    "linux": {
+      "availableMiB": 3346.8,
+      "usedMiB": 4545.8,
+      "swapKiB": 99324,
+      "pswpin": 1226,
+      "pswpout": 20125,
+      "oom": 0,
+      "load": [
+        "7.87",
+        "6.02",
+        "4.77"
+      ],
+      "memoryPSI": "some avg10=0.53 avg60=0.70 avg300=0.46 total=22281279\nfull avg10=0.12 avg60=0.24 avg300=0.23 total=15884168"
+    }
+  },
+  {
+    "stage": "3.8",
+    "utc": "2026-11-13T04:33:25.853974+00:00",
+    "windows": {
+      "availableMiB": 2796,
+      "cpuPercent": 47,
+      "freeCGiB": 35.2
+    },
+    "linux": {
+      "availableMiB": 3318.6,
+      "usedMiB": 4573.9,
+      "swapKiB": 99304,
+      "pswpin": 1227,
+      "pswpout": 20125,
+      "oom": 0,
+      "load": [
+        "7.64",
+        "6.00",
+        "4.77"
+      ],
+      "memoryPSI": "some avg10=0.24 avg60=0.61 avg300=0.45 total=22295365\nfull avg10=0.05 avg60=0.21 avg300=0.22 total=15891338"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:33:38.984630+00:00",
+    "windows": {
+      "availableMiB": 2791,
+      "cpuPercent": 61,
+      "freeCGiB": 35.2
+    },
+    "linux": {
+      "availableMiB": 3412.1,
+      "usedMiB": 4480.4,
+      "swapKiB": 99108,
+      "pswpin": 1283,
+      "pswpout": 20125,
+      "oom": 0,
+      "load": [
+        "6.56",
+        "5.85",
+        "4.74"
+      ],
+      "memoryPSI": "some avg10=0.07 avg60=0.50 avg300=0.43 total=22303838\nfull avg10=0.01 avg60=0.17 avg300=0.21 total=15897379"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:33:58.793844+00:00",
+    "windows": {
+      "availableMiB": 2667,
+      "cpuPercent": 93,
+      "freeCGiB": 35.2
+    },
+    "linux": {
+      "availableMiB": 3365.4,
+      "usedMiB": 4527.2,
+      "swapKiB": 99060,
+      "pswpin": 1303,
+      "pswpout": 20125,
+      "oom": 0,
+      "load": [
+        "9.42",
+        "6.60",
+        "5.02"
+      ],
+      "memoryPSI": "some avg10=0.25 avg60=0.39 avg300=0.41 total=22419151\nfull avg10=0.00 avg60=0.10 avg300=0.19 total=15937370"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:34:26.111280+00:00",
+    "windows": {
+      "availableMiB": 2708,
+      "cpuPercent": 100,
+      "freeCGiB": 35.2
+    },
+    "linux": {
+      "availableMiB": 3208.7,
+      "usedMiB": 4683.8,
+      "swapKiB": 119656,
+      "pswpin": 1366,
+      "pswpout": 24026,
+      "oom": 0,
+      "load": [
+        "9.47",
+        "6.82",
+        "5.13"
+      ],
+      "memoryPSI": "some avg10=1.00 avg60=0.67 avg300=0.47 total=22838281\nfull avg10=0.55 avg60=0.32 avg300=0.23 total=16275689"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:34:47.422493+00:00",
+    "windows": {
+      "availableMiB": 2800,
+      "cpuPercent": 66,
+      "freeCGiB": 35.2
+    },
+    "linux": {
+      "availableMiB": 3232.5,
+      "usedMiB": 4660.0,
+      "swapKiB": 128096,
+      "pswpin": 1412,
+      "pswpout": 26029,
+      "oom": 0,
+      "load": [
+        "10.27",
+        "7.29",
+        "5.34"
+      ],
+      "memoryPSI": "some avg10=1.94 avg60=1.24 avg300=0.63 total=23443674\nfull avg10=1.42 avg60=0.79 avg300=0.35 total=16746506"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:35:07.995582+00:00",
+    "windows": {
+      "availableMiB": 2790,
+      "cpuPercent": 95,
+      "freeCGiB": 35.23
+    },
+    "linux": {
+      "availableMiB": 3281.2,
+      "usedMiB": 4611.3,
+      "swapKiB": 137872,
+      "pswpin": 1479,
+      "pswpout": 28390,
+      "oom": 0,
+      "load": [
+        "9.58",
+        "7.35",
+        "5.40"
+      ],
+      "memoryPSI": "some avg10=2.01 avg60=1.36 avg300=0.70 total=23897207\nfull avg10=0.61 avg60=0.72 avg300=0.37 total=16985409"
+    }
+  },
+  {
+    "stage": "3.9-auth",
+    "utc": "2026-11-13T04:35:15.813691+00:00",
+    "windows": {
+      "availableMiB": 2810,
+      "cpuPercent": 37,
+      "freeCGiB": 35.23
+    },
+    "linux": {
+      "availableMiB": 3405.6,
+      "usedMiB": 4486.9,
+      "swapKiB": 137916,
+      "pswpin": 1484,
+      "pswpout": 28410,
+      "oom": 0,
+      "load": [
+        "8.82",
+        "7.23",
+        "5.37"
+      ],
+      "memoryPSI": "some avg10=1.10 avg60=1.25 avg300=0.69 total=23915595\nfull avg10=0.37 avg60=0.66 avg300=0.36 total=16995821"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:35:28.876576+00:00",
+    "windows": {
+      "availableMiB": 2815,
+      "cpuPercent": 90,
+      "freeCGiB": 35.23
+    },
+    "linux": {
+      "availableMiB": 3292.9,
+      "usedMiB": 4599.6,
+      "swapKiB": 137836,
+      "pswpin": 1507,
+      "pswpout": 28410,
+      "oom": 0,
+      "load": [
+        "9.60",
+        "7.45",
+        "5.47"
+      ],
+      "memoryPSI": "some avg10=0.33 avg60=1.02 avg300=0.66 total=23955655\nfull avg10=0.11 avg60=0.54 avg300=0.35 total=17022306"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:35:49.712610+00:00",
+    "windows": {
+      "availableMiB": 2704,
+      "cpuPercent": 79,
+      "freeCGiB": 34.92
+    },
+    "linux": {
+      "availableMiB": 3248.0,
+      "usedMiB": 4644.6,
+      "swapKiB": 153892,
+      "pswpin": 1539,
+      "pswpout": 31834,
+      "oom": 0,
+      "load": [
+        "10.83",
+        "7.85",
+        "5.64"
+      ],
+      "memoryPSI": "some avg10=2.14 avg60=1.41 avg300=0.78 total=24541894\nfull avg10=1.53 avg60=0.88 avg300=0.44 total=17495016"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:36:10.248318+00:00",
+    "windows": {
+      "availableMiB": 2527,
+      "cpuPercent": 87,
+      "freeCGiB": 34.86
+    },
+    "linux": {
+      "availableMiB": 3230.7,
+      "usedMiB": 4661.8,
+      "swapKiB": 156388,
+      "pswpin": 1601,
+      "pswpout": 32463,
+      "oom": 0,
+      "load": [
+        "8.19",
+        "7.44",
+        "5.55"
+      ],
+      "memoryPSI": "some avg10=0.92 avg60=1.26 avg300=0.79 total=24825361\nfull avg10=0.51 avg60=0.77 avg300=0.44 total=17685344"
+    }
+  },
+  {
+    "stage": "3.9-inventory",
+    "utc": "2026-11-13T04:36:18.402489+00:00",
+    "windows": {
+      "availableMiB": 2649,
+      "cpuPercent": 22,
+      "freeCGiB": 34.86
+    },
+    "linux": {
+      "availableMiB": 3351.6,
+      "usedMiB": 4541.0,
+      "swapKiB": 156364,
+      "pswpin": 1601,
+      "pswpout": 32463,
+      "oom": 0,
+      "load": [
+        "8.05",
+        "7.44",
+        "5.57"
+      ],
+      "memoryPSI": "some avg10=0.41 avg60=1.10 avg300=0.77 total=24837746\nfull avg10=0.23 avg60=0.67 avg300=0.43 total=17690076"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:36:31.922881+00:00",
+    "windows": {
+      "availableMiB": 2663,
+      "cpuPercent": 81,
+      "freeCGiB": 34.86
+    },
+    "linux": {
+      "availableMiB": 3272.5,
+      "usedMiB": 4620.1,
+      "swapKiB": 156212,
+      "pswpin": 1672,
+      "pswpout": 32480,
+      "oom": 0,
+      "load": [
+        "8.37",
+        "7.53",
+        "5.62"
+      ],
+      "memoryPSI": "some avg10=0.76 avg60=1.03 avg300=0.76 total=24958862\nfull avg10=0.17 avg60=0.56 avg300=0.42 total=17740388"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:36:52.406749+00:00",
+    "windows": {
+      "availableMiB": 2640,
+      "cpuPercent": 97,
+      "freeCGiB": 34.55
+    },
+    "linux": {
+      "availableMiB": 3239.5,
+      "usedMiB": 4653.1,
+      "swapKiB": 168964,
+      "pswpin": 1675,
+      "pswpout": 35552,
+      "oom": 0,
+      "load": [
+        "8.75",
+        "7.72",
+        "5.74"
+      ],
+      "memoryPSI": "some avg10=1.72 avg60=1.30 avg300=0.85 total=25509369\nfull avg10=1.39 avg60=0.86 avg300=0.50 total=18175328"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:37:12.669163+00:00",
+    "windows": {
+      "availableMiB": 2631,
+      "cpuPercent": 64,
+      "freeCGiB": 34.36
+    },
+    "linux": {
+      "availableMiB": 3310.6,
+      "usedMiB": 4581.9,
+      "swapKiB": 182000,
+      "pswpin": 1738,
+      "pswpout": 38754,
+      "oom": 0,
+      "load": [
+        "7.76",
+        "7.57",
+        "5.73"
+      ],
+      "memoryPSI": "some avg10=0.85 avg60=1.24 avg300=0.87 total=25735720\nfull avg10=0.51 avg60=0.79 avg300=0.51 total=18340220"
+    }
+  },
+  {
+    "stage": "3.9-sales",
+    "utc": "2026-11-13T04:37:20.015367+00:00",
+    "windows": {
+      "availableMiB": 2629,
+      "cpuPercent": 44,
+      "freeCGiB": 34.36
+    },
+    "linux": {
+      "availableMiB": 3390.9,
+      "usedMiB": 4501.6,
+      "swapKiB": 181984,
+      "pswpin": 1738,
+      "pswpout": 38754,
+      "oom": 0,
+      "load": [
+        "7.54",
+        "7.53",
+        "5.73"
+      ],
+      "memoryPSI": "some avg10=0.38 avg60=1.09 avg300=0.85 total=25758429\nfull avg10=0.23 avg60=0.69 avg300=0.49 total=18355639"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:37:32.988358+00:00",
+    "windows": {
+      "availableMiB": 2643,
+      "cpuPercent": 86,
+      "freeCGiB": 34.36
+    },
+    "linux": {
+      "availableMiB": 3316.7,
+      "usedMiB": 4575.8,
+      "swapKiB": 181916,
+      "pswpin": 1792,
+      "pswpout": 38773,
+      "oom": 0,
+      "load": [
+        "9.89",
+        "8.05",
+        "5.93"
+      ],
+      "memoryPSI": "some avg10=0.11 avg60=0.89 avg300=0.81 total=25812761\nfull avg10=0.06 avg60=0.57 avg300=0.47 total=18374427"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:37:53.463126+00:00",
+    "windows": {
+      "availableMiB": 2671,
+      "cpuPercent": 80,
+      "freeCGiB": 34.23
+    },
+    "linux": {
+      "availableMiB": 3261.2,
+      "usedMiB": 4631.3,
+      "swapKiB": 190844,
+      "pswpin": 1793,
+      "pswpout": 40880,
+      "oom": 0,
+      "load": [
+        "10.54",
+        "8.33",
+        "6.06"
+      ],
+      "memoryPSI": "some avg10=1.59 avg60=1.13 avg300=0.87 total=26300036\nfull avg10=1.32 avg60=0.81 avg300=0.53 total=18778970"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:38:14.083562+00:00",
+    "windows": {
+      "availableMiB": 2651,
+      "cpuPercent": 86,
+      "freeCGiB": 33.92
+    },
+    "linux": {
+      "availableMiB": 3388.7,
+      "usedMiB": 4503.9,
+      "swapKiB": 194676,
+      "pswpin": 1803,
+      "pswpout": 41655,
+      "oom": 0,
+      "load": [
+        "9.06",
+        "8.15",
+        "6.06"
+      ],
+      "memoryPSI": "some avg10=0.55 avg60=0.96 avg300=0.85 total=26472726\nfull avg10=0.32 avg60=0.66 avg300=0.52 total=18897309"
+    }
+  },
+  {
+    "stage": "3.9-report",
+    "utc": "2026-11-13T04:38:26.047517+00:00",
+    "windows": {
+      "availableMiB": 2641,
+      "cpuPercent": 23,
+      "freeCGiB": 33.89
+    },
+    "linux": {
+      "availableMiB": 3413.0,
+      "usedMiB": 4479.6,
+      "swapKiB": 194624,
+      "pswpin": 1809,
+      "pswpout": 41655,
+      "oom": 0,
+      "load": [
+        "7.89",
+        "7.93",
+        "6.01"
+      ],
+      "memoryPSI": "some avg10=0.16 avg60=0.79 avg300=0.81 total=26480869\nfull avg10=0.09 avg60=0.54 avg300=0.50 total=18901430"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:38:34.176891+00:00",
+    "windows": {
+      "availableMiB": 2643,
+      "cpuPercent": 61,
+      "freeCGiB": 33.89
+    },
+    "linux": {
+      "availableMiB": 3432.5,
+      "usedMiB": 4460.0,
+      "swapKiB": 194612,
+      "pswpin": 1813,
+      "pswpout": 41655,
+      "oom": 0,
+      "load": [
+        "6.83",
+        "7.71",
+        "5.95"
+      ],
+      "memoryPSI": "some avg10=0.07 avg60=0.69 avg300=0.79 total=26489940\nfull avg10=0.04 avg60=0.47 avg300=0.48 total=18907474"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:38:54.226655+00:00",
+    "windows": {
+      "availableMiB": 2641,
+      "cpuPercent": 84,
+      "freeCGiB": 33.89
+    },
+    "linux": {
+      "availableMiB": 3332.9,
+      "usedMiB": 4559.7,
+      "swapKiB": 194612,
+      "pswpin": 1813,
+      "pswpout": 41655,
+      "oom": 0,
+      "load": [
+        "5.51",
+        "7.34",
+        "5.87"
+      ],
+      "memoryPSI": "some avg10=0.09 avg60=0.56 avg300=0.76 total=26585097\nfull avg10=0.06 avg60=0.38 avg300=0.46 total=18955525"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:39:14.771044+00:00",
+    "windows": {
+      "availableMiB": 2643,
+      "cpuPercent": 43,
+      "freeCGiB": 33.89
+    },
+    "linux": {
+      "availableMiB": 3334.9,
+      "usedMiB": 4557.6,
+      "swapKiB": 194432,
+      "pswpin": 1867,
+      "pswpout": 41655,
+      "oom": 0,
+      "load": [
+        "4.14",
+        "6.91",
+        "5.76"
+      ],
+      "memoryPSI": "some avg10=0.13 avg60=0.43 avg300=0.71 total=26629793\nfull avg10=0.00 avg60=0.27 avg300=0.43 total=18964177"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:39:34.895078+00:00",
+    "windows": {
+      "availableMiB": 2656,
+      "cpuPercent": 46,
+      "freeCGiB": 33.89
+    },
+    "linux": {
+      "availableMiB": 3429.3,
+      "usedMiB": 4463.2,
+      "swapKiB": 194292,
+      "pswpin": 1907,
+      "pswpout": 41655,
+      "oom": 0,
+      "load": [
+        "3.77",
+        "6.64",
+        "5.69"
+      ],
+      "memoryPSI": "some avg10=0.01 avg60=0.30 avg300=0.66 total=26655722\nfull avg10=0.00 avg60=0.19 avg300=0.40 total=18976397"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:39:54.665534+00:00",
+    "windows": {
+      "availableMiB": 2641,
+      "cpuPercent": 35,
+      "freeCGiB": 33.89
+    },
+    "linux": {
+      "availableMiB": 3405.8,
+      "usedMiB": 4486.7,
+      "swapKiB": 194284,
+      "pswpin": 1907,
+      "pswpout": 41655,
+      "oom": 0,
+      "load": [
+        "3.50",
+        "6.38",
+        "5.63"
+      ],
+      "memoryPSI": "some avg10=0.00 avg60=0.21 avg300=0.61 total=26662690\nfull avg10=0.00 avg60=0.13 avg300=0.37 total=18978313"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:40:14.700376+00:00",
+    "windows": {
+      "availableMiB": 2638,
+      "cpuPercent": 88,
+      "freeCGiB": 33.89
+    },
+    "linux": {
+      "availableMiB": 3353.4,
+      "usedMiB": 4539.2,
+      "swapKiB": 194044,
+      "pswpin": 1983,
+      "pswpout": 41655,
+      "oom": 0,
+      "load": [
+        "2.78",
+        "6.03",
+        "5.53"
+      ],
+      "memoryPSI": "some avg10=0.00 avg60=0.15 avg300=0.57 total=26664931\nfull avg10=0.00 avg60=0.09 avg300=0.34 total=18979925"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:40:34.832966+00:00",
+    "windows": {
+      "availableMiB": 2641,
+      "cpuPercent": 98,
+      "freeCGiB": 33.89
+    },
+    "linux": {
+      "availableMiB": 3416.5,
+      "usedMiB": 4476.0,
+      "swapKiB": 193956,
+      "pswpin": 2008,
+      "pswpout": 41655,
+      "oom": 0,
+      "load": [
+        "3.01",
+        "5.86",
+        "5.48"
+      ],
+      "memoryPSI": "some avg10=0.00 avg60=0.10 avg300=0.53 total=26670421\nfull avg10=0.00 avg60=0.06 avg300=0.32 total=18983969"
+    }
+  },
+  {
+    "stage": "ongoing-monitor",
+    "utc": "2026-11-13T04:40:54.761409+00:00",
+    "windows": {
+      "availableMiB": 2649,
+      "cpuPercent": 63,
+      "freeCGiB": 33.89
+    },
+    "linux": {
+      "availableMiB": 3371.8,
+      "usedMiB": 4520.7,
+      "swapKiB": 194060,
+      "pswpin": 2010,
+      "pswpout": 41682,
+      "oom": 0,
+      "load": [
+        "2.98",
+        "5.66",
+        "5.43"
+      ],
+      "memoryPSI": "some avg10=0.12 avg60=0.10 avg300=0.50 total=26702389\nfull avg10=0.00 avg60=0.04 avg300=0.29 total=19000248"
+    }
+  },
+  {
+    "stage": "FINAL",
+    "utc": "2026-11-13T04:41:05.026533+00:00",
+    "windows": {
+      "availableMiB": 2639,
+      "cpuPercent": 10,
+      "freeCGiB": 33.89
+    },
+    "linux": {
+      "availableMiB": 3464.9,
+      "usedMiB": 4427.7,
+      "swapKiB": 195408,
+      "pswpin": 2061,
+      "pswpout": 42033,
+      "oom": 0,
+      "load": [
+        "3.49",
+        "5.69",
+        "5.44"
+      ],
+      "memoryPSI": "some avg10=0.16 avg60=0.12 avg300=0.49 total=26756020\nfull avg10=0.12 avg60=0.06 avg300=0.29 total=19045534"
+    }
+  },
+  {
+    "stage": "FINAL-AFTER-CLEANUP",
+    "utc": "2026-11-13T04:45:32.827831+00:00",
+    "windows": {
+      "availableMiB": 2521,
+      "cpuPercent": 72,
+      "freeCGiB": 33.91
+    },
+    "linux": {
+      "availableMiB": 3450.6,
+      "usedMiB": 4442.0,
+      "swapKiB": 188936,
+      "pswpin": 4427,
+      "pswpout": 42361,
+      "oom": 0,
+      "load": [
+        "3.92",
+        "4.19",
+        "4.81"
+      ],
+      "memoryPSI": "some avg10=0.19 avg60=0.18 avg300=0.25 total=27306161\nfull avg10=0.19 avg60=0.13 avg300=0.14 total=19400045"
+    }
+  }
+]

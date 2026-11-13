@@ -1,0 +1,362 @@
+[
+  {
+    "namespace": "cnpg-system",
+    "object": "cnpg-controller-manager-7df6db7d87-hx7hk",
+    "reason": "Unhealthy",
+    "first": "2026-11-13T05:21:30Z",
+    "last": "2026-11-13T05:55:29Z",
+    "count": 4,
+    "message": "Liveness probe failed: Get \"https://10.244.0.5:9443/readyz\": net/http: request canceled while waiting for connection (Client.Timeout exceeded while awaiting headers)"
+  },
+  {
+    "namespace": "cnpg-system",
+    "object": "cnpg-controller-manager-7df6db7d87-hx7hk",
+    "reason": "Unhealthy",
+    "first": "2026-11-13T05:21:33Z",
+    "last": "2026-11-13T05:21:37Z",
+    "count": 3,
+    "message": "Readiness probe failed: Get \"https://10.244.0.5:9443/readyz\": net/http: request canceled while waiting for connection (Client.Timeout exceeded while awaiting headers)"
+  },
+  {
+    "namespace": "cnpg-system",
+    "object": "cnpg-controller-manager-7df6db7d87-hx7hk",
+    "reason": "Unhealthy",
+    "first": "2026-11-13T05:21:43Z",
+    "last": "2026-11-13T05:55:29Z",
+    "count": 3,
+    "message": "Readiness probe failed: Get \"https://10.244.0.5:9443/readyz\": context deadline exceeded"
+  },
+  {
+    "namespace": "cnpg-system",
+    "object": "cnpg-controller-manager-7df6db7d87-hx7hk",
+    "reason": "Unhealthy",
+    "first": "2026-11-13T05:21:48Z",
+    "last": "2026-11-13T05:55:43Z",
+    "count": 6,
+    "message": "Readiness probe failed: Get \"https://10.244.0.5:9443/readyz\": dial tcp 10.244.0.5:9443: connect: connection refused"
+  },
+  {
+    "namespace": "cnpg-system",
+    "object": "cnpg-controller-manager-7df6db7d87-hx7hk",
+    "reason": "Unhealthy",
+    "first": "2026-11-13T05:55:31Z",
+    "last": "2026-11-13T05:55:31Z",
+    "count": 1,
+    "message": "Liveness probe failed: Get \"https://10.244.0.5:9443/readyz\": context deadline exceeded"
+  },
+  {
+    "namespace": "cnpg-system",
+    "object": "cnpg-controller-manager-7df6db7d87-hx7hk",
+    "reason": "Unhealthy",
+    "first": "2026-11-13T05:55:36Z",
+    "last": "2026-11-13T05:55:36Z",
+    "count": 1,
+    "message": "Readiness probe failed: Get \"https://10.244.0.5:9443/readyz\": http2: client conn could not be established"
+  },
+  {
+    "namespace": "cnpg-system",
+    "object": "cnpg-controller-manager-7df6db7d87-hx7hk",
+    "reason": "Unhealthy",
+    "first": "2026-11-13T05:55:36Z",
+    "last": "2026-11-13T05:55:46Z",
+    "count": 2,
+    "message": "Liveness probe failed: Get \"https://10.244.0.5:9443/readyz\": dial tcp 10.244.0.5:9443: connect: connection refused"
+  },
+  {
+    "namespace": "jewelry-demo",
+    "object": "jewelry-pg-1",
+    "reason": "Unhealthy",
+    "first": "2026-11-13T05:21:23Z",
+    "last": "2026-11-13T05:55:28Z",
+    "count": 2,
+    "message": "Readiness probe failed: Get \"https://10.244.1.6:8000/readyz\": context deadline exceeded"
+  },
+  {
+    "namespace": "jewelry-demo",
+    "object": "jewelry-pg-1",
+    "reason": "Unhealthy",
+    "first": "2026-11-13T05:21:26Z",
+    "last": "2026-11-13T05:21:26Z",
+    "count": 1,
+    "message": "Liveness probe failed: Get \"https://10.244.1.6:8000/healthz\": context deadline exceeded"
+  },
+  {
+    "namespace": "jewelry-demo",
+    "object": "jewelry-pg-1",
+    "reason": "Unhealthy",
+    "first": "2026-11-13T05:21:28Z",
+    "last": "2026-11-13T05:21:28Z",
+    "count": 1,
+    "message": "Readiness probe failed: Get \"https://10.244.1.6:8000/readyz\": net/http: request canceled while waiting for connection (Client.Timeout exceeded while awaiting headers)"
+  },
+  {
+    "namespace": "jewelry-demo",
+    "object": "jewelry-pg-1",
+    "reason": "Unhealthy",
+    "first": "2026-11-13T05:21:31Z",
+    "last": "2026-11-13T05:21:31Z",
+    "count": 1,
+    "message": "Liveness probe failed: Get \"https://10.244.1.6:8000/healthz\": net/http: request canceled (Client.Timeout exceeded while awaiting headers)"
+  },
+  {
+    "namespace": "jewelry-demo",
+    "object": "jewelry-pg-1",
+    "reason": "Unhealthy",
+    "first": "2026-11-13T05:21:33Z",
+    "last": "2026-11-13T05:21:38Z",
+    "count": 2,
+    "message": "Readiness probe failed: Get \"https://10.244.1.6:8000/readyz\": net/http: request canceled (Client.Timeout exceeded while awaiting headers)"
+  },
+  {
+    "namespace": "jewelry-demo",
+    "object": "jewelry-pg-1",
+    "reason": "Unhealthy",
+    "first": "2026-11-13T05:55:27Z",
+    "last": "2026-11-13T05:55:27Z",
+    "count": 1,
+    "message": "Liveness probe failed: Get \"https://10.244.1.6:8000/healthz\": net/http: request canceled while waiting for connection (Client.Timeout exceeded while awaiting headers)"
+  },
+  {
+    "namespace": "jewelry-demo",
+    "object": "jewelry-pg-1",
+    "reason": "Unhealthy",
+    "first": "2026-11-13T05:55:31Z",
+    "last": "2026-11-13T05:55:31Z",
+    "count": 1,
+    "message": "Liveness probe failed: HTTP probe failed with statuscode: 500"
+  },
+  {
+    "namespace": "jewelry-demo",
+    "object": "jewelry-pg-1",
+    "reason": "Unhealthy",
+    "first": "2026-11-13T05:55:33Z",
+    "last": "2026-11-13T05:55:33Z",
+    "count": 1,
+    "message": "Readiness probe failed: Get \"https://10.244.1.6:8000/readyz\": http2: client conn could not be established"
+  },
+  {
+    "namespace": "jewelry-demo",
+    "object": "jewelry-pg-2",
+    "reason": "Unhealthy",
+    "first": "2026-11-13T05:21:20Z",
+    "last": "2026-11-13T05:21:20Z",
+    "count": 1,
+    "message": "Liveness probe failed: Get \"https://10.244.2.6:8000/healthz\": EOF"
+  },
+  {
+    "namespace": "jewelry-demo",
+    "object": "jewelry-pg-2",
+    "reason": "Unhealthy",
+    "first": "2026-11-13T05:21:27Z",
+    "last": "2026-11-13T05:21:27Z",
+    "count": 1,
+    "message": "Readiness probe failed: Get \"https://10.244.2.6:8000/readyz\": net/http: request canceled while waiting for connection (Client.Timeout exceeded while awaiting headers)"
+  },
+  {
+    "namespace": "jewelry-demo",
+    "object": "jewelry-pg-2",
+    "reason": "Unhealthy",
+    "first": "2026-11-13T05:21:32Z",
+    "last": "2026-11-13T05:21:32Z",
+    "count": 1,
+    "message": "Readiness probe failed: Get \"https://10.244.2.6:8000/readyz\": context deadline exceeded (Client.Timeout exceeded while awaiting headers)"
+  },
+  {
+    "namespace": "jewelry-demo",
+    "object": "jewelry-pg-2",
+    "reason": "Unhealthy",
+    "first": "2026-11-13T05:21:38Z",
+    "last": "2026-11-13T05:55:31Z",
+    "count": 2,
+    "message": "Readiness probe failed: Get \"https://10.244.2.6:8000/readyz\": net/http: request canceled (Client.Timeout exceeded while awaiting headers)"
+  },
+  {
+    "namespace": "jewelry-demo",
+    "object": "jewelry-pg-2",
+    "reason": "Unhealthy",
+    "first": "2026-11-13T05:21:43Z",
+    "last": "2026-11-13T05:21:43Z",
+    "count": 1,
+    "message": "Readiness probe failed: Get \"https://10.244.2.6:8000/readyz\": context deadline exceeded"
+  },
+  {
+    "namespace": "jewelry-demo",
+    "object": "jewelry-pg-2",
+    "reason": "Unhealthy",
+    "first": "2026-11-13T05:55:27Z",
+    "last": "2026-11-13T05:55:27Z",
+    "count": 1,
+    "message": "Liveness probe failed: Get \"https://10.244.2.6:8000/healthz\": read tcp 10.244.2.1:47836->10.244.2.6:8000: read: connection reset by peer"
+  },
+  {
+    "namespace": "kube-system",
+    "object": "coredns-589f44dc88-8rpsz",
+    "reason": "Unhealthy",
+    "first": "2026-11-13T03:09:16Z",
+    "last": "2026-11-13T05:55:30Z",
+    "count": 6,
+    "message": "Readiness probe failed: Get \"http://10.244.0.4:8181/ready\": context deadline exceeded (Client.Timeout exceeded while awaiting headers)"
+  },
+  {
+    "namespace": "kube-system",
+    "object": "coredns-589f44dc88-8rpsz",
+    "reason": "Unhealthy",
+    "first": "2026-11-13T03:09:20Z",
+    "last": "2026-11-13T05:21:39Z",
+    "count": 4,
+    "message": "Liveness probe failed: Get \"http://10.244.0.4:8080/health\": context deadline exceeded (Client.Timeout exceeded while awaiting headers)"
+  },
+  {
+    "namespace": "kube-system",
+    "object": "coredns-589f44dc88-ks4jw",
+    "reason": "Unhealthy",
+    "first": "2026-11-13T03:09:19Z",
+    "last": "2026-11-13T05:55:30Z",
+    "count": 6,
+    "message": "Readiness probe failed: Get \"http://10.244.0.2:8181/ready\": context deadline exceeded (Client.Timeout exceeded while awaiting headers)"
+  },
+  {
+    "namespace": "kube-system",
+    "object": "coredns-589f44dc88-ks4jw",
+    "reason": "Unhealthy",
+    "first": "2026-11-13T03:09:19Z",
+    "last": "2026-11-13T05:21:39Z",
+    "count": 2,
+    "message": "Liveness probe failed: Get \"http://10.244.0.2:8080/health\": context deadline exceeded (Client.Timeout exceeded while awaiting headers)"
+  },
+  {
+    "namespace": "kube-system",
+    "object": "etcd-jewelry-lab-control-plane",
+    "reason": "Unhealthy",
+    "first": "2026-11-13T05:21:35Z",
+    "last": "2026-11-13T05:55:35Z",
+    "count": 2,
+    "message": "Readiness probe failed: Get \"http://127.0.0.1:2381/readyz\": context deadline exceeded (Client.Timeout exceeded while awaiting headers)"
+  },
+  {
+    "namespace": "kube-system",
+    "object": "kube-apiserver-jewelry-lab-control-plane",
+    "reason": "Unhealthy",
+    "first": "2026-11-13T03:09:27Z",
+    "last": "2026-11-13T05:21:44Z",
+    "count": 10,
+    "message": "Liveness probe failed: HTTP probe failed with statuscode: 500"
+  },
+  {
+    "namespace": "kube-system",
+    "object": "kube-apiserver-jewelry-lab-control-plane",
+    "reason": "Unhealthy",
+    "first": "2026-11-13T03:09:30Z",
+    "last": "2026-11-13T05:21:32Z",
+    "count": 2,
+    "message": "Readiness probe failed: Get \"https://172.19.0.2:6443/readyz\": net/http: request canceled (Client.Timeout exceeded while awaiting headers)"
+  },
+  {
+    "namespace": "kube-system",
+    "object": "kube-apiserver-jewelry-lab-control-plane",
+    "reason": "Unhealthy",
+    "first": "2026-11-13T03:09:35Z",
+    "last": "2026-11-13T05:55:40Z",
+    "count": 9,
+    "message": "Readiness probe failed: HTTP probe failed with statuscode: 500"
+  },
+  {
+    "namespace": "kube-system",
+    "object": "kube-apiserver-jewelry-lab-control-plane",
+    "reason": "Unhealthy",
+    "first": "2026-11-13T05:21:30Z",
+    "last": "2026-11-13T05:21:30Z",
+    "count": 1,
+    "message": "Liveness probe failed: Get \"https://172.19.0.2:6443/livez\": net/http: request canceled while waiting for connection (Client.Timeout exceeded while awaiting headers)"
+  },
+  {
+    "namespace": "kube-system",
+    "object": "kube-apiserver-jewelry-lab-control-plane",
+    "reason": "Unhealthy",
+    "first": "2026-11-13T05:55:33Z",
+    "last": "2026-11-13T05:55:33Z",
+    "count": 1,
+    "message": "Readiness probe failed: Get \"https://172.19.0.2:6443/readyz\": net/http: TLS handshake timeout"
+  },
+  {
+    "namespace": "kube-system",
+    "object": "kube-controller-manager-jewelry-lab-control-plane",
+    "reason": "Unhealthy",
+    "first": "2026-11-13T03:09:24Z",
+    "last": "2026-11-13T05:55:33Z",
+    "count": 6,
+    "message": "Liveness probe failed: Get \"https://127.0.0.1:10257/healthz\": dial tcp 127.0.0.1:10257: connect: connection refused"
+  },
+  {
+    "namespace": "kube-system",
+    "object": "kube-controller-manager-jewelry-lab-control-plane",
+    "reason": "Unhealthy",
+    "first": "2026-11-13T05:21:35Z",
+    "last": "2026-11-13T05:21:35Z",
+    "count": 1,
+    "message": "Liveness probe failed: Get \"https://127.0.0.1:10257/healthz\": read tcp 127.0.0.1:47262->127.0.0.1:10257: read: connection reset by peer"
+  },
+  {
+    "namespace": "kube-system",
+    "object": "kube-controller-manager-jewelry-lab-control-plane",
+    "reason": "Unhealthy",
+    "first": "2026-11-13T05:21:36Z",
+    "last": "2026-11-13T05:21:36Z",
+    "count": 1,
+    "message": "Liveness probe failed: Get \"https://127.0.0.1:10257/healthz\": dial tcp 127.0.0.1:10257: connect: connection reset by peer"
+  },
+  {
+    "namespace": "kube-system",
+    "object": "kube-controller-manager-jewelry-lab-control-plane",
+    "reason": "Unhealthy",
+    "first": "2026-11-13T05:55:32Z",
+    "last": "2026-11-13T05:55:32Z",
+    "count": 1,
+    "message": "Liveness probe failed: Get \"https://127.0.0.1:10257/healthz\": read tcp 127.0.0.1:44420->127.0.0.1:10257: read: connection reset by peer"
+  },
+  {
+    "namespace": "kube-system",
+    "object": "kube-controller-manager-jewelry-lab-control-plane",
+    "reason": "Unhealthy",
+    "first": "2026-11-13T05:55:33Z",
+    "last": "2026-11-13T05:55:33Z",
+    "count": 1,
+    "message": "Liveness probe failed: Get \"https://127.0.0.1:10257/healthz\": read tcp 127.0.0.1:34958->127.0.0.1:10257: read: connection reset by peer"
+  },
+  {
+    "namespace": "kube-system",
+    "object": "kube-scheduler-jewelry-lab-control-plane",
+    "reason": "Unhealthy",
+    "first": "2026-11-13T03:09:15Z",
+    "last": "2026-11-13T05:21:31Z",
+    "count": 2,
+    "message": "Readiness probe failed: Get \"https://127.0.0.1:10259/readyz\": context deadline exceeded"
+  },
+  {
+    "namespace": "kube-system",
+    "object": "kube-scheduler-jewelry-lab-control-plane",
+    "reason": "Unhealthy",
+    "first": "2026-11-13T03:09:20Z",
+    "last": "2026-11-13T05:55:37Z",
+    "count": 7,
+    "message": "Liveness probe failed: Get \"https://127.0.0.1:10259/livez\": dial tcp 127.0.0.1:10259: connect: connection refused"
+  },
+  {
+    "namespace": "kube-system",
+    "object": "kube-scheduler-jewelry-lab-control-plane",
+    "reason": "Unhealthy",
+    "first": "2026-11-13T03:09:21Z",
+    "last": "2026-11-13T05:55:41Z",
+    "count": 46,
+    "message": "Readiness probe failed: Get \"https://127.0.0.1:10259/readyz\": dial tcp 127.0.0.1:10259: connect: connection refused"
+  },
+  {
+    "namespace": "kube-system",
+    "object": "kube-scheduler-jewelry-lab-control-plane",
+    "reason": "Unhealthy",
+    "first": "2026-11-13T05:21:34Z",
+    "last": "2026-11-13T05:21:34Z",
+    "count": 1,
+    "message": "Liveness probe failed: Get \"https://127.0.0.1:10259/livez\": EOF"
+  }
+]

@@ -540,6 +540,8 @@ test('idempotency recovery is scoped to actor AND branch; same key for another a
 });
 
 test('query bounds and unknown filters rejected; inclusive date/status/branch filter with stable paginated order', async () => {
+  for (const status of ['APPRAISED', 'APPROVED', 'REJECTED'])
+    assert.equal(buybackQuerySchema.safeParse({ status }).success, true);
   for (const query of [
     { page: '0' },
     { page: '1.5' },
@@ -548,7 +550,7 @@ test('query bounds and unknown filters rejected; inclusive date/status/branch fi
     { pageSize: ['1', '2'] },
     { pageSize: ['1'] },
     { page: true },
-    { status: 'APPROVED' },
+    { status: 'PAYOUT' },
     { branchId: otherBranch },
     { from: 'yesterday' },
     { from: '2026-01-02T00:00:00Z', to: '2026-01-01T00:00:00Z' },
@@ -632,7 +634,14 @@ test('controller is authenticated, branch-role guarded, no-store and matches gen
   const schemas = salesOpenApiSchemas();
   assert.equal(schemas.CreateBuyback.additionalProperties, false);
   assert.equal(schemas.UpdateBuyback.properties.version.type, 'integer');
-  assert.deepEqual(schemas.BuybackStatus.enum, ['DRAFT', 'PENDING_APPRAISAL', 'CANCELLED']);
+  assert.deepEqual(schemas.BuybackStatus.enum, [
+    'DRAFT',
+    'PENDING_APPRAISAL',
+    'CANCELLED',
+    'APPRAISED',
+    'APPROVED',
+    'REJECTED',
+  ]);
   const doc = readFileSync(
     new URL('../../../docs/api/sales.openapi.yaml', import.meta.url),
     'utf8',

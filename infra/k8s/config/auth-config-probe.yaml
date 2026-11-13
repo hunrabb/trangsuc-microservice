@@ -1,0 +1,99 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: auth-config-probe
+  namespace: jewelry-demo
+  labels:
+    app.kubernetes.io/part-of: jewelry-demo
+    jewelry-demo/role: auth-config-check
+spec:
+  restartPolicy: Never
+  activeDeadlineSeconds: 90
+  terminationGracePeriodSeconds: 3
+  automountServiceAccountToken: false
+  nodeSelector:
+    kubernetes.io/hostname: jewelry-lab-worker
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+  - name: check-auth-config
+    image: jewelry/gateway:dev
+    imagePullPolicy: Never
+    command:
+    - node
+    - --max-old-space-size=48
+    - -e
+    - 'const fs=require(''node:fs''),c=require(''node:crypto''),a=require(''node:assert/strict''),cp=require(''node:child_process'');
+
+      a.equal(process.getuid(),1000);const priv=fs.readFileSync(process.env.JWT_PRIVATE_KEY_PATH),pub=fs.readFileSync(process.env.JWT_PUBLIC_KEY_PATH);const
+      b=Buffer.from(''phase3-config-probe'');a.ok(c.verify(''sha256'',b,pub,c.sign(''sha256'',b,priv)));a.equal(fs.statSync(process.env.JWT_PRIVATE_KEY_PATH).mode
+      & 7,0);
+
+      const u=new URL(process.env.DATABASE_URL);a.equal(u.hostname,''jewelry-pg-rw.jewelry-demo.svc.cluster.local'');a.equal(u.pathname,''/auth_db'');a.equal(u.searchParams.get(''schema''),''auth'');a.equal(u.searchParams.get(''sslmode''),''verify-full'');
+
+      const r=cp.spawnSync(''openssl'',[''s_client'',''-starttls'',''postgres'',''-connect'',u.hostname+'':5432'',''-servername'',u.hostname,''-verify_hostname'',u.hostname,''-verify_return_error'',''-CAfile'',''/run/secrets/postgres/ca.crt''],{input:'''',timeout:10000,encoding:''utf8''});a.equal(r.status,0);a.ok((r.stdout+r.stderr).includes(''Verify
+      return code: 0''));
+
+      console.log(''PASS Auth UID1000 Secret read, fresh RSA sign/verify, private
+      mode, demo URL, PostgreSQL CA/hostname TLS verification'');'
+    envFrom:
+    - configMapRef:
+        name: jewelry-common
+    - configMapRef:
+        name: auth-config
+    env:
+    - name: DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: auth-runtime-creds
+          key: DATABASE_URL
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        cpu: 250m
+        memory: 96Mi
+    securityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+        - ALL
+    volumeMounts:
+    - name: jwt-public
+      mountPath: /run/secrets/jwt-public
+      readOnly: true
+    - name: jwt-private
+      mountPath: /run/secrets/jwt-private
+      readOnly: true
+    - name: pg-ca
+      mountPath: /run/secrets/postgres
+      readOnly: true
+  volumes:
+  - name: jwt-public
+    secret:
+      secretName: jwt-verification
+      defaultMode: 288
+      items:
+      - key: public.pem
+        path: public.pem
+  - name: jwt-private
+    secret:
+      secretName: auth-jwt-signing
+      defaultMode: 288
+      items:
+      - key: private.pem
+        path: private.pem
+  - name: pg-ca
+    secret:
+      secretName: jewelry-pg-ca
+      defaultMode: 288
+      items:
+      - key: ca.crt
+        path: ca.crt

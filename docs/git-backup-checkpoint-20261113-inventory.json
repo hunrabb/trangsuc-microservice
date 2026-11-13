@@ -1,0 +1,1528 @@
+{
+  "originalBranch": "feat/sales-pos",
+  "originalHEAD": "48e469a2468c177c33fb7939c338105179503c16",
+  "trackedChanges": 90,
+  "modified": 85,
+  "deleted": 5,
+  "untracked": 360,
+  "checkpointPaths": [
+    ".env.example",
+    ".github/workflows/ci.yml",
+    "CLAUDE.md",
+    "README.md",
+    "apps/auth/.env.example",
+    "apps/auth/package.json",
+    "apps/auth/prisma/migrations/20261110090000_customer_accounts/migration.sql",
+    "apps/auth/prisma/schema.prisma",
+    "apps/auth/src/session/access-token.service.ts",
+    "apps/auth/src/session/customer-auth.controller.ts",
+    "apps/auth/src/session/session.module.ts",
+    "apps/auth/test/customer-accounts.test.mjs",
+    "apps/backoffice/Dockerfile",
+    "apps/backoffice/README.md",
+    "apps/backoffice/package.json",
+    "apps/backoffice/src/App.tsx",
+    "apps/backoffice/src/api/inventory-endpoints.ts",
+    "apps/backoffice/src/api/inventory-queries.ts",
+    "apps/backoffice/src/api/messages.ts",
+    "apps/backoffice/src/auth/permissions.test.ts",
+    "apps/backoffice/src/auth/permissions.ts",
+    "apps/backoffice/src/buybacks/api.test.ts",
+    "apps/backoffice/src/buybacks/api.ts",
+    "apps/backoffice/src/buybacks/appraisal-panel.tsx",
+    "apps/backoffice/src/buybacks/create-page.tsx",
+    "apps/backoffice/src/buybacks/detail-page.tsx",
+    "apps/backoffice/src/buybacks/intake-form.tsx",
+    "apps/backoffice/src/buybacks/list-page.tsx",
+    "apps/backoffice/src/buybacks/model.test.ts",
+    "apps/backoffice/src/buybacks/model.ts",
+    "apps/backoffice/src/buybacks/quote-panel.tsx",
+    "apps/backoffice/src/buybacks/quote-view.tsx",
+    "apps/backoffice/src/buybacks/settlement-model.test.ts",
+    "apps/backoffice/src/buybacks/settlement-model.ts",
+    "apps/backoffice/src/buybacks/settlement-panel.tsx",
+    "apps/backoffice/src/components/error-alert.tsx",
+    "apps/backoffice/src/inventory/format.ts",
+    "apps/backoffice/src/layout/app-shell.tsx",
+    "apps/backoffice/src/pages/receipt-detail-page.tsx",
+    "apps/backoffice/src/pages/receipts-page.tsx",
+    "apps/backoffice/src/pages/stock-count-detail-page.tsx",
+    "apps/backoffice/src/pages/stock-counts-page.tsx",
+    "apps/backoffice/src/pages/stock-page.tsx",
+    "apps/backoffice/src/pages/stock-summary-table.tsx",
+    "apps/backoffice/test/buyback-render.test.mjs",
+    "apps/backoffice/test/stock-summary-render.test.mjs",
+    "apps/gateway/src/proxy/buybacks.test.ts",
+    "apps/gateway/src/proxy/checkout.test.ts",
+    "apps/gateway/src/proxy/rate-limit-rules.ts",
+    "apps/gateway/src/proxy/routes.test.ts",
+    "apps/gateway/src/proxy/routes.ts",
+    "apps/inventory/.env.example",
+    "apps/inventory/README.md",
+    "apps/inventory/package.json",
+    "apps/inventory/prisma/migrations/20261109150000_exchange_hold/migration.sql",
+    "apps/inventory/prisma/migrations/20261109160000_buyback_enums/migration.sql",
+    "apps/inventory/prisma/migrations/20261109161000_buyback_stock/migration.sql",
+    "apps/inventory/prisma/schema.prisma",
+    "apps/inventory/src/app.module.ts",
+    "apps/inventory/src/catalog/internal-buyback-price.controller.ts",
+    "apps/inventory/src/catalog/metals.service.ts",
+    "apps/inventory/src/inventory.module.ts",
+    "apps/inventory/src/receipts/buyback-receipts.handler.ts",
+    "apps/inventory/src/receipts/receipts.controller.ts",
+    "apps/inventory/src/receipts/receipts.service.ts",
+    "apps/inventory/src/stock-count/stock-count.controller.ts",
+    "apps/inventory/src/stock-count/stock-count.service.ts",
+    "apps/inventory/src/stock/exchange-expiry.worker.ts",
+    "apps/inventory/src/stock/exchange-holds.service.ts",
+    "apps/inventory/src/stock/internal-exchange.controller.ts",
+    "apps/inventory/src/stock/stock.controller.ts",
+    "apps/inventory/src/stock/stock.service.ts",
+    "apps/inventory/test/catalog.test.mjs",
+    "apps/inventory/test/receipts-access.test.mjs",
+    "apps/inventory/test/stock-summary.test.mjs",
+    "apps/report/.env.example",
+    "apps/report/package.json",
+    "apps/report/prisma/migrations/20261109160000_buyback_facts/migration.sql",
+    "apps/report/prisma/schema.prisma",
+    "apps/report/src/app.module.ts",
+    "apps/report/src/buybacks/buyback-events.ts",
+    "apps/report/src/buybacks/buyback-reports.service.ts",
+    "apps/report/src/orders/reports.controller.ts",
+    "apps/report/test/buyback-reports.test.mjs",
+    "apps/sales/.env.example",
+    "apps/sales/package.json",
+    "apps/sales/prisma/migrations/20261109140000_buyback_appraisal/migration.sql",
+    "apps/sales/prisma/migrations/20261109150000_buyback_settlement/migration.sql",
+    "apps/sales/prisma/migrations/20261109152000_settlement_integrity/migration.sql",
+    "apps/sales/prisma/migrations/20261109153000_settlement_strict_checks/migration.sql",
+    "apps/sales/prisma/migrations/20261110090000_online_account/migration.sql",
+    "apps/sales/prisma/schema.prisma",
+    "apps/sales/src/app.module.ts",
+    "apps/sales/src/buybacks/buyback-appraisal.controller.ts",
+    "apps/sales/src/buybacks/buyback-appraisal.service.ts",
+    "apps/sales/src/buybacks/buyback-price.client.ts",
+    "apps/sales/src/buybacks/buyback-pricing.ts",
+    "apps/sales/src/buybacks/buyback-settlement-recovery.worker.ts",
+    "apps/sales/src/buybacks/buyback-settlement.controller.ts",
+    "apps/sales/src/buybacks/buyback-settlement.service.ts",
+    "apps/sales/src/buybacks/buybacks.module.ts",
+    "apps/sales/src/buybacks/exchange-client.ts",
+    "apps/sales/src/online/my-orders.controller.ts",
+    "apps/sales/src/online/online-orders.service.ts",
+    "apps/sales/test/buyback-appraisal.test.mjs",
+    "apps/sales/test/buyback-settlement.test.mjs",
+    "apps/sales/test/buybacks.test.mjs",
+    "apps/sales/test/online-checkout.test.mjs",
+    "apps/storefront/public/catalog-images/067123287899422109d7ccd23e1f6f452e143921eb27250c7420eda6a6f4c969.png",
+    "apps/storefront/public/catalog-images/0db0f421645bc678c32c5abad2ac929687b0e8a822539056e076535473a1751e.png",
+    "apps/storefront/public/catalog-images/0f73d9a7fb2ccaf80cf8ed442cd2bc806f50c01800fade16cc54a0802533c448.png",
+    "apps/storefront/public/catalog-images/1c78f2958af882a3e85703f3156ffcadf7f985c6d9aa64d06be9598c953bb0d1.png",
+    "apps/storefront/public/catalog-images/32eab911cc4d6c13dc611ee58782ca2023b8d8521e84c97997d4c184564edfeb.jpg",
+    "apps/storefront/public/catalog-images/353cdef8774b00b9882811bc52a81b6e0b8480188dc8c01bb7ed986d78eab918.jpg",
+    "apps/storefront/public/catalog-images/384af1ad534e4a409ff1d7189ac12dd0a839f355b09ec8df8c744ff7ef54568f.jpg",
+    "apps/storefront/public/catalog-images/4bca5ad7f77e7fb2d77a36c28c6b8f92a762c9999f3120ce0466356560742551.png",
+    "apps/storefront/public/catalog-images/4fe68658f217c36a82e78d62a1d06ee6d1f4a54c59f3a2a7c42592a0fba2becc.jpg",
+    "apps/storefront/public/catalog-images/5aa7b7efcac218451b179cd0b65bc610e2eb3e6c6878790b798526570caf0f00.png",
+    "apps/storefront/public/catalog-images/64c4b6cb76385dcb1c0b94255c1f322f5c3260fcc5004ff416fab1b37d0491c1.jpg",
+    "apps/storefront/public/catalog-images/657c16e3aa0175c7502d6d813914ff3317c84ee79117da28a267f4877380d6ca.jpg",
+    "apps/storefront/public/catalog-images/7a438d1db555f5d27d38db7fafb17ba2035909ce0a7ad5cfa9d99844ba404a73.png",
+    "apps/storefront/public/catalog-images/8244a141c3853fb9c8871ad54e21af8349432608df048f225238584492fb4c92.png",
+    "apps/storefront/public/catalog-images/857ea09dcc90020d5e68f5c3a0a6f37b16bdab0c81c1848253dd4e972b79447a.jpg",
+    "apps/storefront/public/catalog-images/8595497cf8e8ea97cf8697ef68d4d8b166cc550027f64dd0a1479684f33d75c1.jpg",
+    "apps/storefront/public/catalog-images/accfc81ebf99b53fa9349fe769b01d440a2f950852db7c521c174214cd27d0d2.png",
+    "apps/storefront/public/catalog-images/affd9f429e9948a88c6206076120b24b0a6f4daeacba81c5949f92b0ef66d5ef.jpg",
+    "apps/storefront/public/catalog-images/b2f11f1d86fbb0ce5e04c3ec76cb179a73129c105634171b14abd7e6a190e033.jpg",
+    "apps/storefront/public/catalog-images/b5a9ccf394045c027cdaff4ac91e422579b5b2556890f408aeed400301792bdb.jpg",
+    "apps/storefront/public/catalog-images/c89ec0989c8e42e7bbecd2462e2ab2c1681ec5e379e8b982bf43780c5f845f86.jpg",
+    "apps/storefront/public/catalog-images/de1cc802d58ae4b83e8f2d9a0205e1f9e89ba936008955fcfaf0009ac76a224d.png",
+    "apps/storefront/public/catalog-images/e8b2f40e6fb212b4c837391df38e666364761c0766d192d9ddf6df6d20b0719e.png",
+    "apps/storefront/public/catalog-images/fc217fac869cf7b965b9d62c62d32feb8680f115717cf7a1b39044ff3d8968dc.jpg",
+    "apps/storefront/src/App.tsx",
+    "apps/storefront/src/api/account.ts",
+    "apps/storefront/src/api/shop.ts",
+    "apps/storefront/src/components/demo-payment.tsx",
+    "apps/storefront/src/components/layout.tsx",
+    "apps/storefront/src/luxury.css",
+    "apps/storefront/src/main.tsx",
+    "apps/storefront/src/pages/account.tsx",
+    "apps/storefront/src/pages/catalog.tsx",
+    "apps/storefront/src/pages/checkout.tsx",
+    "apps/storefront/src/pages/home.tsx",
+    "apps/storefront/src/pages/orders.tsx",
+    "apps/storefront/src/state/checkout.ts",
+    "apps/storefront/src/styles.css",
+    "apps/storefront/test/checkout-expiry-notes.md",
+    "apps/storefront/test/checkout-intent.browser.mjs",
+    "apps/storefront/test/demo-payment-notes.md",
+    "apps/storefront/test/demo-payment.browser.html",
+    "apps/storefront/test/demo-payment.browser.mjs",
+    "apps/storefront/test/rebuy.integration.mjs",
+    "apps/storefront/test/storefront.test.mjs",
+    "docker-compose.db-separated.dev.yml",
+    "docker-compose.db-separated.yml",
+    "docker-compose.kong-candidate.yml",
+    "docker-compose.legacy.override.yml",
+    "docker-compose.legacy.yml",
+    "docker-compose.override.yml",
+    "docker-compose.yml",
+    "docs/admin-only-receipts.md",
+    "docs/api/auth.openapi.yaml",
+    "docs/api/inventory.openapi.yaml",
+    "docs/api/report.openapi.yaml",
+    "docs/api/sales.openapi.yaml",
+    "docs/api/shop.openapi.yaml",
+    "docs/checkout-intent-p0-fix.md",
+    "docs/checkout-rebuy-fix.md",
+    "docs/database-migration-runbook.md",
+    "docs/database-public-schema-migration.md",
+    "docs/database-separation-acceptance.md",
+    "docs/database-separation-progress.md",
+    "docs/development-seed.md",
+    "docs/evidence/kubernetes-phase3-resume/acceptance.json",
+    "docs/evidence/kubernetes-phase3-resume/leases.json",
+    "docs/evidence/kubernetes-phase3-resume/migration-image-verification.json",
+    "docs/evidence/kubernetes-phase3-resume/pods.json",
+    "docs/evidence/kubernetes-phase3-resume/postgres-metrics.txt",
+    "docs/evidence/kubernetes-phase3-resume/replication.json",
+    "docs/evidence/kubernetes-phase3-resume/resource-samples.json",
+    "docs/evidence/kubernetes-phase3-resume/resource-summary.json",
+    "docs/evidence/kubernetes-phase3-resume/session-history.md",
+    "docs/evidence/kubernetes-phase3-resume/storage.json",
+    "docs/evidence/kubernetes-phase3-resume/vmstat-final.txt",
+    "docs/evidence/kubernetes-phase3-resume/workload-resources.json",
+    "docs/evidence/kubernetes-phase4-0/cluster-audit.json",
+    "docs/evidence/kubernetes-phase4-0/cnpg-controller-manager-7df6db7d87-hx7hk-lease-log.txt",
+    "docs/evidence/kubernetes-phase4-0/config-checks.json",
+    "docs/evidence/kubernetes-phase4-0/image-audit.json",
+    "docs/evidence/kubernetes-phase4-0/kube-controller-manager-jewelry-lab-control-plane-lease-log.txt",
+    "docs/evidence/kubernetes-phase4-0/kube-scheduler-jewelry-lab-control-plane-lease-log.txt",
+    "docs/evidence/kubernetes-phase4-0/pg-status.txt",
+    "docs/evidence/kubernetes-phase4-0/resources.jsonl",
+    "docs/evidence/kubernetes-phase4-0/validation.json",
+    "docs/evidence/kubernetes-phase4-0r/api-livez.txt",
+    "docs/evidence/kubernetes-phase4-0r/api-readyz.txt",
+    "docs/evidence/kubernetes-phase4-0r/cgroup-interval.json",
+    "docs/evidence/kubernetes-phase4-0r/cgroup-measurements.json",
+    "docs/evidence/kubernetes-phase4-0r/control-plane-excerpts.txt",
+    "docs/evidence/kubernetes-phase4-0r/docker-kind-stats.txt",
+    "docs/evidence/kubernetes-phase4-0r/docker-nodes-meta.txt",
+    "docs/evidence/kubernetes-phase4-0r/etcd-health.txt",
+    "docs/evidence/kubernetes-phase4-0r/etcd-selected.json",
+    "docs/evidence/kubernetes-phase4-0r/etcd-slow-fdatasync.json",
+    "docs/evidence/kubernetes-phase4-0r/etcd-status.txt",
+    "docs/evidence/kubernetes-phase4-0r/historical-lifecycle.json",
+    "docs/evidence/kubernetes-phase4-0r/leases-final.json",
+    "docs/evidence/kubernetes-phase4-0r/linux-resources.json",
+    "docs/evidence/kubernetes-phase4-0r/nodes-final.json",
+    "docs/evidence/kubernetes-phase4-0r/pods-final.json",
+    "docs/evidence/kubernetes-phase4-0r/replication.txt",
+    "docs/evidence/kubernetes-phase4-0r/summary.json",
+    "docs/evidence/kubernetes-phase4-0r/vmstat.txt",
+    "docs/evidence/kubernetes-phase4-0r/warning-events.json",
+    "docs/evidence/kubernetes-phase4-0r/windows-power-events.json",
+    "docs/evidence/kubernetes-phase4-0r/windows-resources.json",
+    "docs/ke-hoach.md",
+    "docs/kong-migration-progress.md",
+    "docs/kubernetes-architecture-plan.md",
+    "docs/kubernetes-phase3-report.md",
+    "docs/kubernetes-phase4-0r-report.md",
+    "docs/kubernetes-phase4-plan.md",
+    "docs/legacy-products-import.md",
+    "docs/phase5-progress.md",
+    "docs/phase7-appraisal-evidence.md",
+    "docs/phase7-buyback-inventory-evidence.md",
+    "docs/phase7-progress.md",
+    "docs/phase7-settlement-evidence.md",
+    "docs/phase7-ui-progress.md",
+    "docs/stock-summary-docker-deploy.md",
+    "docs/stock-summary.md",
+    "docs/stocktaking-removal.md",
+    "docs/storefront-customer-orders-deployment.md",
+    "docs/storefront-customer-orders.md",
+    "docs/storefront-redesign-progress.md",
+    "docs/thiet-ke.md",
+    "infra/k8s/apps/auth/deployment.yaml",
+    "infra/k8s/apps/auth/kustomization.yaml",
+    "infra/k8s/apps/auth/service.yaml",
+    "infra/k8s/apps/inventory/deployment.yaml",
+    "infra/k8s/apps/inventory/kustomization.yaml",
+    "infra/k8s/apps/inventory/service.yaml",
+    "infra/k8s/apps/kustomization.yaml",
+    "infra/k8s/apps/report/deployment.yaml",
+    "infra/k8s/apps/report/kustomization.yaml",
+    "infra/k8s/apps/report/service.yaml",
+    "infra/k8s/apps/sales/deployment.yaml",
+    "infra/k8s/apps/sales/kustomization.yaml",
+    "infra/k8s/apps/sales/service.yaml",
+    "infra/k8s/cnpg/README.md",
+    "infra/k8s/cnpg/cnpg-1.30.1.yaml",
+    "infra/k8s/cnpg/kustomization.yaml",
+    "infra/k8s/cnpg/operator-demo-patch.yaml",
+    "infra/k8s/config/README.md",
+    "infra/k8s/config/auth-config-probe.yaml",
+    "infra/k8s/config/configmaps.yaml",
+    "infra/k8s/config/kustomization.yaml",
+    "infra/k8s/config/resource-profiles.yaml",
+    "infra/k8s/config/runtime-db-probe.yaml",
+    "infra/k8s/jobs/README.md",
+    "infra/k8s/jobs/auth-migration.yaml",
+    "infra/k8s/jobs/inventory-migration.yaml",
+    "infra/k8s/jobs/migration-images.lock.json",
+    "infra/k8s/jobs/report-migration.yaml",
+    "infra/k8s/jobs/sales-migration.yaml",
+    "infra/k8s/kind/README.md",
+    "infra/k8s/kind/kind-config.yaml",
+    "infra/k8s/kong/configmap.yaml",
+    "infra/k8s/kong/deployment.yaml",
+    "infra/k8s/kong/kustomization.yaml",
+    "infra/k8s/kong/service.yaml",
+    "infra/k8s/nginx/configmap.yaml",
+    "infra/k8s/nginx/deployment.yaml",
+    "infra/k8s/nginx/kustomization.yaml",
+    "infra/k8s/nginx/service.yaml",
+    "infra/k8s/overlays/demo/README.md",
+    "infra/k8s/overlays/demo/kustomization.yaml",
+    "infra/k8s/overlays/demo/phase4/README.md",
+    "infra/k8s/overlays/demo/phase4/kustomization.yaml",
+    "infra/k8s/postgres/README.md",
+    "infra/k8s/postgres/cluster-bootstrap.yaml",
+    "infra/k8s/postgres/cluster.yaml",
+    "infra/k8s/postgres/databases.yaml",
+    "infra/k8s/postgres/kustomization.yaml",
+    "infra/k8s/postgres/privileges.sql",
+    "infra/k8s/postgres/roles.yaml",
+    "infra/k8s/postgres/storageclass.yaml",
+    "infra/k8s/rabbitmq/README.md",
+    "infra/k8s/rabbitmq/compose.yaml",
+    "infra/k8s/rabbitmq/kustomization.yaml",
+    "infra/k8s/rabbitmq/probe.cjs",
+    "infra/k8s/rabbitmq/rabbitmq.conf",
+    "infra/k8s/rabbitmq/service.yaml",
+    "infra/k8s/rabbitmq/topology.json",
+    "infra/kong/Dockerfile",
+    "infra/kong/generate-config.mjs",
+    "infra/kong/plugins/jewelry-jwt-policy/handler.lua",
+    "infra/kong/plugins/jewelry-jwt-policy/schema.lua",
+    "infra/kong/plugins/jewelry-rate-policy/handler.lua",
+    "infra/kong/plugins/jewelry-rate-policy/schema.lua",
+    "infra/kong/plugins/jewelry-request-boundary/handler.lua",
+    "infra/kong/plugins/jewelry-request-boundary/schema.lua",
+    "infra/kong/plugins/jewelry-route-guard/handler.lua",
+    "infra/kong/plugins/jewelry-route-guard/schema.lua",
+    "infra/phase7/compose.appraisal-test.yml",
+    "infra/phase7/compose.buyback-stock-test.yml",
+    "infra/phase7/compose.settlement-test.yml",
+    "infra/postgres/separation/.gitignore",
+    "infra/postgres/separation/assert-test-target.mjs",
+    "infra/postgres/separation/broker-outage.mjs",
+    "infra/postgres/separation/catalog-check.sql",
+    "infra/postgres/separation/compare-restored-data.py",
+    "infra/postgres/separation/compose.acceptance.yml",
+    "infra/postgres/separation/compose.hybrid.yml",
+    "infra/postgres/separation/compose.migrate-test.yml",
+    "infra/postgres/separation/compose.test.yml",
+    "infra/postgres/separation/cutover-smoke.mjs",
+    "infra/postgres/separation/fault-isolation.mjs",
+    "infra/postgres/separation/http-acceptance.mjs",
+    "infra/postgres/separation/preflight.sql",
+    "infra/postgres/separation/run-host-service.mjs",
+    "infra/postgres/separation/task-a-concurrency-rbac.mjs",
+    "infra/postgres/separation/task-a-db13.mjs",
+    "infra/postgres/separation/task-a-lib.mjs",
+    "infra/postgres/separation/task-a-reserve-race.mjs",
+    "infra/postgres/separation/test-migrations.mjs",
+    "infra/postgres/separation/test-outage.sh",
+    "infra/postgres/separation/test-prisma-clients.mjs",
+    "infra/postgres/separation/test-restore.sh",
+    "infra/postgres/separation/verify-acceptance-db.py",
+    "infra/postgres/separation/verify-compose.py",
+    "infra/postgres/separation/verify-migrate-images.py",
+    "infra/postgres/service-init/01-init.sh",
+    "infra/rabbitmq/definitions.json",
+    "libs/contracts/src/buyback-api.ts",
+    "libs/contracts/src/buyback-appraisal-api.ts",
+    "libs/contracts/src/buyback-inventory-events.ts",
+    "libs/contracts/src/buyback-settlement-api.ts",
+    "libs/contracts/src/customer-account.ts",
+    "libs/contracts/src/error-codes.ts",
+    "libs/contracts/src/events.ts",
+    "libs/contracts/src/exchange-internal-api.ts",
+    "libs/contracts/src/index.ts",
+    "libs/contracts/src/inventory-api.ts",
+    "libs/contracts/src/openapi.ts",
+    "package.json",
+    "scripts/data/legacy-products.json",
+    "scripts/seed-development.mjs",
+    "scripts/seed-legacy-products.mjs",
+    "tests/buyback-appraisal/README.md",
+    "tests/buyback-appraisal/appraisal.integration.mjs",
+    "tests/buyback-appraisal/compatibility.sql",
+    "tests/buyback-appraisal/schema-assertions.sql",
+    "tests/buyback-settlement/README.md",
+    "tests/buyback-settlement/rabbit.integration.mjs",
+    "tests/buyback-settlement/settlement.integration.mjs",
+    "tests/buyback-stock/rabbit.integration.mjs",
+    "tests/buyback-stock/stock.integration.mjs",
+    "tests/integration/src/correlation.test.ts",
+    "tests/inventory/src/inventory.test.ts",
+    "tests/inventory/src/stock-count.test.ts"
+  ],
+  "excluded": [
+    {
+      "path": "apps/storefront/test/evidence/checkout-expiry/fresh-order.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "apps/storefront/test/evidence/checkout-expiry/previous-order.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "apps/storefront/test/evidence/checkout-expiry/result.json",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "apps/storefront/test/evidence/checkout-intent-p0/new-payment.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "apps/storefront/test/evidence/checkout-intent-p0/results.json",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "apps/storefront/test/evidence/demo-payment/acknowledged-1440.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "apps/storefront/test/evidence/demo-payment/acknowledged-390.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "apps/storefront/test/evidence/demo-payment/results.json",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "apps/storefront/test/evidence/rebuy/new-order.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "apps/storefront/test/evidence/rebuy/results.json",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/catalog-navigation-20261110/1440-GOLD.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/catalog-navigation-20261110/1440-SILVER.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/catalog-navigation-20261110/1440-all.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/catalog-navigation-20261110/390-GOLD.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/catalog-navigation-20261110/390-SILVER.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/catalog-navigation-20261110/390-all.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/catalog-navigation-20261110/results.json",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/checkout-intent-p0-20261110/before.json",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/checkout-intent-p0-20261110/deployment.json",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/checkout-intent-p0-20261110/inventory-after.txt",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/checkout-intent-p0-20261110/sales-after.txt",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/checkout-rebuy-20261110/before.json",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/checkout-rebuy-20261110/inventory-after.txt",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/checkout-rebuy-20261110/inventory-before.txt",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/checkout-rebuy-20261110/sales-after.txt",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/checkout-rebuy-20261110/sales-before.txt",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/development-seed-20261110/backoffice-receipts.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/development-seed-20261110/browser-results.json",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/development-seed-20261110/customer-orders.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/development-seed-20261110/seed-summary.json",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/development-seed-20261110/storefront-catalog.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/kubernetes-phase3/resource-samples.json",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/kubernetes-phase3/safety-stop.json",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/legacy-products-import-20261110/cart.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/legacy-products-import-20261110/catalog.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/legacy-products-import-20261110/results.json",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-customer-orders-20261110/account-orders-desktop.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-customer-orders-20261110/account-orders-mobile.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-customer-orders-20261110/auth-migrate.txt",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-customer-orders-20261110/browser-results.json",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-customer-orders-20261110/http-results.json",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-customer-orders-20261110/ownership-results.json",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-customer-orders-20261110/preservation-results.json",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-customer-orders-20261110/sales-migrate.txt",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-docker-redesign-20261110/cart-1366.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-docker-redesign-20261110/cart-1440.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-docker-redesign-20261110/cart-390.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-docker-redesign-20261110/cart-768.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-docker-redesign-20261110/catalog-1366.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-docker-redesign-20261110/catalog-1440.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-docker-redesign-20261110/catalog-390.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-docker-redesign-20261110/catalog-768.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-docker-redesign-20261110/checkout-1366.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-docker-redesign-20261110/checkout-1440.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-docker-redesign-20261110/checkout-390.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-docker-redesign-20261110/checkout-768.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-docker-redesign-20261110/config.json",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-docker-redesign-20261110/containers-before.json",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-docker-redesign-20261110/home-1366.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-docker-redesign-20261110/home-1440.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-docker-redesign-20261110/home-390.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-docker-redesign-20261110/home-768.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-docker-redesign-20261110/http-results.json",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-docker-redesign-20261110/product-1366.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-docker-redesign-20261110/product-1440.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-docker-redesign-20261110/product-390.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-docker-redesign-20261110/product-768.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-docker-redesign-20261110/results.json",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-redesign-20261110/cart-1366.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-redesign-20261110/cart-1440.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-redesign-20261110/cart-390.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-redesign-20261110/cart-768.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-redesign-20261110/catalog-1366.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-redesign-20261110/catalog-1440.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-redesign-20261110/catalog-390.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-redesign-20261110/catalog-768.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-redesign-20261110/checkout-1366.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-redesign-20261110/checkout-1440.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-redesign-20261110/checkout-390.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-redesign-20261110/checkout-768.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-redesign-20261110/home-1366.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-redesign-20261110/home-1440.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-redesign-20261110/home-390.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-redesign-20261110/home-768.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-redesign-20261110/product-1366.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-redesign-20261110/product-1440.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-redesign-20261110/product-390.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-redesign-20261110/product-768.png",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    },
+    {
+      "path": "docs/evidence/storefront-redesign-20261110/results.json",
+      "reason": "optional business/browser evidence; potential personal data, not deployment source"
+    }
+  ],
+  "secretScan": {
+    "gitleaksVersion": "8.30.1",
+    "officialChecksumVerified": true,
+    "historyCommitsReported": 46,
+    "reachableGitCommits": 49,
+    "historyBlobPatternScanCount": 1524,
+    "historyDetections": 1,
+    "candidateDetections": 129,
+    "reviewedFalsePositives": [
+      {
+        "path": "infra/k8s/config/runtime-db-probe.yaml",
+        "line": 22,
+        "rule": "generic-api-key",
+        "assessment": "local Docker image tag derived from content ID"
+      },
+      {
+        "path": "infra/k8s/jobs/auth-migration.yaml",
+        "line": 32,
+        "rule": "generic-api-key",
+        "assessment": "local Docker image tag derived from content ID"
+      },
+      {
+        "path": "infra/k8s/jobs/migration-images.lock.json",
+        "line": 11,
+        "rule": "generic-api-key",
+        "assessment": "local Docker image tag derived from content ID"
+      },
+      {
+        "path": "infra/k8s/kind/README.md",
+        "line": 13,
+        "rule": "generic-api-key",
+        "assessment": "public tool binary checksum"
+      },
+      {
+        "path": "tests/phase6/contracts.test.mjs",
+        "line": 151,
+        "rule": "generic-api-key",
+        "assessment": "contract-test fixture identifier, no authentication access"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 23,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 24,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 48,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 49,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 50,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 53,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 55,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 56,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 57,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 90,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 95,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 99,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 103,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 106,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 108,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 110,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 112,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 115,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 128,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 156,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 195,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 196,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 197,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 198,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 199,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 200,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 201,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 203,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 206,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 210,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 212,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 213,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 218,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 219,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 220,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 221,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 223,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 225,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 229,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 231,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 232,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 235,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 236,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 237,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 313,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 348,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 418,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 446,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 482,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 483,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 484,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 485,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 486,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 487,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 488,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 490,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 493,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 497,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 499,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 500,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 505,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 506,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 507,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 508,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 510,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 512,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 516,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 518,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 519,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 522,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 523,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 524,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 721,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 749,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 788,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 789,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 790,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 791,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 792,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 793,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 794,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 796,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 799,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 803,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 805,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 806,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 811,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 812,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 813,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 814,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 816,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 818,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 822,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 824,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 825,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 828,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 829,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 830,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 957,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 985,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 1026,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 1027,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 1028,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 1029,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 1030,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 1031,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 1032,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 1034,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 1037,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 1041,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 1043,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 1044,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 1049,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 1050,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 1051,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 1052,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 1054,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 1055,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 1059,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 1061,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 1062,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 1065,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 1066,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      },
+      {
+        "path": "docs/evidence/kubernetes-phase4-0/image-audit.json",
+        "line": 1067,
+        "rule": "generic-api-key",
+        "assessment": "SHA256 content checksum fields, not authentication keys"
+      }
+    ],
+    "liveEnvironmentCredentialMatches": 0,
+    "populatedKubernetesSecretOrKubeconfigFindings": 0,
+    "detectedUnresolvedSecrets": 0
+  },
+  "remote": "https://github.com/hunrabb/trangsuc-microservice.git",
+  "remoteVisibility": "PUBLIC",
+  "permission": "ADMIN",
+  "runtimeChanged": false,
+  "kubernetesPhase4_1": "HOLD as documented by 4.0R",
+  "limitations": [
+    "Automated pattern matching and manual review do not prove absolute absence of all possible secrets.",
+    "89 optional browser/business evidence files intentionally excluded; no files removed from disk.",
+    "Real env/private keys/credentials/PVC data not backed up to Git; re-provision securely when restoring.",
+    "Separate phase1/phase2 report files not found; existing kind README/config and later phase reports included."
+  ]
+}

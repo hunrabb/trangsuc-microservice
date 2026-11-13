@@ -1,0 +1,14 @@
+{
+  "kind": "resources",
+  "utc": "2026-11-13T06:01:12.5816457Z",
+  "totalMiB": 16283,
+  "availableMiB": 3795,
+  "CPU": "Intel(R) Core(TM) i5-7200U CPU @ 2.50GHz",
+  "cores": 2,
+  "threads": 4,
+  "cpuPercent": 76,
+  "freeCGiB": 33.72,
+  "diskTransfers": 37,
+  "diskAvgLatencyMs": 0.9149621621621622,
+  "windowsBoot": "2026-11-11T13:56:17.5000000Z"
+}

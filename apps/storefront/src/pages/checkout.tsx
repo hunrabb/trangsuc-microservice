@@ -1,4 +1,5 @@
-import { useState, type FormEvent } from 'react';
+import { accountToken, restoreAccount, useAccount } from '../api/account.ts';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { createOnlineOrderSchema } from '@jewelry/contracts';
 import { ShopApiError } from '../api/shop.ts';
@@ -8,6 +9,10 @@ import { Breadcrumb, Icon, PriceNote, StatePanel } from '../components/ui.tsx';
 
 export function CheckoutPage() {
   const store = useStore();
+  const { account, ready } = useAccount();
+  useEffect(() => {
+    if (!ready) void restoreAccount();
+  }, [ready]);
   const cart = useCartProducts();
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false),
@@ -66,9 +71,10 @@ export function CheckoutPage() {
     setBusy(true);
     setMessage('');
     try {
+      const token = await accountToken();
       const order = await store.coordinator.submit(body.data);
       store.refreshSession();
-      navigate(`/don-hang/${order.id}`);
+      navigate(token ? `/tai-khoan/don-hang/${order.id}` : `/don-hang/${order.id}`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Chưa xác định được kết quả đặt hàng.');
       store.refreshSession();
@@ -121,36 +127,35 @@ export function CheckoutPage() {
           <span>03 Kiểm tra đơn</span>
         </div>
       </div>
+      <p className="notice">
+        {account ? (
+          <>
+            Đặt hàng bằng tài khoản {account.user.email}. Bạn có thể xem lại trong{' '}
+            <Link to="/tai-khoan/don-hang">Đơn hàng của tôi</Link>.
+          </>
+        ) : (
+          <>
+            Bạn có thể <Link to="/tai-khoan">đăng nhập hoặc đăng ký</Link> trước khi đặt hàng để xem
+            lại đơn trong tài khoản, hoặc tiếp tục đặt không dùng tài khoản.
+          </>
+        )}
+      </p>
       {active ? (
         <StatePanel
-          title={
-            active.orderId ? 'Bạn đã có một yêu cầu đặt hàng' : 'Yêu cầu của bạn đang được kiểm tra'
-          }
+          title="Yêu cầu của bạn đang được kiểm tra"
           action={
             <>
-              {active.orderId ? (
-                <Link className="button button-dark" to={`/don-hang/${active.orderId}`}>
-                  Theo dõi đơn của bạn <Icon name="arrow" size={16} />
-                </Link>
-              ) : (
-                <>
-                  <button
-                    className="button button-dark"
-                    disabled={busy}
-                    onClick={() => void resolve()}
-                  >
-                    Kiểm tra kết quả đã gửi
-                  </button>
-                  {active.body && (
-                    <button
-                      className="button button-outline"
-                      disabled={busy}
-                      onClick={() => void resolve(true)}
-                    >
-                      Gửi lại đúng yêu cầu đã lưu
-                    </button>
-                  )}
-                </>
+              <button className="button button-dark" disabled={busy} onClick={() => void resolve()}>
+                Kiểm tra kết quả đã gửi
+              </button>
+              {active.body && (
+                <button
+                  className="button button-outline"
+                  disabled={busy}
+                  onClick={() => void resolve(true)}
+                >
+                  Gửi lại đúng yêu cầu đã lưu
+                </button>
               )}
             </>
           }

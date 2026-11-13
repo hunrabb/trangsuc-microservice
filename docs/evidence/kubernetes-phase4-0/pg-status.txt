@@ -1,0 +1,5 @@
+jewelry-pg-2|streaming|async|0
+auth_db|auth_migrator
+inventory_db|inventory_migrator
+report_db|report_migrator
+sales_db|sales_migrator

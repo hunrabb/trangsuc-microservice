@@ -293,7 +293,8 @@ button:disabled:hover {
   padding: 12px 0;
   border-bottom: 1px solid transparent;
 }
-.main-nav a.active {
+.main-nav a.active,
+.main-nav a[aria-current='page'] {
   border-color: var(--gold);
   color: var(--gold);
 }
@@ -2883,4 +2884,18 @@ button:disabled:hover {
 .product-card p,
 .detail-price {
   overflow-wrap: anywhere;
+}
+
+.account-order-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 24px;
+  margin-block: 32px;
+}
+.account-order-list h2 {
+  overflow-wrap: anywhere;
+}
+.access-form > .text-button {
+  display: block;
+  margin-top: 24px;
 }

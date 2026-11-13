@@ -14,7 +14,6 @@ export const inventoryKeys = {
   variants: ['inventory', 'variants'] as const,
   receipts: ['inventory', 'receipts'] as const,
   items: ['inventory', 'items'] as const,
-  stockCount: (stockCountId: string) => ['inventory', 'stock-count', stockCountId] as const,
 };
 
 export const useMetals = () =>

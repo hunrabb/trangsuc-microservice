@@ -1,0 +1,442 @@
+[
+  {
+    "namespace": "cnpg-system",
+    "name": "cnpg-controller-manager-7df6db7d87-hx7hk",
+    "node": "jewelry-lab-control-plane",
+    "phase": "Running",
+    "ready": "True",
+    "containers": [
+      {
+        "name": "manager",
+        "ready": true,
+        "restartCount": 2,
+        "state": {
+          "running": {
+            "startedAt": "2026-11-13T05:55:43Z"
+          }
+        },
+        "lastState": {
+          "terminated": {
+            "containerID": "containerd://5c18b0137df54c9fe2351c95f5cc9818c1c627802b3031812cf0608774852106",
+            "exitCode": 1,
+            "finishedAt": "2026-11-13T05:55:35Z",
+            "reason": "Error",
+            "startedAt": "2026-11-13T05:21:48Z"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "namespace": "jewelry-demo",
+    "name": "auth-migrate-phase3-q289b",
+    "node": "jewelry-lab-worker",
+    "phase": "Succeeded",
+    "ready": "False",
+    "containers": [
+      {
+        "name": "migrate",
+        "ready": false,
+        "restartCount": 0,
+        "state": {
+          "terminated": {
+            "containerID": "containerd://d6250a64d5b3ce2f76671aedf99f60cfe2df0028d879bb343fe85600b9f766e1",
+            "exitCode": 0,
+            "finishedAt": "2026-11-13T04:35:09Z",
+            "reason": "Completed",
+            "startedAt": "2026-11-13T04:35:01Z"
+          }
+        },
+        "lastState": {}
+      }
+    ]
+  },
+  {
+    "namespace": "jewelry-demo",
+    "name": "inventory-migrate-phase3-26fg2",
+    "node": "jewelry-lab-worker",
+    "phase": "Succeeded",
+    "ready": "False",
+    "containers": [
+      {
+        "name": "migrate",
+        "ready": false,
+        "restartCount": 0,
+        "state": {
+          "terminated": {
+            "containerID": "containerd://09966faa65f08a45decd1fa2b01e859274aa3ab6a918307ea19106d724521f37",
+            "exitCode": 0,
+            "finishedAt": "2026-11-13T04:36:11Z",
+            "reason": "Completed",
+            "startedAt": "2026-11-13T04:36:04Z"
+          }
+        },
+        "lastState": {}
+      }
+    ]
+  },
+  {
+    "namespace": "jewelry-demo",
+    "name": "jewelry-pg-1",
+    "node": "jewelry-lab-worker",
+    "phase": "Running",
+    "ready": "True",
+    "containers": [
+      {
+        "name": "postgres",
+        "ready": true,
+        "restartCount": 0,
+        "state": {
+          "running": {
+            "startedAt": "2026-11-13T04:27:19Z"
+          }
+        },
+        "lastState": {}
+      }
+    ]
+  },
+  {
+    "namespace": "jewelry-demo",
+    "name": "jewelry-pg-2",
+    "node": "jewelry-lab-worker2",
+    "phase": "Running",
+    "ready": "True",
+    "containers": [
+      {
+        "name": "postgres",
+        "ready": true,
+        "restartCount": 0,
+        "state": {
+          "running": {
+            "startedAt": "2026-11-13T04:27:03Z"
+          }
+        },
+        "lastState": {}
+      }
+    ]
+  },
+  {
+    "namespace": "jewelry-demo",
+    "name": "report-migrate-phase3-pg54f",
+    "node": "jewelry-lab-worker",
+    "phase": "Succeeded",
+    "ready": "False",
+    "containers": [
+      {
+        "name": "migrate",
+        "ready": false,
+        "restartCount": 0,
+        "state": {
+          "terminated": {
+            "containerID": "containerd://884dffca8583ddc61c069c15a3b78469fb036b767b4c7dc5046e54388fe41933",
+            "exitCode": 0,
+            "finishedAt": "2026-11-13T04:38:18Z",
+            "reason": "Completed",
+            "startedAt": "2026-11-13T04:38:12Z"
+          }
+        },
+        "lastState": {}
+      }
+    ]
+  },
+  {
+    "namespace": "jewelry-demo",
+    "name": "sales-migrate-phase3-nv88n",
+    "node": "jewelry-lab-worker",
+    "phase": "Succeeded",
+    "ready": "False",
+    "containers": [
+      {
+        "name": "migrate",
+        "ready": false,
+        "restartCount": 0,
+        "state": {
+          "terminated": {
+            "containerID": "containerd://79673ff70e14a29ffe35cb70d3111bd5873161c6329d8a66b8c9fb0da54ac567",
+            "exitCode": 0,
+            "finishedAt": "2026-11-13T04:37:13Z",
+            "reason": "Completed",
+            "startedAt": "2026-11-13T04:37:06Z"
+          }
+        },
+        "lastState": {}
+      }
+    ]
+  },
+  {
+    "namespace": "kube-system",
+    "name": "coredns-589f44dc88-8rpsz",
+    "node": "jewelry-lab-control-plane",
+    "phase": "Running",
+    "ready": "True",
+    "containers": [
+      {
+        "name": "coredns",
+        "ready": true,
+        "restartCount": 0,
+        "state": {
+          "running": {
+            "startedAt": "2026-11-12T19:40:01Z"
+          }
+        },
+        "lastState": {}
+      }
+    ]
+  },
+  {
+    "namespace": "kube-system",
+    "name": "coredns-589f44dc88-ks4jw",
+    "node": "jewelry-lab-control-plane",
+    "phase": "Running",
+    "ready": "True",
+    "containers": [
+      {
+        "name": "coredns",
+        "ready": true,
+        "restartCount": 0,
+        "state": {
+          "running": {
+            "startedAt": "2026-11-12T19:40:01Z"
+          }
+        },
+        "lastState": {}
+      }
+    ]
+  },
+  {
+    "namespace": "kube-system",
+    "name": "etcd-jewelry-lab-control-plane",
+    "node": "jewelry-lab-control-plane",
+    "phase": "Running",
+    "ready": "True",
+    "containers": [
+      {
+        "name": "etcd",
+        "ready": true,
+        "restartCount": 0,
+        "state": {
+          "running": {
+            "startedAt": "2026-11-12T19:39:07Z"
+          }
+        },
+        "lastState": {}
+      }
+    ]
+  },
+  {
+    "namespace": "kube-system",
+    "name": "kindnet-2qjhq",
+    "node": "jewelry-lab-control-plane",
+    "phase": "Running",
+    "ready": "True",
+    "containers": [
+      {
+        "name": "kindnet-cni",
+        "ready": true,
+        "restartCount": 0,
+        "state": {
+          "running": {
+            "startedAt": "2026-11-12T19:39:41Z"
+          }
+        },
+        "lastState": {}
+      }
+    ]
+  },
+  {
+    "namespace": "kube-system",
+    "name": "kindnet-ctt27",
+    "node": "jewelry-lab-worker2",
+    "phase": "Running",
+    "ready": "True",
+    "containers": [
+      {
+        "name": "kindnet-cni",
+        "ready": true,
+        "restartCount": 0,
+        "state": {
+          "running": {
+            "startedAt": "2026-11-12T19:39:46Z"
+          }
+        },
+        "lastState": {}
+      }
+    ]
+  },
+  {
+    "namespace": "kube-system",
+    "name": "kindnet-r2vqt",
+    "node": "jewelry-lab-worker",
+    "phase": "Running",
+    "ready": "True",
+    "containers": [
+      {
+        "name": "kindnet-cni",
+        "ready": true,
+        "restartCount": 0,
+        "state": {
+          "running": {
+            "startedAt": "2026-11-12T19:39:46Z"
+          }
+        },
+        "lastState": {}
+      }
+    ]
+  },
+  {
+    "namespace": "kube-system",
+    "name": "kube-apiserver-jewelry-lab-control-plane",
+    "node": "jewelry-lab-control-plane",
+    "phase": "Running",
+    "ready": "True",
+    "containers": [
+      {
+        "name": "kube-apiserver",
+        "ready": true,
+        "restartCount": 0,
+        "state": {
+          "running": {
+            "startedAt": "2026-11-12T19:39:07Z"
+          }
+        },
+        "lastState": {}
+      }
+    ]
+  },
+  {
+    "namespace": "kube-system",
+    "name": "kube-controller-manager-jewelry-lab-control-plane",
+    "node": "jewelry-lab-control-plane",
+    "phase": "Running",
+    "ready": "True",
+    "containers": [
+      {
+        "name": "kube-controller-manager",
+        "ready": true,
+        "restartCount": 4,
+        "state": {
+          "running": {
+            "startedAt": "2026-11-13T05:55:43Z"
+          }
+        },
+        "lastState": {
+          "terminated": {
+            "containerID": "containerd://8b55858c6cdc790ccd67b478c50ac9372d80240b0fa006adf3165325c90d2f46",
+            "exitCode": 1,
+            "finishedAt": "2026-11-13T05:55:33Z",
+            "reason": "Error",
+            "startedAt": "2026-11-13T05:21:48Z"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "namespace": "kube-system",
+    "name": "kube-proxy-h6dxw",
+    "node": "jewelry-lab-control-plane",
+    "phase": "Running",
+    "ready": "True",
+    "containers": [
+      {
+        "name": "kube-proxy",
+        "ready": true,
+        "restartCount": 0,
+        "state": {
+          "running": {
+            "startedAt": "2026-11-12T19:39:26Z"
+          }
+        },
+        "lastState": {}
+      }
+    ]
+  },
+  {
+    "namespace": "kube-system",
+    "name": "kube-proxy-rg2jz",
+    "node": "jewelry-lab-worker",
+    "phase": "Running",
+    "ready": "True",
+    "containers": [
+      {
+        "name": "kube-proxy",
+        "ready": true,
+        "restartCount": 0,
+        "state": {
+          "running": {
+            "startedAt": "2026-11-12T19:39:41Z"
+          }
+        },
+        "lastState": {}
+      }
+    ]
+  },
+  {
+    "namespace": "kube-system",
+    "name": "kube-proxy-zvlt5",
+    "node": "jewelry-lab-worker2",
+    "phase": "Running",
+    "ready": "True",
+    "containers": [
+      {
+        "name": "kube-proxy",
+        "ready": true,
+        "restartCount": 0,
+        "state": {
+          "running": {
+            "startedAt": "2026-11-12T19:39:39Z"
+          }
+        },
+        "lastState": {}
+      }
+    ]
+  },
+  {
+    "namespace": "kube-system",
+    "name": "kube-scheduler-jewelry-lab-control-plane",
+    "node": "jewelry-lab-control-plane",
+    "phase": "Running",
+    "ready": "True",
+    "containers": [
+      {
+        "name": "kube-scheduler",
+        "ready": true,
+        "restartCount": 4,
+        "state": {
+          "running": {
+            "startedAt": "2026-11-13T05:55:47Z"
+          }
+        },
+        "lastState": {
+          "terminated": {
+            "containerID": "containerd://f7e3f7d3ce8d07cc90b35585f584e8ad7dbd02c44021807b2aff53b1e0517044",
+            "exitCode": 1,
+            "finishedAt": "2026-11-13T05:55:37Z",
+            "reason": "Error",
+            "startedAt": "2026-11-13T05:21:48Z"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "namespace": "local-path-storage",
+    "name": "local-path-provisioner-855c7b7774-6dnxn",
+    "node": "jewelry-lab-control-plane",
+    "phase": "Running",
+    "ready": "True",
+    "containers": [
+      {
+        "name": "local-path-provisioner",
+        "ready": true,
+        "restartCount": 0,
+        "state": {
+          "running": {
+            "startedAt": "2026-11-12T19:40:01Z"
+          }
+        },
+        "lastState": {}
+      }
+    ]
+  }
+]

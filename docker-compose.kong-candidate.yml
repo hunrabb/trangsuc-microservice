@@ -1,0 +1,38 @@
+# Chạy độc lập, song song với gateway cũ. Không dùng file này để cutover.
+services:
+  kong-candidate:
+    build:
+      context: ./infra/kong
+      dockerfile: Dockerfile
+    image: jewelry/kong-candidate:dev
+    restart: unless-stopped
+    environment:
+      KONG_DATABASE: 'off'
+      KONG_DECLARATIVE_CONFIG: /kong/kong.yml
+      KONG_PLUGINS: bundled,jewelry-jwt-policy,jewelry-request-boundary,jewelry-route-guard,jewelry-rate-policy
+      KONG_NGINX_HTTP_LUA_SHARED_DICT: jewelry_limits 8m
+      KONG_ADMIN_LISTEN: 'off'
+      KONG_PROXY_LISTEN: 0.0.0.0:8000
+      KONG_STATUS_LISTEN: 0.0.0.0:8100
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_TRUSTED_IPS: 172.30.0.16/31
+      KONG_REAL_IP_HEADER: X-Forwarded-For
+      KONG_REAL_IP_RECURSIVE: 'on'
+      KONG_NGINX_HTTP_CLIENT_MAX_BODY_SIZE: 1m
+    volumes:
+      - ${KONG_CANDIDATE_CONFIG:-/tmp/jewelry-kong-candidate.yml}:/kong/kong.yml:ro
+    ports:
+      - 127.0.0.1:${KONG_CANDIDATE_PORT:-18000}:8000
+    networks:
+      - jewelry
+    healthcheck:
+      test: [CMD, kong, health]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+networks:
+  jewelry:
+    name: jewelry_default
+    external: true

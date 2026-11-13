@@ -89,6 +89,8 @@ model Order {
   createdAt         DateTime             @default(now()) @db.Timestamptz(3)
   updatedAt         DateTime             @default(now()) @updatedAt @db.Timestamptz(3)
   items             OrderItem[]
+  tradeInItems      TradeInItem[]
+  buybackSettlement BuybackSettlement?
   history           OrderStatusHistory[]
   customer          Customer?            @relation(fields: [customerId], references: [id])
 
@@ -192,6 +194,7 @@ enum OnlineOrderStatus {
 }
 
 model OnlineOrder {
+  accountId       String?              @db.Uuid // Auth customer identity; no cross-service foreign key.
   activePaymentId String?              @db.Uuid
   paymentAttempts Int                  @default(0)
   payments        OnlinePayment[]
@@ -220,6 +223,7 @@ model OnlineOrder {
   updatedAt       DateTime             @default(now()) @updatedAt @db.Timestamptz(3)
   items           OnlineOrderItem[]
 
+  @@index([accountId, createdAt, id])
   @@unique([accessHash, idempotencyKey])
   @@index([status, recoveryAfter])
 }
@@ -299,6 +303,9 @@ enum BuybackIntakeStatus {
   DRAFT
   PENDING_APPRAISAL
   CANCELLED
+  APPRAISED
+  APPROVED
+  REJECTED
 }
 
 enum BuybackAssetKind {
@@ -317,9 +324,19 @@ enum BuybackAuditAction {
   UPDATED
   SUBMITTED
   CANCELLED
+  APPRAISED
+  QUOTED
+  APPROVED
+  REJECTED
 }
 
 model BuybackIntake {
+  activeQuoteId      String?              @db.Uuid
+  activeQuote        BuybackQuote?        @relation("ActiveBuybackQuote", fields: [id, activeQuoteId], references: [intakeId, id], onDelete: Restrict, onUpdate: NoAction, map: "BuybackIntake_activeQuote_fkey")
+  appraisals         BuybackAppraisal[]
+  quotes             BuybackQuote[]       @relation("BuybackQuotes")
+  requests           BuybackRequest[]
+  settlements        BuybackSettlement[]
   id                 String               @id @default(uuid()) @db.Uuid
   code               String               @unique
   branchId           String               @db.Uuid
@@ -348,19 +365,20 @@ model BuybackIntake {
 }
 
 model BuybackIntakeItem {
-  id                    String            @id @default(uuid()) @db.Uuid
-  intakeId              String            @db.Uuid
+  appraisals            BuybackAppraisal[]
+  id                    String             @id @default(uuid()) @db.Uuid
+  intakeId              String             @db.Uuid
   position              Int
   source                BuybackItemSource
   referenceTagCode      String?
   assetKind             BuybackAssetKind
   description           String
   condition             String
-  declaredWeight        Decimal?          @db.Decimal(12, 4)
-  initialMeasuredWeight Decimal?          @db.Decimal(12, 4)
+  declaredWeight        Decimal?           @db.Decimal(12, 4)
+  initialMeasuredWeight Decimal?           @db.Decimal(12, 4)
   declaredPurity        String?
   notes                 String?
-  intake                BuybackIntake     @relation(fields: [intakeId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  intake                BuybackIntake      @relation(fields: [intakeId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
   @@unique([intakeId, position])
 }
@@ -380,4 +398,242 @@ model BuybackIntakeAudit {
   intake      BuybackIntake        @relation(fields: [intakeId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
   @@unique([intakeId, toVersion])
+}
+
+// Immutable appraisal revisions. Header lock serializes all item changes/quote decisions.
+model BuybackAppraisal {
+  id             String             @id @default(uuid()) @db.Uuid
+  intakeId       String             @db.Uuid
+  itemId         String             @db.Uuid
+  intakeVersion  Int
+  measuredWeight Decimal            @db.Decimal(12, 4)
+  acceptedWeight Decimal            @db.Decimal(12, 4)
+  metalId        String             @db.Uuid
+  metalKind      String
+  purityPerMille Decimal            @db.Decimal(8, 4)
+  condition      String
+  notes          String?
+  appraisedBy    String             @db.Uuid
+  appraisedAt    DateTime           @default(now()) @db.Timestamptz(3)
+  intake         BuybackIntake      @relation(fields: [intakeId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  item           BuybackIntakeItem  @relation(fields: [itemId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  lines          BuybackQuoteLine[]
+
+  @@unique([itemId, intakeVersion])
+  @@index([intakeId, itemId, intakeVersion])
+}
+
+// Configured deductions/purity mapping; buy prices remain owned by Inventory.
+model BuybackPricePolicy {
+  id                  String               @id @default(uuid()) @db.Uuid
+  branchId            String               @db.Uuid
+  metalId             String               @db.Uuid
+  metalKind           String
+  purityPerMille      Decimal              @db.Decimal(8, 4)
+  label               String
+  deductionVndPerItem Decimal              @db.Decimal(15, 2)
+  version             Int                  @default(1)
+  isActive            Boolean              @default(true)
+  createdBy           String               @db.Uuid
+  idempotencyKey      String
+  requestHash         String
+  updatedAt           DateTime             @default(now()) @updatedAt @db.Timestamptz(3)
+  audit               BuybackPolicyAudit[]
+  lines               BuybackQuoteLine[]
+
+  @@unique([branchId, createdBy, idempotencyKey])
+  @@index([branchId, isActive, id])
+}
+
+model BuybackPolicyAudit {
+  id        String             @id @default(uuid()) @db.Uuid
+  policyId  String             @db.Uuid
+  version   Int
+  actorId   String             @db.Uuid
+  reason    String
+  snapshot  Json
+  createdAt DateTime           @default(now()) @db.Timestamptz(3)
+  policy    BuybackPricePolicy @relation(fields: [policyId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@unique([policyId, version])
+}
+
+model BuybackQuote {
+  id                      String             @id @default(uuid()) @db.Uuid
+  intakeId                String             @db.Uuid
+  sourceVersion           Int
+  status                  String             @default("QUOTED")
+  currency                String             @default("VND")
+  total                   Decimal            @db.Decimal(20, 2)
+  rounding                String
+  requireSeparateApprover Boolean            @default(true)
+  quotedBy                String             @db.Uuid
+  quotedAt                DateTime           @default(now()) @db.Timestamptz(3)
+  decidedBy               String?            @db.Uuid
+  decidedAt               DateTime?          @db.Timestamptz(3)
+  rejectionReason         String?
+  intake                  BuybackIntake      @relation("BuybackQuotes", fields: [intakeId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  activeFor               BuybackIntake[]    @relation("ActiveBuybackQuote")
+  lines                   BuybackQuoteLine[]
+  settlements             BuybackSettlement[]
+
+  @@unique([intakeId, id])
+  @@index([intakeId, quotedAt, id])
+}
+
+model BuybackQuoteLine {
+  id                  String             @id @default(uuid()) @db.Uuid
+  quoteId             String             @db.Uuid
+  itemId              String             @db.Uuid
+  appraisalId         String             @db.Uuid
+  appraisedBy         String             @db.Uuid
+  measuredWeight      Decimal            @db.Decimal(12, 4)
+  acceptedWeight      Decimal            @db.Decimal(12, 4)
+  metalId             String             @db.Uuid
+  metalKind           String
+  purityPerMille      Decimal            @db.Decimal(8, 4)
+  policyId            String             @db.Uuid
+  policyVersion       Int
+  priceId             String             @db.Uuid
+  metalCode           String
+  unit                String
+  unitPrice           Decimal            @db.Decimal(15, 2)
+  effectiveFrom       DateTime           @db.Timestamptz(3)
+  capturedAt          DateTime           @db.Timestamptz(3)
+  deductionVndPerItem Decimal            @db.Decimal(15, 2)
+  amount              Decimal            @db.Decimal(20, 2)
+  quote               BuybackQuote       @relation(fields: [quoteId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  appraisal           BuybackAppraisal   @relation(fields: [appraisalId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  policy              BuybackPricePolicy @relation(fields: [policyId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  tradeInItems        TradeInItem[]
+
+  @@unique([quoteId, itemId])
+}
+
+model TradeInItem {
+  id             String           @id @default(uuid()) @db.Uuid
+  orderId        String           @db.Uuid
+  quoteLineId    String           @unique @db.Uuid
+  intakeItemId   String           @db.Uuid
+  metalId        String           @db.Uuid
+  acceptedWeight Decimal          @db.Decimal(12, 4)
+  amount         Decimal          @db.Decimal(20, 2)
+  order          Order            @relation(fields: [orderId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  quoteLine      BuybackQuoteLine @relation(fields: [quoteLineId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@index([orderId])
+}
+
+model BuybackRequest {
+  id             String        @id @default(uuid()) @db.Uuid
+  intakeId       String        @db.Uuid
+  actorId        String        @db.Uuid
+  idempotencyKey String
+  requestHash    String
+  result         Json
+  createdAt      DateTime      @default(now()) @db.Timestamptz(3)
+  intake         BuybackIntake @relation(fields: [intakeId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@unique([intakeId, actorId, idempotencyKey])
+}
+
+enum BuybackSettlementKind {
+  DIRECT
+  EXCHANGE
+}
+
+enum BuybackSettlementStatus {
+  RESERVING
+  AWAITING_PAYMENT
+  PAYMENT_RECORDED
+  FULFILLING
+  SETTLED
+  RECONCILIATION_REQUIRED
+  CANCELLING
+  CANCELLED
+}
+
+enum BuybackPaymentDirection {
+  STORE_PAYS
+  CUSTOMER_PAYS
+  NONE
+}
+
+enum BuybackPaymentMethod {
+  CASH
+  BANK_TRANSFER
+}
+
+model BuybackSettlement {
+  id                    String                  @id @default(uuid()) @db.Uuid
+  intakeId              String                  @db.Uuid
+  quoteId               String                  @db.Uuid
+  branchId              String                  @db.Uuid
+  kind                  BuybackSettlementKind
+  status                BuybackSettlementStatus
+  version               Int                     @default(1)
+  method                BuybackPaymentMethod
+  approvedAmount        Decimal                 @db.Decimal(20, 2)
+  saleAmount            Decimal?                @db.Decimal(20, 2)
+  difference            Decimal?                @db.Decimal(20, 2)
+  direction             BuybackPaymentDirection?
+  amountDue             Decimal?                @db.Decimal(20, 2)
+  tagCode               String?
+  reservationId         String?                 @db.Uuid
+  reservationExpiresAt  DateTime?               @db.Timestamptz(3)
+  saleSnapshot          Json?
+  paymentReference      String?                 @unique
+  paymentEvidence       String?
+  paymentRecordedBy     String?                 @db.Uuid
+  paymentConfirmedBy    String?                 @db.Uuid
+  paymentConfirmedAt    DateTime?               @db.Timestamptz(3)
+  verificationReference String?
+  confirmationNote      String?
+  orderId               String?                 @unique @db.Uuid
+  failureCode           String?
+  recoveryAttempts      Int                     @default(0)
+  createdBy             String                  @db.Uuid
+  creationKey           String
+  creationHash          String
+  createdAt             DateTime                @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime                @default(now()) @updatedAt @db.Timestamptz(3)
+  intake                BuybackIntake           @relation(fields: [intakeId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  quote                 BuybackQuote            @relation(fields: [quoteId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  exchangeOrder         Order?                   @relation(fields: [orderId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  audit                 BuybackSettlementAudit[]
+  requests              BuybackSettlementRequest[]
+
+  @@index([status, updatedAt])
+  @@index([branchId, createdAt])
+  @@index([intakeId, createdAt])
+  @@unique([intakeId, createdBy, creationKey])
+}
+
+model BuybackSettlementAudit {
+  id           String                   @id @default(uuid()) @db.Uuid
+  settlementId String                   @db.Uuid
+  actorId      String?                  @db.Uuid
+  action       String
+  fromStatus   BuybackSettlementStatus?
+  toStatus     BuybackSettlementStatus
+  fromVersion  Int?
+  toVersion    Int
+  detail       Json
+  createdAt    DateTime                 @default(now()) @db.Timestamptz(3)
+  settlement   BuybackSettlement        @relation(fields: [settlementId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@unique([settlementId, toVersion])
+}
+
+model BuybackSettlementRequest {
+  id             String            @id @default(uuid()) @db.Uuid
+  settlementId   String            @db.Uuid
+  actorId        String            @db.Uuid
+  idempotencyKey String
+  requestHash    String
+  result         Json
+  createdAt      DateTime          @default(now()) @db.Timestamptz(3)
+  settlement     BuybackSettlement @relation(fields: [settlementId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@unique([settlementId, actorId, idempotencyKey])
 }

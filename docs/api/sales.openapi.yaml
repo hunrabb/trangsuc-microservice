@@ -1,6 +1,6 @@
 openapi: 3.1.0
 info:
-  title: Sales POS, Online Payments and Buyback Intake API
+  title: Sales POS, Online Payments, Buyback Appraisal and Settlement API
   version: 1.0.0
   description: >-
     Đường ở gateway. Chỉ ADMIN toàn hệ thống hoặc STAFF/MANAGER đúng chi nhánh.
@@ -10,6 +10,657 @@ info:
 security:
   - bearerAuth: []
 paths:
+  /api/admin/sales/branches/{branchId}/buybacks/{id}/settlements:
+    post:
+      operationId: createDirectBuybackSettlement
+      x-audience: store-backoffice
+      x-roles: [ADMIN, MANAGER, STAFF]
+      summary: Create direct buyback payout intent from an approved quote
+      parameters:
+        - { name: branchId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateSettlement' }
+      responses:
+        '201': { description: Payout intent; no money has moved, content: { application/json: { schema: { $ref: '#/components/schemas/BuybackSettlement' } } } }
+        '409': { description: 'Quote not approved, version conflict or already active settlement' }
+    get:
+      operationId: getBuybackSettlement
+      x-audience: store-backoffice
+      x-roles: [ADMIN, MANAGER, STAFF]
+      parameters:
+        - { name: branchId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Latest settlement or null, content: { application/json: { schema: { anyOf: [ { $ref: '#/components/schemas/BuybackSettlement' }, { type: 'null' } ] } } } }
+  /api/admin/sales/branches/{branchId}/buybacks/{id}/exchanges:
+    post:
+      operationId: createJewelryExchange
+      x-audience: store-backoffice
+      x-roles: [ADMIN, MANAGER, STAFF]
+      summary: Reserve one tagged Inventory item and snapshot sale price
+      parameters:
+        - { name: branchId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateExchange' }
+      responses:
+        '201': { description: Reservation state and Decimal difference, content: { application/json: { schema: { $ref: '#/components/schemas/BuybackSettlement' } } } }
+        '409': { description: Approved quote or item unavailable }
+  /api/admin/sales/branches/{branchId}/buybacks/{id}/settlements/{settlementId}/payment:
+    post:
+      operationId: recordBuybackPaymentEvidence
+      x-audience: store-backoffice
+      x-roles: [ADMIN, MANAGER, STAFF]
+      summary: Record cash receipt or bank reference; does not confirm money moved
+      parameters:
+        - { name: branchId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: settlementId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RecordSettlementPayment' }
+      responses:
+        '200': { description: Payment evidence recorded, content: { application/json: { schema: { $ref: '#/components/schemas/BuybackSettlement' } } } }
+        '409': { description: 'Duplicate payment reference, stale version or invalid state' }
+  /api/admin/sales/branches/{branchId}/buybacks/{id}/settlements/{settlementId}/confirm:
+    post:
+      operationId: confirmBuybackPayment
+      x-audience: store-backoffice
+      x-roles: [ADMIN, MANAGER]
+      summary: Manager attests actual payment and handover; exchange fulfills via Inventory
+      parameters:
+        - { name: branchId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: settlementId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ConfirmSettlementPayment' }
+      responses:
+        '200': { description: Settled or reconciliation required, content: { application/json: { schema: { $ref: '#/components/schemas/BuybackSettlement' } } } }
+        '403': { description: Manager scope or separate confirmer required }
+        '409': { description: Stale version or invalid state }
+  /api/admin/sales/branches/{branchId}/buybacks/{id}/settlements/{settlementId}/cancel:
+    post:
+      operationId: cancelBuybackSettlement
+      x-audience: store-backoffice
+      x-roles: [ADMIN, MANAGER, STAFF]
+      summary: Cancel before payment is recorded and release Inventory reservation
+      parameters:
+        - { name: branchId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: settlementId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CancelSettlement' }
+      responses:
+        '200': { description: Cancelled or release pending, content: { application/json: { schema: { $ref: '#/components/schemas/BuybackSettlement' } } } }
+        '409': { description: Payment already recorded or terminal state }
+  /api/admin/sales/branches/{branchId}/buybacks/price-policies:
+    get:
+      operationId: listBuybackPricePolicies
+      security:
+        - bearerAuth: []
+      x-audience: store-backoffice
+      x-roles:
+        - ADMIN
+        - MANAGER
+        - STAFF
+      description: "Policies scoped to the authorized branch; at most 100, ordered by ID. Cache-Control:
+        no-store."
+      parameters:
+        - in: path
+          name: branchId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success; pricing snapshot retains its source price and rounding policy
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 100
+                items:
+                  $ref: "#/components/schemas/BuybackPolicy"
+        "400":
+          description: "VALIDATION_FAILED: strict DTO/UUID/header"
+        "401":
+          description: Backoffice token required
+        "403":
+          description: FORBIDDEN or BUYBACK_SEPARATE_APPROVER_REQUIRED
+        "404":
+          description: NOT_FOUND in authorized branch
+        "409":
+          description: VERSION_CONFLICT, INVALID_STATE, BUYBACK_POLICY_REQUIRED, BUYBACK_APPRAISAL_INCOMPLETE
+            or BUYBACK_PRICE_INVALID
+        "422":
+          description: IDEMPOTENCY_KEY_REUSED
+        "503":
+          description: "SERVICE_UNAVAILABLE: price source or lock timeout"
+    post:
+      operationId: createBuybackPricePolicy
+      security:
+        - bearerAuth: []
+      x-audience: store-backoffice
+      x-roles:
+        - ADMIN
+      description: ADMIN configures explicit alloy/fineness mapping and fixed VND deduction per physical
+        item. No default deduction or market price. Retry of the original create key returns the
+        current policy without another audit.
+      parameters:
+        - in: path
+          name: branchId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 200
+      responses:
+        "201":
+          description: Success; pricing snapshot retains its source price and rounding policy
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BuybackPolicy"
+        "400":
+          description: "VALIDATION_FAILED: strict DTO/UUID/header"
+        "401":
+          description: Backoffice token required
+        "403":
+          description: FORBIDDEN or BUYBACK_SEPARATE_APPROVER_REQUIRED
+        "404":
+          description: NOT_FOUND in authorized branch
+        "409":
+          description: VERSION_CONFLICT, INVALID_STATE, BUYBACK_POLICY_REQUIRED, BUYBACK_APPRAISAL_INCOMPLETE
+            or BUYBACK_PRICE_INVALID
+        "422":
+          description: IDEMPOTENCY_KEY_REUSED
+        "503":
+          description: "SERVICE_UNAVAILABLE: price source or lock timeout"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBuybackPolicy"
+  /api/admin/sales/branches/{branchId}/buybacks/price-policies/{policyId}:
+    put:
+      operationId: updateBuybackPricePolicy
+      security:
+        - bearerAuth: []
+      x-audience: store-backoffice
+      x-roles:
+        - ADMIN
+      description: ADMIN updates deduction/label/active flag with version CAS and a required reason.
+        Metal/fineness identity is fixed. Existing quote snapshots remain unchanged. Stale version
+        returns 409.
+      parameters:
+        - in: path
+          name: branchId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: policyId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success; pricing snapshot retains its source price and rounding policy
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BuybackPolicy"
+        "400":
+          description: "VALIDATION_FAILED: strict DTO/UUID/header"
+        "401":
+          description: Backoffice token required
+        "403":
+          description: FORBIDDEN or BUYBACK_SEPARATE_APPROVER_REQUIRED
+        "404":
+          description: NOT_FOUND in authorized branch
+        "409":
+          description: VERSION_CONFLICT, INVALID_STATE, BUYBACK_POLICY_REQUIRED, BUYBACK_APPRAISAL_INCOMPLETE
+            or BUYBACK_PRICE_INVALID
+        "422":
+          description: IDEMPOTENCY_KEY_REUSED
+        "503":
+          description: "SERVICE_UNAVAILABLE: price source or lock timeout"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBuybackPolicy"
+  /api/admin/sales/branches/{branchId}/buybacks/{id}/appraisals:
+    get:
+      operationId: getBuybackAppraisals
+      security:
+        - bearerAuth: []
+      x-audience: store-backoffice
+      x-roles:
+        - ADMIN
+        - MANAGER
+        - STAFF
+      description: Current immutable appraisal revision per item; includes the current header version.
+        Original intake measurements remain separate.
+      parameters:
+        - in: path
+          name: branchId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success; pricing snapshot retains its source price and rounding policy
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BuybackAppraisals"
+        "400":
+          description: "VALIDATION_FAILED: strict DTO/UUID/header"
+        "401":
+          description: Backoffice token required
+        "403":
+          description: FORBIDDEN or BUYBACK_SEPARATE_APPROVER_REQUIRED
+        "404":
+          description: NOT_FOUND in authorized branch
+        "409":
+          description: VERSION_CONFLICT, INVALID_STATE, BUYBACK_POLICY_REQUIRED, BUYBACK_APPRAISAL_INCOMPLETE
+            or BUYBACK_PRICE_INVALID
+        "422":
+          description: IDEMPOTENCY_KEY_REUSED
+        "503":
+          description: "SERVICE_UNAVAILABLE: price source or lock timeout"
+  /api/admin/sales/branches/{branchId}/buybacks/{id}/items/{itemId}/appraisal:
+    put:
+      operationId: recordBuybackAppraisal
+      security:
+        - bearerAuth: []
+      x-audience: store-backoffice
+      x-roles:
+        - ADMIN
+        - MANAGER
+        - STAFF
+      description: Weights are strings in chi; acceptedWeight must not exceed measuredWeight. Fineness is
+        per mille in (0,1000]. Appends a revision and supersedes the current unapproved quote. Same
+        Idempotency-Key/body replays the original result.
+      parameters:
+        - in: path
+          name: branchId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: itemId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 200
+      responses:
+        "200":
+          description: Success; pricing snapshot retains its source price and rounding policy
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BuybackAppraisal"
+        "400":
+          description: "VALIDATION_FAILED: strict DTO/UUID/header"
+        "401":
+          description: Backoffice token required
+        "403":
+          description: FORBIDDEN or BUYBACK_SEPARATE_APPROVER_REQUIRED
+        "404":
+          description: NOT_FOUND in authorized branch
+        "409":
+          description: VERSION_CONFLICT, INVALID_STATE, BUYBACK_POLICY_REQUIRED, BUYBACK_APPRAISAL_INCOMPLETE
+            or BUYBACK_PRICE_INVALID
+        "422":
+          description: IDEMPOTENCY_KEY_REUSED
+        "503":
+          description: "SERVICE_UNAVAILABLE: price source or lock timeout"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppraisalInput"
+  /api/admin/sales/branches/{branchId}/buybacks/{id}/quotes:
+    post:
+      operationId: quoteBuyback
+      security:
+        - bearerAuth: []
+      x-audience: store-backoffice
+      x-roles:
+        - ADMIN
+        - MANAGER
+        - STAFF
+      description: "Requires every item and its active policy/version. Reads Inventory buyPrice outside
+        the transaction, then rechecks header/policy versions. Alloy rate already includes fineness:
+        amount=HALF_UP((acceptedWeight*buyPrice-fixedDeduction)/1000)*1000 per line;
+        total=sum(lines). No client price or payout. Same key/body replays the original quote."
+      parameters:
+        - in: path
+          name: branchId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 200
+      responses:
+        "201":
+          description: Success; pricing snapshot retains its source price and rounding policy
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BuybackQuote"
+        "400":
+          description: "VALIDATION_FAILED: strict DTO/UUID/header"
+        "401":
+          description: Backoffice token required
+        "403":
+          description: FORBIDDEN or BUYBACK_SEPARATE_APPROVER_REQUIRED
+        "404":
+          description: NOT_FOUND in authorized branch
+        "409":
+          description: VERSION_CONFLICT, INVALID_STATE, BUYBACK_POLICY_REQUIRED, BUYBACK_APPRAISAL_INCOMPLETE
+            or BUYBACK_PRICE_INVALID
+        "422":
+          description: IDEMPOTENCY_KEY_REUSED
+        "503":
+          description: "SERVICE_UNAVAILABLE: price source or lock timeout"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BuybackQuoteInput"
+    get:
+      operationId: getBuybackQuotes
+      security:
+        - bearerAuth: []
+      x-audience: store-backoffice
+      x-roles:
+        - ADMIN
+        - MANAGER
+        - STAFF
+      description: Current header version/activeQuoteId and the latest 50 immutable quote snapshots
+        including superseded/terminal history.
+      parameters:
+        - in: path
+          name: branchId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success; pricing snapshot retains its source price and rounding policy
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BuybackQuotes"
+        "400":
+          description: "VALIDATION_FAILED: strict DTO/UUID/header"
+        "401":
+          description: Backoffice token required
+        "403":
+          description: FORBIDDEN or BUYBACK_SEPARATE_APPROVER_REQUIRED
+        "404":
+          description: NOT_FOUND in authorized branch
+        "409":
+          description: VERSION_CONFLICT, INVALID_STATE, BUYBACK_POLICY_REQUIRED, BUYBACK_APPRAISAL_INCOMPLETE
+            or BUYBACK_PRICE_INVALID
+        "422":
+          description: IDEMPOTENCY_KEY_REUSED
+        "503":
+          description: "SERVICE_UNAVAILABLE: price source or lock timeout"
+  /api/admin/sales/branches/{branchId}/buybacks/{id}/quotes/{quoteId}/approve:
+    post:
+      operationId: approveBuybackQuote
+      security:
+        - bearerAuth: []
+      x-audience: store-backoffice
+      x-roles:
+        - ADMIN
+        - MANAGER
+      description: Only the active QUOTED snapshot with complete current appraisals may be approved.
+        Approver must differ from intake creator, quote creator and current appraisers, including
+        ADMIN. Locks/CAS/audit/request are atomic; same key/body replays the original decision. No
+        repricing, payout or stock receipt.
+      parameters:
+        - in: path
+          name: branchId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: quoteId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 200
+      responses:
+        "200":
+          description: Success; pricing snapshot retains its source price and rounding policy
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BuybackQuote"
+        "400":
+          description: "VALIDATION_FAILED: strict DTO/UUID/header"
+        "401":
+          description: Backoffice token required
+        "403":
+          description: FORBIDDEN or BUYBACK_SEPARATE_APPROVER_REQUIRED
+        "404":
+          description: NOT_FOUND in authorized branch
+        "409":
+          description: VERSION_CONFLICT, INVALID_STATE, BUYBACK_POLICY_REQUIRED, BUYBACK_APPRAISAL_INCOMPLETE
+            or BUYBACK_PRICE_INVALID
+        "422":
+          description: IDEMPOTENCY_KEY_REUSED
+        "503":
+          description: "SERVICE_UNAVAILABLE: price source or lock timeout"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BuybackDecision"
+  /api/admin/sales/branches/{branchId}/buybacks/{id}/quotes/{quoteId}/reject:
+    post:
+      operationId: rejectBuybackQuote
+      security:
+        - bearerAuth: []
+      x-audience: store-backoffice
+      x-roles:
+        - ADMIN
+        - MANAGER
+      description: Manager in the actual branch or global ADMIN rejects the active quote with a required
+        reason. Version/CAS, decision audit and idempotent request are atomic. REJECTED is terminal
+        in Task 7.2.
+      parameters:
+        - in: path
+          name: branchId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: quoteId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 200
+      responses:
+        "200":
+          description: Success; pricing snapshot retains its source price and rounding policy
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BuybackQuote"
+        "400":
+          description: "VALIDATION_FAILED: strict DTO/UUID/header"
+        "401":
+          description: Backoffice token required
+        "403":
+          description: FORBIDDEN or BUYBACK_SEPARATE_APPROVER_REQUIRED
+        "404":
+          description: NOT_FOUND in authorized branch
+        "409":
+          description: VERSION_CONFLICT, INVALID_STATE, BUYBACK_POLICY_REQUIRED, BUYBACK_APPRAISAL_INCOMPLETE
+            or BUYBACK_PRICE_INVALID
+        "422":
+          description: IDEMPOTENCY_KEY_REUSED
+        "503":
+          description: "SERVICE_UNAVAILABLE: price source or lock timeout"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RejectBuybackQuote"
   /api/admin/sales/branches/{branchId}/buybacks:
     post:
       operationId: createBuybackIntake
@@ -495,12 +1146,800 @@ components:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
   schemas:
+    CreateSettlement:
+      type: "object"
+      properties:
+        version:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
+        method:
+          type: "string"
+          enum:
+            - "CASH"
+            - "BANK_TRANSFER"
+      required:
+        - "version"
+        - "method"
+      additionalProperties: false
+    CreateExchange:
+      type: "object"
+      properties:
+        version:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
+        method:
+          type: "string"
+          enum:
+            - "CASH"
+            - "BANK_TRANSFER"
+        tagCode:
+          type: "string"
+          minLength: 1
+          maxLength: 64
+      required:
+        - "version"
+        - "method"
+        - "tagCode"
+      additionalProperties: false
+    RecordSettlementPayment:
+      type: "object"
+      properties:
+        version:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
+        reference:
+          type: "string"
+          minLength: 5
+          maxLength: 120
+        evidence:
+          type: "string"
+          minLength: 10
+          maxLength: 1000
+      required:
+        - "version"
+        - "reference"
+        - "evidence"
+      additionalProperties: false
+    ConfirmSettlementPayment:
+      type: "object"
+      properties:
+        version:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
+        verificationReference:
+          type: "string"
+          minLength: 5
+          maxLength: 120
+        note:
+          type: "string"
+          minLength: 10
+          maxLength: 1000
+      required:
+        - "version"
+        - "verificationReference"
+        - "note"
+      additionalProperties: false
+    CancelSettlement:
+      type: "object"
+      properties:
+        version:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
+        reason:
+          type: "string"
+          minLength: 10
+          maxLength: 500
+      required:
+        - "version"
+        - "reason"
+      additionalProperties: false
+    BuybackSettlement:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        intakeId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        quoteId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        branchId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        kind:
+          type: "string"
+          enum:
+            - "DIRECT"
+            - "EXCHANGE"
+        status:
+          type: "string"
+          enum:
+            - "RESERVING"
+            - "AWAITING_PAYMENT"
+            - "PAYMENT_RECORDED"
+            - "FULFILLING"
+            - "SETTLED"
+            - "RECONCILIATION_REQUIRED"
+            - "CANCELLING"
+            - "CANCELLED"
+        version:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
+        method:
+          type: "string"
+          enum:
+            - "CASH"
+            - "BANK_TRANSFER"
+        approvedAmount:
+          type: "string"
+          pattern: "^(0|[1-9]\\d{0,17})\\.\\d{2}$"
+        saleAmount:
+          anyOf:
+            - type: "string"
+              pattern: "^(0|[1-9]\\d{0,17})\\.\\d{2}$"
+            - type: "null"
+        difference:
+          anyOf:
+            - type: "string"
+              pattern: "^-?\\d+\\.\\d{2}$"
+            - type: "null"
+        direction:
+          anyOf:
+            - type: "string"
+              enum:
+                - "STORE_PAYS"
+                - "CUSTOMER_PAYS"
+                - "NONE"
+            - type: "null"
+        amountDue:
+          anyOf:
+            - type: "string"
+              pattern: "^(0|[1-9]\\d{0,17})\\.\\d{2}$"
+            - type: "null"
+        tagCode:
+          type:
+            - "string"
+            - "null"
+        reservationId:
+          anyOf:
+            - type: "string"
+              format: "uuid"
+              pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            - type: "null"
+        reservationExpiresAt:
+          anyOf:
+            - type: "string"
+              format: "date-time"
+              pattern: "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+            - type: "null"
+        paymentReference:
+          type:
+            - "string"
+            - "null"
+        paymentEvidence:
+          type:
+            - "string"
+            - "null"
+        paymentRecordedBy:
+          anyOf:
+            - type: "string"
+              format: "uuid"
+              pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            - type: "null"
+        paymentConfirmedBy:
+          anyOf:
+            - type: "string"
+              format: "uuid"
+              pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            - type: "null"
+        paymentConfirmedAt:
+          anyOf:
+            - type: "string"
+              format: "date-time"
+              pattern: "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+            - type: "null"
+        confirmationNote:
+          type:
+            - "string"
+            - "null"
+        orderId:
+          anyOf:
+            - type: "string"
+              format: "uuid"
+              pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            - type: "null"
+        failureCode:
+          type:
+            - "string"
+            - "null"
+        createdBy:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        createdAt:
+          type: "string"
+          format: "date-time"
+          pattern: "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+        updatedAt:
+          type: "string"
+          format: "date-time"
+          pattern: "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+      required:
+        - "id"
+        - "intakeId"
+        - "quoteId"
+        - "branchId"
+        - "kind"
+        - "status"
+        - "version"
+        - "method"
+        - "approvedAmount"
+        - "saleAmount"
+        - "difference"
+        - "direction"
+        - "amountDue"
+        - "tagCode"
+        - "reservationId"
+        - "reservationExpiresAt"
+        - "paymentReference"
+        - "paymentEvidence"
+        - "paymentRecordedBy"
+        - "paymentConfirmedBy"
+        - "paymentConfirmedAt"
+        - "confirmationNote"
+        - "orderId"
+        - "failureCode"
+        - "createdBy"
+        - "createdAt"
+        - "updatedAt"
+      additionalProperties: false
+    AppraisalInput:
+      type: "object"
+      properties:
+        version:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 2147483647
+        measuredWeight:
+          type: "string"
+          pattern: "^\\d{1,8}(\\.\\d{1,4})?$"
+          description: "Trọng lượng (chỉ), chuỗi thập phân"
+        acceptedWeight:
+          type: "string"
+          pattern: "^\\d{1,8}(\\.\\d{1,4})?$"
+          description: "Trọng lượng (chỉ), chuỗi thập phân"
+        metalId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        metalKind:
+          type: "string"
+          enum:
+            - "GOLD"
+            - "SILVER"
+        purityPerMille:
+          type: "string"
+          pattern: "^\\d{1,4}(\\.\\d{1,4})?$"
+        condition:
+          type: "string"
+          minLength: 1
+          maxLength: 1000
+        notes:
+          default: null
+          anyOf:
+            - type: "string"
+              minLength: 1
+              maxLength: 1000
+            - type: "null"
+      required:
+        - "version"
+        - "measuredWeight"
+        - "acceptedWeight"
+        - "metalId"
+        - "metalKind"
+        - "purityPerMille"
+        - "condition"
+        - "notes"
+      additionalProperties: false
+    BuybackAppraisal:
+      type: "object"
+      properties:
+        measuredWeight:
+          type: "string"
+          pattern: "^\\d{1,8}(\\.\\d{1,4})?$"
+          description: "Trọng lượng (chỉ), chuỗi thập phân"
+        acceptedWeight:
+          type: "string"
+          pattern: "^\\d{1,8}(\\.\\d{1,4})?$"
+          description: "Trọng lượng (chỉ), chuỗi thập phân"
+        metalId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        metalKind:
+          type: "string"
+          enum:
+            - "GOLD"
+            - "SILVER"
+        purityPerMille:
+          type: "string"
+          pattern: "^\\d{1,4}(\\.\\d{1,4})?$"
+        condition:
+          type: "string"
+          minLength: 1
+          maxLength: 1000
+        notes:
+          default: null
+          anyOf:
+            - type: "string"
+              minLength: 1
+              maxLength: 1000
+            - type: "null"
+        id:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        itemId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        intakeId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        intakeVersion:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 2147483647
+        appraisedBy:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        appraisedAt:
+          type: "string"
+          format: "date-time"
+          pattern: "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+      required:
+        - "measuredWeight"
+        - "acceptedWeight"
+        - "metalId"
+        - "metalKind"
+        - "purityPerMille"
+        - "condition"
+        - "notes"
+        - "id"
+        - "itemId"
+        - "intakeId"
+        - "intakeVersion"
+        - "appraisedBy"
+        - "appraisedAt"
+      additionalProperties: false
+    BuybackAppraisals:
+      type: "object"
+      properties:
+        intakeId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        status:
+          $ref: "#/components/schemas/BuybackStatus"
+        version:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 2147483647
+        items:
+          maxItems: 20
+          type: "array"
+          items:
+            $ref: "#/components/schemas/BuybackAppraisal"
+      required:
+        - "intakeId"
+        - "status"
+        - "version"
+        - "items"
+      additionalProperties: false
+    CreateBuybackPolicy:
+      type: "object"
+      properties:
+        metalId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        metalKind:
+          type: "string"
+          enum:
+            - "GOLD"
+            - "SILVER"
+        purityPerMille:
+          type: "string"
+          pattern: "^\\d{1,4}(\\.\\d{1,4})?$"
+        label:
+          type: "string"
+          minLength: 1
+          maxLength: 150
+        deductionVndPerItem:
+          type: "string"
+          pattern: "^\\d{1,13}(\\.\\d{1,2})?$"
+          description: "Số tiền (đồng), chuỗi thập phân"
+        reason:
+          type: "string"
+          minLength: 5
+          maxLength: 500
+      required:
+        - "metalId"
+        - "metalKind"
+        - "purityPerMille"
+        - "label"
+        - "deductionVndPerItem"
+        - "reason"
+      additionalProperties: false
+    UpdateBuybackPolicy:
+      type: "object"
+      properties:
+        label:
+          type: "string"
+          minLength: 1
+          maxLength: 150
+        deductionVndPerItem:
+          type: "string"
+          pattern: "^\\d{1,13}(\\.\\d{1,2})?$"
+          description: "Số tiền (đồng), chuỗi thập phân"
+        reason:
+          type: "string"
+          minLength: 5
+          maxLength: 500
+        version:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 2147483647
+        isActive:
+          type: "boolean"
+      required:
+        - "label"
+        - "deductionVndPerItem"
+        - "reason"
+        - "version"
+        - "isActive"
+      additionalProperties: false
+    BuybackPolicy:
+      type: "object"
+      properties:
+        metalId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        metalKind:
+          type: "string"
+          enum:
+            - "GOLD"
+            - "SILVER"
+        purityPerMille:
+          type: "string"
+          pattern: "^\\d{1,4}(\\.\\d{1,4})?$"
+        label:
+          type: "string"
+          minLength: 1
+          maxLength: 150
+        deductionVndPerItem:
+          type: "string"
+          pattern: "^\\d{1,13}(\\.\\d{1,2})?$"
+          description: "Số tiền (đồng), chuỗi thập phân"
+        id:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        branchId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        version:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 2147483647
+        isActive:
+          type: "boolean"
+        createdBy:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        updatedAt:
+          type: "string"
+          format: "date-time"
+          pattern: "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+      required:
+        - "metalId"
+        - "metalKind"
+        - "purityPerMille"
+        - "label"
+        - "deductionVndPerItem"
+        - "id"
+        - "branchId"
+        - "version"
+        - "isActive"
+        - "createdBy"
+        - "updatedAt"
+      additionalProperties: false
+    BuybackQuoteInput:
+      type: "object"
+      properties:
+        version:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 2147483647
+        items:
+          minItems: 1
+          maxItems: 20
+          type: "array"
+          items:
+            type: "object"
+            properties:
+              itemId:
+                type: "string"
+                format: "uuid"
+                pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              policyId:
+                type: "string"
+                format: "uuid"
+                pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              policyVersion:
+                type: "integer"
+                exclusiveMinimum: 0
+                maximum: 2147483647
+            required:
+              - "itemId"
+              - "policyId"
+              - "policyVersion"
+            additionalProperties: false
+      required:
+        - "version"
+        - "items"
+      additionalProperties: false
+    BuybackDecision:
+      type: "object"
+      properties:
+        version:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 2147483647
+      required:
+        - "version"
+      additionalProperties: false
+    RejectBuybackQuote:
+      type: "object"
+      properties:
+        version:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 2147483647
+        reason:
+          type: "string"
+          minLength: 5
+          maxLength: 500
+      required:
+        - "version"
+        - "reason"
+      additionalProperties: false
+    BuybackQuote:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        intakeId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        sourceVersion:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 2147483647
+        status:
+          type: "string"
+          enum:
+            - "QUOTED"
+            - "SUPERSEDED"
+            - "APPROVED"
+            - "REJECTED"
+        currency:
+          type: "string"
+          const: "VND"
+        total:
+          type: "string"
+          pattern: "^\\d{1,18}\\.\\d{2}$"
+        rounding:
+          type: "string"
+          const: "HALF_UP_1000_VND_PER_LINE"
+        requireSeparateApprover:
+          type: "boolean"
+          const: true
+        quotedBy:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        quotedAt:
+          type: "string"
+          format: "date-time"
+          pattern: "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+        decidedBy:
+          anyOf:
+            - type: "string"
+              format: "uuid"
+              pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            - type: "null"
+        decidedAt:
+          anyOf:
+            - type: "string"
+              format: "date-time"
+              pattern: "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+            - type: "null"
+        rejectionReason:
+          type:
+            - "string"
+            - "null"
+        lines:
+          minItems: 1
+          maxItems: 20
+          type: "array"
+          items:
+            type: "object"
+            properties:
+              itemId:
+                type: "string"
+                format: "uuid"
+                pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              appraisalId:
+                type: "string"
+                format: "uuid"
+                pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              appraisedBy:
+                type: "string"
+                format: "uuid"
+                pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              measuredWeight:
+                type: "string"
+                pattern: "^\\d{1,8}(\\.\\d{1,4})?$"
+                description: "Trọng lượng (chỉ), chuỗi thập phân"
+              acceptedWeight:
+                type: "string"
+                pattern: "^\\d{1,8}(\\.\\d{1,4})?$"
+                description: "Trọng lượng (chỉ), chuỗi thập phân"
+              metalId:
+                type: "string"
+                format: "uuid"
+                pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              metalKind:
+                type: "string"
+                enum:
+                  - "GOLD"
+                  - "SILVER"
+              purityPerMille:
+                type: "string"
+                pattern: "^\\d{1,4}(\\.\\d{1,4})?$"
+              policyId:
+                type: "string"
+                format: "uuid"
+                pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              policyVersion:
+                type: "integer"
+                exclusiveMinimum: 0
+                maximum: 2147483647
+              priceId:
+                type: "string"
+                format: "uuid"
+                pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              metalCode:
+                type: "string"
+              unit:
+                type: "string"
+                const: "VND_PER_CHI_ALLOY"
+              unitPrice:
+                type: "string"
+                pattern: "^\\d{1,13}(\\.\\d{1,2})?$"
+                description: "Số tiền (đồng), chuỗi thập phân"
+              effectiveFrom:
+                type: "string"
+                format: "date-time"
+                pattern: "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              capturedAt:
+                type: "string"
+                format: "date-time"
+                pattern: "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              deductionVndPerItem:
+                type: "string"
+                pattern: "^\\d{1,13}(\\.\\d{1,2})?$"
+                description: "Số tiền (đồng), chuỗi thập phân"
+              amount:
+                type: "string"
+                pattern: "^\\d{1,18}\\.\\d{2}$"
+            required:
+              - "itemId"
+              - "appraisalId"
+              - "appraisedBy"
+              - "measuredWeight"
+              - "acceptedWeight"
+              - "metalId"
+              - "metalKind"
+              - "purityPerMille"
+              - "policyId"
+              - "policyVersion"
+              - "priceId"
+              - "metalCode"
+              - "unit"
+              - "unitPrice"
+              - "effectiveFrom"
+              - "capturedAt"
+              - "deductionVndPerItem"
+              - "amount"
+            additionalProperties: false
+      required:
+        - "id"
+        - "intakeId"
+        - "sourceVersion"
+        - "status"
+        - "currency"
+        - "total"
+        - "rounding"
+        - "requireSeparateApprover"
+        - "quotedBy"
+        - "quotedAt"
+        - "decidedBy"
+        - "decidedAt"
+        - "rejectionReason"
+        - "lines"
+      additionalProperties: false
+    BuybackQuotes:
+      type: "object"
+      properties:
+        intakeId:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        status:
+          $ref: "#/components/schemas/BuybackStatus"
+        version:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 2147483647
+        activeQuoteId:
+          anyOf:
+            - type: "string"
+              format: "uuid"
+              pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            - type: "null"
+        quotes:
+          maxItems: 50
+          type: "array"
+          items:
+            $ref: "#/components/schemas/BuybackQuote"
+      required:
+        - "intakeId"
+        - "status"
+        - "version"
+        - "activeQuoteId"
+        - "quotes"
+      additionalProperties: false
     BuybackStatus:
       type: "string"
       enum:
         - "DRAFT"
         - "PENDING_APPRAISAL"
         - "CANCELLED"
+        - "APPRAISED"
+        - "APPROVED"
+        - "REJECTED"
     CreateBuyback:
       type: "object"
       properties:
@@ -944,6 +2383,10 @@ components:
                   - "UPDATED"
                   - "SUBMITTED"
                   - "CANCELLED"
+                  - "APPRAISED"
+                  - "QUOTED"
+                  - "APPROVED"
+                  - "REJECTED"
               fromStatus:
                 anyOf:
                   - $ref: "#/components/schemas/BuybackStatus"
@@ -1137,6 +2580,10 @@ components:
             - "METHOD_NOT_ALLOWED"
             - "VERSION_CONFLICT"
             - "INVALID_STATE"
+            - "BUYBACK_POLICY_REQUIRED"
+            - "BUYBACK_APPRAISAL_INCOMPLETE"
+            - "BUYBACK_PRICE_INVALID"
+            - "BUYBACK_SEPARATE_APPROVER_REQUIRED"
             - "LAST_ADMIN"
             - "METAL_PRICE_NOT_SET"
             - "ITEM_NOT_AVAILABLE"

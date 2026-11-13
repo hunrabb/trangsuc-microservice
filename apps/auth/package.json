@@ -17,7 +17,8 @@
     "test": "node ../../scripts/run-tests.mjs \"src/**/*.test.ts\"",
     "db:generate": "prisma generate",
     "db:migrate:dev": "prisma migrate dev",
-    "db:migrate:deploy": "prisma migrate deploy"
+    "db:migrate:deploy": "prisma migrate deploy",
+    "test:customers": "node test/customer-accounts.test.mjs"
   },
   "dependencies": {
     "@jewelry/common": "workspace:*",

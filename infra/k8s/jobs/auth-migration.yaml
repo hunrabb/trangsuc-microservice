@@ -1,0 +1,63 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: auth-migrate-phase3
+  namespace: jewelry-demo
+  labels:
+    app.kubernetes.io/part-of: jewelry-demo
+    jewelry-demo/task: migration
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 180
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: jewelry-demo
+        jewelry-demo/task: migration
+    spec:
+      restartPolicy: Never
+      terminationGracePeriodSeconds: 10
+      automountServiceAccountToken: false
+      nodeSelector:
+        kubernetes.io/hostname: jewelry-lab-worker
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: migrate
+        image: jewelry/auth-migrate:phase3-1b063775fb93
+        imagePullPolicy: Never
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: auth-migration-creds
+              key: DATABASE_URL
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 750m
+            memory: 384Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: postgres-ca
+          mountPath: /run/secrets/postgres
+          readOnly: true
+      volumes:
+      - name: postgres-ca
+        secret:
+          secretName: jewelry-pg-ca
+          defaultMode: 288
+          items:
+          - key: ca.crt
+            path: ca.crt

@@ -141,3 +141,25 @@ model AuditLog {
 
   @@index([entityType, entityId])
 }
+
+// Storefront identities are separate from employee User and POS Customer.
+model CustomerAccount {
+  id           String            @id @default(uuid()) @db.Uuid
+  email        String            @unique
+  fullName     String
+  passwordHash String
+  createdAt    DateTime          @default(now()) @db.Timestamptz(3)
+  sessions     CustomerSession[]
+}
+
+model CustomerSession {
+  id               String          @id @default(uuid()) @db.Uuid
+  accountId        String          @db.Uuid
+  tokenHash        String          @unique
+  expiresAt        DateTime        @db.Timestamptz(3)
+  sessionStartedAt DateTime        @db.Timestamptz(3)
+  revokedAt        DateTime?       @db.Timestamptz(3)
+  account          CustomerAccount @relation(fields: [accountId], references: [id])
+
+  @@index([accountId])
+}

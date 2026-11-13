@@ -134,6 +134,12 @@ export function CatalogPage() {
   const [params, setParams] = useSearchParams();
   const parsed = catalogQuery(params);
   const query = parsed.success ? parsed.data : shopQuerySchema.parse({ pageSize: 12 });
+  const collectionName =
+    query.metalKind === 'GOLD'
+      ? 'Trang sức vàng'
+      : query.metalKind === 'SILVER'
+        ? 'Trang sức bạc'
+        : 'Bộ sưu tập';
   const products = useQuery({
     queryKey: ['catalog', query],
     queryFn: ({ signal }) => shopApi.list(query, signal),
@@ -165,11 +171,11 @@ export function CatalogPage() {
   );
   return (
     <div className="container catalog-page">
-      <Breadcrumb items={[{ label: 'Bộ sưu tập' }]} />
+      <Breadcrumb items={[{ label: collectionName }]} />
       <div className="page-intro">
         <p className="eyebrow">THE COLLECTION</p>
         <h1>
-          Tìm món trang sức
+          {query.metalKind ? collectionName : 'Tìm món trang sức'}
           <br />
           <em>mang dấu ấn của bạn.</em>
         </h1>

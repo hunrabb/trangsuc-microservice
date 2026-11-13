@@ -19,10 +19,11 @@ describe('correlationId đi xuyên gateway → inventory', () => {
   let gateway: RunningService;
   let inventory: RunningService;
   let gatewayPort: number;
+  let inventoryPort: number;
 
   before(async () => {
     gatewayPort = await freePort();
-    const inventoryPort = await freePort();
+    inventoryPort = await freePort();
     inventory = startService('inventory', {
       PORT: String(inventoryPort),
       DATABASE_URL: 'postgresql://test:test@127.0.0.1:1/test?schema=inventory',
@@ -69,6 +70,21 @@ describe('correlationId đi xuyên gateway → inventory', () => {
     assert.match(id, UUID_PATTERN);
     assert.ok((await waitForLogs(gateway, id)).length > 0);
     assert.ok((await waitForLogs(inventory, id)).length > 0);
+  });
+
+  it('API kiểm kê đã gỡ trả 404 tại Inventory', async () => {
+    const id = randomUUID();
+    for (const [method, path] of [
+      ['POST', ''],
+      ['GET', `/${id}`],
+      ['POST', `/${id}/scan`],
+      ['POST', `/${id}/close`],
+    ]) {
+      const response = await fetch(`http://127.0.0.1:${inventoryPort}/admin/stock-counts${path}`, {
+        method,
+      });
+      assert.equal(response.status, 404);
+    }
   });
 
   it('không có header: gateway tự sinh mã', async () => {

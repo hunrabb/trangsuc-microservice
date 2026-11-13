@@ -43,7 +43,14 @@ export function ErrorAlert({
       </Alert>
     );
   }
-  const conflict = isApiError(error) && error.code === 'VERSION_CONFLICT';
+  const conflict =
+    isApiError(error) &&
+    [
+      'VERSION_CONFLICT',
+      'INVALID_STATE',
+      'BUYBACK_APPRAISAL_INCOMPLETE',
+      'BUYBACK_POLICY_REQUIRED',
+    ].includes(error.code);
   return (
     <Alert color="red" mb="md">
       {describeError(error)}

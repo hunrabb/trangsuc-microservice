@@ -24,6 +24,7 @@ import {
   canChangeOwnPassword,
   canManageBranches,
   canManageCatalog,
+  canManageReceipts,
   canManageUsers,
   canUsePos,
   canViewReports,
@@ -31,8 +32,8 @@ import {
 } from '../auth/permissions.ts';
 import { useSession } from '../auth/session-context.tsx';
 import {
-  BoxIcon,
   ChecklistIcon,
+  BoxIcon,
   GemIcon,
   HomeIcon,
   KeyIcon,
@@ -103,7 +104,7 @@ export function AppLayout() {
       to: '/nhap-hang',
       label: 'Nhập hàng',
       icon: <ReceiptIcon />,
-      visible: canBranchStockAccess(branches),
+      visible: canManageReceipts(branches),
     },
     {
       to: '/ban-tai-quay',
@@ -112,15 +113,15 @@ export function AppLayout() {
       visible: canUsePos(branches),
     },
     {
+      to: '/thu-mua',
+      label: 'Thu mua vàng cũ',
+      icon: <GemIcon size={18} />,
+      visible: canUsePos(branches),
+    },
+    {
       to: '/ton-kho',
       label: 'Tồn kho',
       icon: <StockIcon />,
-      visible: canBranchStockAccess(branches),
-    },
-    {
-      to: '/kiem-ke',
-      label: 'Kiểm kê',
-      icon: <ChecklistIcon />,
       visible: canBranchStockAccess(branches),
     },
     {

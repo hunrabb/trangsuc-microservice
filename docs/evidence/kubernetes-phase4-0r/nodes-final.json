@@ -1,0 +1,113 @@
+[
+  {
+    "name": "jewelry-lab-control-plane",
+    "conditions": [
+      {
+        "lastHeartbeatTime": "2026-11-13T06:06:34Z",
+        "lastTransitionTime": "2026-11-12T19:39:09Z",
+        "message": "kubelet has sufficient memory available",
+        "reason": "KubeletHasSufficientMemory",
+        "status": "False",
+        "type": "MemoryPressure"
+      },
+      {
+        "lastHeartbeatTime": "2026-11-13T06:06:34Z",
+        "lastTransitionTime": "2026-11-12T19:39:09Z",
+        "message": "kubelet has no disk pressure",
+        "reason": "KubeletHasNoDiskPressure",
+        "status": "False",
+        "type": "DiskPressure"
+      },
+      {
+        "lastHeartbeatTime": "2026-11-13T06:06:34Z",
+        "lastTransitionTime": "2026-11-12T19:39:09Z",
+        "message": "kubelet has sufficient PID available",
+        "reason": "KubeletHasSufficientPID",
+        "status": "False",
+        "type": "PIDPressure"
+      },
+      {
+        "lastHeartbeatTime": "2026-11-13T06:06:34Z",
+        "lastTransitionTime": "2026-11-12T19:39:53Z",
+        "message": "kubelet is posting ready status",
+        "reason": "KubeletReady",
+        "status": "True",
+        "type": "Ready"
+      }
+    ]
+  },
+  {
+    "name": "jewelry-lab-worker",
+    "conditions": [
+      {
+        "lastHeartbeatTime": "2026-11-13T06:02:34Z",
+        "lastTransitionTime": "2026-11-12T19:39:25Z",
+        "message": "kubelet has sufficient memory available",
+        "reason": "KubeletHasSufficientMemory",
+        "status": "False",
+        "type": "MemoryPressure"
+      },
+      {
+        "lastHeartbeatTime": "2026-11-13T06:02:34Z",
+        "lastTransitionTime": "2026-11-12T19:39:25Z",
+        "message": "kubelet has no disk pressure",
+        "reason": "KubeletHasNoDiskPressure",
+        "status": "False",
+        "type": "DiskPressure"
+      },
+      {
+        "lastHeartbeatTime": "2026-11-13T06:02:34Z",
+        "lastTransitionTime": "2026-11-12T19:39:25Z",
+        "message": "kubelet has sufficient PID available",
+        "reason": "KubeletHasSufficientPID",
+        "status": "False",
+        "type": "PIDPressure"
+      },
+      {
+        "lastHeartbeatTime": "2026-11-13T06:02:34Z",
+        "lastTransitionTime": "2026-11-12T19:39:57Z",
+        "message": "kubelet is posting ready status",
+        "reason": "KubeletReady",
+        "status": "True",
+        "type": "Ready"
+      }
+    ]
+  },
+  {
+    "name": "jewelry-lab-worker2",
+    "conditions": [
+      {
+        "lastHeartbeatTime": "2026-11-13T06:05:48Z",
+        "lastTransitionTime": "2026-11-12T19:39:26Z",
+        "message": "kubelet has sufficient memory available",
+        "reason": "KubeletHasSufficientMemory",
+        "status": "False",
+        "type": "MemoryPressure"
+      },
+      {
+        "lastHeartbeatTime": "2026-11-13T06:05:48Z",
+        "lastTransitionTime": "2026-11-12T19:39:26Z",
+        "message": "kubelet has no disk pressure",
+        "reason": "KubeletHasNoDiskPressure",
+        "status": "False",
+        "type": "DiskPressure"
+      },
+      {
+        "lastHeartbeatTime": "2026-11-13T06:05:48Z",
+        "lastTransitionTime": "2026-11-12T19:39:26Z",
+        "message": "kubelet has sufficient PID available",
+        "reason": "KubeletHasSufficientPID",
+        "status": "False",
+        "type": "PIDPressure"
+      },
+      {
+        "lastHeartbeatTime": "2026-11-13T06:05:48Z",
+        "lastTransitionTime": "2026-11-12T19:39:57Z",
+        "message": "kubelet is posting ready status",
+        "reason": "KubeletReady",
+        "status": "True",
+        "type": "Ready"
+      }
+    ]
+  }
+]

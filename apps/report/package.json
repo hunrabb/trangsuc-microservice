@@ -17,6 +17,7 @@
     "lint": "eslint .",
     "test": "node ../../scripts/run-tests.mjs \"src/**/*.test.ts\"",
     "test:stock-reports": "node test/stock-reports.test.mjs",
+    "test:buyback-reports": "node test/buyback-reports.test.mjs",
     "test:excel-export": "node test/report-export.test.mjs",
     "test:dlq": "node test/dlq.test.mjs",
     "test:dlq:rabbit": "node test/dlq-rabbit.test.mjs",

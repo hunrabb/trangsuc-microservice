@@ -1,3 +1,4 @@
+import { AccountPage } from './pages/account.tsx';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Link, Route, Routes } from 'react-router';
 import { StoreProvider } from './state/store.tsx';
@@ -25,7 +26,11 @@ export function StorefrontRoutes() {
         <Route path="san-pham/:productId" element={<ProductPage />} />
         <Route path="gio-hang" element={<CartPage />} />
         <Route path="dat-hang" element={<CheckoutPage />} />
-        <Route path="don-hang" element={<OrdersPage />} />
+        <Route path="tai-khoan" element={<AccountPage />} />
+        <Route path="tai-khoan/don-hang" element={<AccountPage />} />
+        <Route path="tai-khoan/don-hang/:orderId" element={<AccountPage />} />
+        <Route path="don-hang" element={<AccountPage />} />
+        <Route path="don-hang/khach" element={<OrdersPage />} />
         <Route path="don-hang/:orderId" element={<OrdersPage />} />
         <Route path="huong-dan" element={<GuidePage />} />
         <Route

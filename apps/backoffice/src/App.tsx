@@ -4,6 +4,7 @@ import {
   canChangeOwnPassword,
   canManageBranches,
   canManageCatalog,
+  canManageReceipts,
   canManageUsers,
   canUsePos,
   canViewReports,
@@ -12,6 +13,9 @@ import {
 import { RequireAuth, RequireRole } from './auth/require-auth.tsx';
 import { WorkingBranchLayout } from './inventory/working-branch.tsx';
 import { AppLayout } from './layout/app-shell.tsx';
+import { BuybackCreatePage } from './buybacks/create-page.tsx';
+import { BuybackDetailPage } from './buybacks/detail-page.tsx';
+import { BuybackListPage } from './buybacks/list-page.tsx';
 import { BranchesPage } from './pages/branches-page.tsx';
 import { ChangePasswordPage } from './pages/change-password-page.tsx';
 import { HomePage } from './pages/home-page.tsx';
@@ -25,8 +29,6 @@ import { ProductsPage } from './pages/products-page.tsx';
 import { PosPage } from './pages/pos-page.tsx';
 import { ReceiptDetailPage } from './pages/receipt-detail-page.tsx';
 import { ReceiptsPage } from './pages/receipts-page.tsx';
-import { StockCountDetailPage } from './pages/stock-count-detail-page.tsx';
-import { StockCountsPage } from './pages/stock-counts-page.tsx';
 import { StockPage } from './pages/stock-page.tsx';
 import { UsersPage } from './pages/users-page.tsx';
 
@@ -73,18 +75,23 @@ export function App() {
         <Route element={<RequireRole allow={canViewReports} />}>
           <Route path="/bao-cao" element={<ReportsPage />} />
         </Route>
-        <Route element={<RequireRole allow={canBranchStockAccess} />}>
+        <Route element={<RequireRole allow={canManageReceipts} />}>
           <Route element={<WorkingBranchLayout />}>
             <Route path="/nhap-hang" element={<ReceiptsPage />} />
             <Route path="/nhap-hang/:receiptId" element={<ReceiptDetailPage />} />
+          </Route>
+        </Route>
+        <Route element={<RequireRole allow={canBranchStockAccess} />}>
+          <Route element={<WorkingBranchLayout />}>
             <Route path="/ton-kho" element={<StockPage />} />
-            <Route path="/kiem-ke" element={<StockCountsPage />} />
-            <Route path="/kiem-ke/:stockCountId" element={<StockCountDetailPage />} />
           </Route>
         </Route>
         <Route element={<RequireRole allow={canUsePos} />}>
           <Route element={<WorkingBranchLayout />}>
             <Route path="/ban-tai-quay" element={<PosPage />} />
+            <Route path="/thu-mua" element={<BuybackListPage />} />
+            <Route path="/thu-mua/moi" element={<BuybackCreatePage />} />
+            <Route path="/thu-mua/:buybackId" element={<BuybackDetailPage />} />
           </Route>
         </Route>
         <Route path="*" element={<NotFoundPage />} />

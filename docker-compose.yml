@@ -1,4 +1,7 @@
-# Chạy cả hệ thống:   docker compose up --build
+# CẤU HÌNH DEVELOPMENT SAU CUTOVER 2026-11-10: bốn PostgreSQL độc lập.
+# Lệnh mặc định `docker compose up` dùng project jewelry và các DB mới.
+# PostgreSQL legacy chỉ chạy với profile legacy-db; không dùng --remove-orphans.
+# Rollback: xem docker-compose.legacy.yml và docs/database-migration-runbook.md.
 # Chạy "như production" (không mở cổng dev):   docker compose -f docker-compose.yml up --build
 #
 # Chỉ gateway, backoffice, storefront có `ports`. Mọi service khác chỉ thấy nhau trong mạng Docker.
@@ -53,13 +56,11 @@ x-static-healthcheck: &static-healthcheck
 x-migrate: &migrate
   restart: 'no'
   logging: *logging
-  depends_on:
-    postgres:
-      condition: service_healthy
 
 services:
   # ---------------------------------------------------------------- Hạ tầng
   postgres:
+    profiles: ['legacy-db']
     image: postgres:16.15
     restart: unless-stopped
     environment:
@@ -78,6 +79,111 @@ services:
     healthcheck:
       # -h 127.0.0.1 (TCP): server tạm lúc chạy script init chỉ nghe socket nên chưa tính là "sẵn sàng".
       test: ['CMD-SHELL', 'pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    logging: *logging
+
+  # Mỗi instance có data directory riêng; user ứng dụng chỉ sở hữu schema của chính mình.
+  auth-postgres:
+    image: postgres:16.15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER chưa đặt trong .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD chưa đặt trong .env}
+      POSTGRES_DB: auth_db
+      SHADOW_DB_NAME: auth_shadow
+      SERVICE_DB_USER: auth_user
+      SERVICE_SCHEMA: auth
+      SERVICE_DB_PASSWORD: ${AUTH_DB_PASSWORD:?AUTH_DB_PASSWORD chưa đặt trong .env}
+    volumes:
+      - auth_pg_data:/var/lib/postgresql/data
+      - ./infra/postgres/service-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'PGPASSWORD="$${SERVICE_DB_PASSWORD}" psql -h 127.0.0.1 -U "$${SERVICE_DB_USER}" -d "$${POSTGRES_DB}" -Atqc "SELECT 1" >/dev/null',
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    logging: *logging
+
+  inventory-postgres:
+    image: postgres:16.15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER chưa đặt trong .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD chưa đặt trong .env}
+      POSTGRES_DB: inventory_db
+      SHADOW_DB_NAME: inventory_shadow
+      SERVICE_DB_USER: inventory_user
+      SERVICE_SCHEMA: inventory
+      SERVICE_DB_PASSWORD: ${INVENTORY_DB_PASSWORD:?INVENTORY_DB_PASSWORD chưa đặt trong .env}
+    volumes:
+      - inventory_pg_data:/var/lib/postgresql/data
+      - ./infra/postgres/service-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'PGPASSWORD="$${SERVICE_DB_PASSWORD}" psql -h 127.0.0.1 -U "$${SERVICE_DB_USER}" -d "$${POSTGRES_DB}" -Atqc "SELECT 1" >/dev/null',
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    logging: *logging
+
+  sales-postgres:
+    image: postgres:16.15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER chưa đặt trong .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD chưa đặt trong .env}
+      POSTGRES_DB: sales_db
+      SHADOW_DB_NAME: sales_shadow
+      SERVICE_DB_USER: sales_user
+      SERVICE_SCHEMA: sales
+      SERVICE_DB_PASSWORD: ${SALES_DB_PASSWORD:?SALES_DB_PASSWORD chưa đặt trong .env}
+    volumes:
+      - sales_pg_data:/var/lib/postgresql/data
+      - ./infra/postgres/service-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'PGPASSWORD="$${SERVICE_DB_PASSWORD}" psql -h 127.0.0.1 -U "$${SERVICE_DB_USER}" -d "$${POSTGRES_DB}" -Atqc "SELECT 1" >/dev/null',
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    logging: *logging
+
+  report-postgres:
+    image: postgres:16.15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER chưa đặt trong .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD chưa đặt trong .env}
+      POSTGRES_DB: report_db
+      SHADOW_DB_NAME: report_shadow
+      SERVICE_DB_USER: report_user
+      SERVICE_SCHEMA: report
+      SERVICE_DB_PASSWORD: ${REPORT_DB_PASSWORD:?REPORT_DB_PASSWORD chưa đặt trong .env}
+    volumes:
+      - report_pg_data:/var/lib/postgresql/data
+      - ./infra/postgres/service-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'PGPASSWORD="$${SERVICE_DB_PASSWORD}" psql -h 127.0.0.1 -U "$${SERVICE_DB_USER}" -d "$${POSTGRES_DB}" -Atqc "SELECT 1" >/dev/null',
+        ]
       interval: 5s
       timeout: 5s
       retries: 12
@@ -132,6 +238,9 @@ services:
   # ---------------------------------------------------------------- Migration (mỗi service một container riêng)
   auth-migrate:
     <<: *migrate
+    depends_on:
+      auth-postgres:
+        condition: service_healthy
     build:
       context: .
       dockerfile: apps/auth/Dockerfile
@@ -140,10 +249,13 @@ services:
         migrate-scripts: ./infra/migrate
     image: jewelry/auth-migrate:dev
     environment:
-      DATABASE_URL: postgresql://auth_user:${AUTH_DB_PASSWORD:?AUTH_DB_PASSWORD chưa đặt trong .env}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB chưa đặt trong .env}?schema=auth
+      DATABASE_URL: postgresql://auth_user:${AUTH_DB_PASSWORD:?AUTH_DB_PASSWORD chưa đặt trong .env}@auth-postgres:5432/auth_db?schema=auth
 
   inventory-migrate:
     <<: *migrate
+    depends_on:
+      inventory-postgres:
+        condition: service_healthy
     build:
       context: .
       dockerfile: apps/inventory/Dockerfile
@@ -152,10 +264,13 @@ services:
         migrate-scripts: ./infra/migrate
     image: jewelry/inventory-migrate:dev
     environment:
-      DATABASE_URL: postgresql://inventory_user:${INVENTORY_DB_PASSWORD:?INVENTORY_DB_PASSWORD chưa đặt trong .env}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB chưa đặt trong .env}?schema=inventory
+      DATABASE_URL: postgresql://inventory_user:${INVENTORY_DB_PASSWORD:?INVENTORY_DB_PASSWORD chưa đặt trong .env}@inventory-postgres:5432/inventory_db?schema=inventory
 
   sales-migrate:
     <<: *migrate
+    depends_on:
+      sales-postgres:
+        condition: service_healthy
     build:
       context: .
       dockerfile: apps/sales/Dockerfile
@@ -164,10 +279,13 @@ services:
         migrate-scripts: ./infra/migrate
     image: jewelry/sales-migrate:dev
     environment:
-      DATABASE_URL: postgresql://sales_user:${SALES_DB_PASSWORD:?SALES_DB_PASSWORD chưa đặt trong .env}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB chưa đặt trong .env}?schema=sales
+      DATABASE_URL: postgresql://sales_user:${SALES_DB_PASSWORD:?SALES_DB_PASSWORD chưa đặt trong .env}@sales-postgres:5432/sales_db?schema=sales
 
   report-migrate:
     <<: *migrate
+    depends_on:
+      report-postgres:
+        condition: service_healthy
     build:
       context: .
       dockerfile: apps/report/Dockerfile
@@ -176,7 +294,7 @@ services:
         migrate-scripts: ./infra/migrate
     image: jewelry/report-migrate:dev
     environment:
-      DATABASE_URL: postgresql://report_user:${REPORT_DB_PASSWORD:?REPORT_DB_PASSWORD chưa đặt trong .env}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB chưa đặt trong .env}?schema=report
+      DATABASE_URL: postgresql://report_user:${REPORT_DB_PASSWORD:?REPORT_DB_PASSWORD chưa đặt trong .env}@report-postgres:5432/report_db?schema=report
 
   # ---------------------------------------------------------------- Dịch vụ nghiệp vụ (KHÔNG mở cổng ra ngoài)
   auth:
@@ -191,7 +309,7 @@ services:
       PORT: '3000'
       JWT_PRIVATE_KEY_PATH: /run/secrets/jwt-private.pem
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?GOOGLE_CLIENT_ID chưa đặt trong .env}
-      DATABASE_URL: postgresql://auth_user:${AUTH_DB_PASSWORD:?AUTH_DB_PASSWORD chưa đặt trong .env}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB chưa đặt trong .env}?schema=auth
+      DATABASE_URL: postgresql://auth_user:${AUTH_DB_PASSWORD:?AUTH_DB_PASSWORD chưa đặt trong .env}@auth-postgres:5432/auth_db?schema=auth
       DATABASE_POOL_MAX: ${DATABASE_POOL_MAX:?DATABASE_POOL_MAX chưa đặt trong .env}
       RABBITMQ_URL: amqp://${RABBITMQ_APP_USER:?RABBITMQ_APP_USER chưa đặt trong .env}:${RABBITMQ_APP_PASSWORD:?RABBITMQ_APP_PASSWORD chưa đặt trong .env}@rabbitmq:5672
     volumes:
@@ -199,7 +317,7 @@ services:
       # Chỉ auth có private key.
       - ./secrets/jwt/private.pem:/run/secrets/jwt-private.pem:ro
     depends_on:
-      postgres:
+      auth-postgres:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
@@ -220,13 +338,13 @@ services:
       <<: *jwt-env
       NODE_ENV: production
       PORT: '3000'
-      DATABASE_URL: postgresql://inventory_user:${INVENTORY_DB_PASSWORD:?INVENTORY_DB_PASSWORD chưa đặt trong .env}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB chưa đặt trong .env}?schema=inventory
+      DATABASE_URL: postgresql://inventory_user:${INVENTORY_DB_PASSWORD:?INVENTORY_DB_PASSWORD chưa đặt trong .env}@inventory-postgres:5432/inventory_db?schema=inventory
       DATABASE_POOL_MAX: ${DATABASE_POOL_MAX:?DATABASE_POOL_MAX chưa đặt trong .env}
       RABBITMQ_URL: amqp://${RABBITMQ_APP_USER:?RABBITMQ_APP_USER chưa đặt trong .env}:${RABBITMQ_APP_PASSWORD:?RABBITMQ_APP_PASSWORD chưa đặt trong .env}@rabbitmq:5672
     volumes:
       - *jwt-public-volume
     depends_on:
-      postgres:
+      inventory-postgres:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
@@ -248,13 +366,13 @@ services:
       NODE_ENV: production
       PORT: '3000'
       INVENTORY_URL: http://inventory:3000
-      DATABASE_URL: postgresql://sales_user:${SALES_DB_PASSWORD:?SALES_DB_PASSWORD chưa đặt trong .env}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB chưa đặt trong .env}?schema=sales
+      DATABASE_URL: postgresql://sales_user:${SALES_DB_PASSWORD:?SALES_DB_PASSWORD chưa đặt trong .env}@sales-postgres:5432/sales_db?schema=sales
       DATABASE_POOL_MAX: ${DATABASE_POOL_MAX:?DATABASE_POOL_MAX chưa đặt trong .env}
       RABBITMQ_URL: amqp://${RABBITMQ_APP_USER:?RABBITMQ_APP_USER chưa đặt trong .env}:${RABBITMQ_APP_PASSWORD:?RABBITMQ_APP_PASSWORD chưa đặt trong .env}@rabbitmq:5672
     volumes:
       - *jwt-public-volume
     depends_on:
-      postgres:
+      sales-postgres:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
@@ -275,13 +393,13 @@ services:
       <<: *jwt-env
       NODE_ENV: production
       PORT: '3000'
-      DATABASE_URL: postgresql://report_user:${REPORT_DB_PASSWORD:?REPORT_DB_PASSWORD chưa đặt trong .env}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB chưa đặt trong .env}?schema=report
+      DATABASE_URL: postgresql://report_user:${REPORT_DB_PASSWORD:?REPORT_DB_PASSWORD chưa đặt trong .env}@report-postgres:5432/report_db?schema=report
       DATABASE_POOL_MAX: ${DATABASE_POOL_MAX:?DATABASE_POOL_MAX chưa đặt trong .env}
       RABBITMQ_URL: amqp://${RABBITMQ_APP_USER:?RABBITMQ_APP_USER chưa đặt trong .env}:${RABBITMQ_APP_PASSWORD:?RABBITMQ_APP_PASSWORD chưa đặt trong .env}@rabbitmq:5672
     volumes:
       - *jwt-public-volume
     depends_on:
-      postgres:
+      report-postgres:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
@@ -370,4 +488,8 @@ networks:
 
 volumes:
   pg_data:
+  auth_pg_data:
+  inventory_pg_data:
+  sales_pg_data:
+  report_pg_data:
   rabbitmq_data:

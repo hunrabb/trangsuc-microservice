@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Demo payment component test</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module">
+      import React from 'react';
+      import { createRoot } from 'react-dom/client';
+      import { DemoPayment } from '../src/components/demo-payment.tsx';
+      import '../src/styles.css';
+      import '../src/luxury.css';
+      const root = createRoot(document.getElementById('root'));
+      const order = {
+        id: '33333333-3333-4333-8333-333333333333',
+        code: 'WEB-UI-TEST',
+        status: 'AWAITING_PAYMENT',
+        total: '1234567.89',
+        needsReview: false,
+        expiresAt: null,
+        failureCode: null,
+        items: [],
+      };
+      window.testOrder = order;
+      window.renderOrder = (patch = {}) => {
+        Object.assign(order, patch);
+        root.render(
+          React.createElement(
+            'main',
+            { className: 'container' },
+            React.createElement(DemoPayment, { order: { ...order } }),
+          ),
+        );
+      };
+      window.renderOrder();
+    </script>
+  </body>
+</html>

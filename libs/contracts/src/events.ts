@@ -7,6 +7,7 @@ import {
   stockReservationExpiredSchema,
 } from './online-checkout';
 import { z } from 'zod';
+import { buybackSettledEventSchema, buybackStockedEventSchema } from './buyback-inventory-events';
 import { productSnapshotSchema, availabilitySnapshotSchema } from './shop-api';
 
 /** Phong bì chung của mọi thư trên RabbitMQ. `eventId` = id dòng outbox. */
@@ -38,6 +39,8 @@ export const ROUTING_KEYS = {
   ORDER_PAID: 'order.paid',
   STOCK_PAYMENT_RESULT: 'stock.payment_result',
   ORDER_CANCELLED: 'order.cancelled',
+  BUYBACK_SETTLED: 'buyback.settled',
+  BUYBACK_STOCKED: 'buyback.stocked',
 } as const;
 
 export const systemTestPayloadSchema = z.object({ message: z.string().max(200) });
@@ -165,6 +168,8 @@ export const EVENT_PAYLOAD_SCHEMAS = {
   [ROUTING_KEYS.STOCK_RESERVED]: stockReservedSchema,
   [ROUTING_KEYS.STOCK_RESERVE_FAILED]: stockReserveFailedSchema,
   [ROUTING_KEYS.STOCK_RESERVATION_EXPIRED]: stockReservationExpiredSchema,
+  [ROUTING_KEYS.BUYBACK_SETTLED]: buybackSettledEventSchema,
+  [ROUTING_KEYS.BUYBACK_STOCKED]: buybackStockedEventSchema,
 } as const;
 
 export type EventType = keyof typeof EVENT_PAYLOAD_SCHEMAS;

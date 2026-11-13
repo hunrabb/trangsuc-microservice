@@ -123,9 +123,9 @@ describe('lõi inventory trên Postgres thật', () => {
     }
   });
 
-  const manager = (branchId: string): Actor => ({
+  const admin = (): Actor => ({
     id: randomUUID(),
-    branches: [{ branchId, role: 'MANAGER' }],
+    branches: [{ branchId: null, role: 'ADMIN' }],
   });
 
   /** Kho của một chi nhánh mới, và một phiếu nháp có `lineCount` dòng. */
@@ -165,11 +165,11 @@ describe('lõi inventory trên Postgres thật', () => {
   it(`hai người duyệt cùng một phiếu, ${ROUNDS} vòng: đúng một lần tạo hàng`, async (context) => {
     const losers: Record<string, number> = {};
     for (let round = 0; round < ROUNDS; round += 1) {
-      const { branchId, warehouse, receipt } = await draftReceipt(5);
+      const { warehouse, receipt } = await draftReceipt(5);
 
       const results = await Promise.allSettled([
-        receipts.approve(manager(branchId), receipt.id, { version: receipt.version }),
-        receipts.approve(manager(branchId), receipt.id, { version: receipt.version }),
+        receipts.approve(admin(), receipt.id, { version: receipt.version }),
+        receipts.approve(admin(), receipt.id, { version: receipt.version }),
       ]);
 
       assert.equal(results.filter((r) => r.status === 'fulfilled').length, 1, `vòng ${round}`);
@@ -187,10 +187,10 @@ describe('lõi inventory trên Postgres thật', () => {
   });
 
   it('duyệt sai version: 409 VERSION_CONFLICT, phiếu vẫn là nháp, không tạo hàng', async () => {
-    const { branchId, warehouse, receipt } = await draftReceipt(2);
+    const { warehouse, receipt } = await draftReceipt(2);
 
     await assert.rejects(
-      receipts.approve(manager(branchId), receipt.id, { version: receipt.version + 1 }),
+      receipts.approve(admin(), receipt.id, { version: receipt.version + 1 }),
       (error: { code?: string; httpStatus?: number }) =>
         error.code === 'VERSION_CONFLICT' && error.httpStatus === 409,
     );

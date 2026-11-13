@@ -1,0 +1,261 @@
+{
+  "apiVersion": "v1",
+  "items": [
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "annotations": {
+          "local.path.provisioner/selected-node": "jewelry-lab-worker",
+          "pv.kubernetes.io/provisioned-by": "rancher.io/local-path"
+        },
+        "creationTimestamp": "2026-11-13T03:54:14Z",
+        "finalizers": [
+          "kubernetes.io/pv-protection"
+        ],
+        "name": "pvc-cd2c8353-2082-43ef-bb19-d285d5f3c3d2",
+        "resourceVersion": "7678",
+        "uid": "1df33ca2-d624-402d-bc29-7a1adbcb863d"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "5Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "jewelry-pg-1",
+          "namespace": "jewelry-demo",
+          "resourceVersion": "7652",
+          "uid": "cd2c8353-2082-43ef-bb19-d285d5f3c3d2"
+        },
+        "hostPath": {
+          "path": "/var/local-path-provisioner/pvc-cd2c8353-2082-43ef-bb19-d285d5f3c3d2_jewelry-demo_jewelry-pg-1",
+          "type": "DirectoryOrCreate"
+        },
+        "nodeAffinity": {
+          "required": {
+            "nodeSelectorTerms": [
+              {
+                "matchExpressions": [
+                  {
+                    "key": "kubernetes.io/hostname",
+                    "operator": "In",
+                    "values": [
+                      "jewelry-lab-worker"
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "jewelry-demo-local",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-11-13T03:54:14Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolume",
+      "metadata": {
+        "annotations": {
+          "local.path.provisioner/selected-node": "jewelry-lab-worker2",
+          "pv.kubernetes.io/provisioned-by": "rancher.io/local-path"
+        },
+        "creationTimestamp": "2026-11-13T04:20:44Z",
+        "finalizers": [
+          "kubernetes.io/pv-protection"
+        ],
+        "name": "pvc-dced64e8-81cc-4eff-829e-2a4980211f01",
+        "resourceVersion": "11842",
+        "uid": "26be8584-c8fe-4793-8635-e1a8a39e11af"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "5Gi"
+        },
+        "claimRef": {
+          "apiVersion": "v1",
+          "kind": "PersistentVolumeClaim",
+          "name": "jewelry-pg-2",
+          "namespace": "jewelry-demo",
+          "resourceVersion": "11812",
+          "uid": "dced64e8-81cc-4eff-829e-2a4980211f01"
+        },
+        "hostPath": {
+          "path": "/var/local-path-provisioner/pvc-dced64e8-81cc-4eff-829e-2a4980211f01_jewelry-demo_jewelry-pg-2",
+          "type": "DirectoryOrCreate"
+        },
+        "nodeAffinity": {
+          "required": {
+            "nodeSelectorTerms": [
+              {
+                "matchExpressions": [
+                  {
+                    "key": "kubernetes.io/hostname",
+                    "operator": "In",
+                    "values": [
+                      "jewelry-lab-worker2"
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "persistentVolumeReclaimPolicy": "Retain",
+        "storageClassName": "jewelry-demo-local",
+        "volumeMode": "Filesystem"
+      },
+      "status": {
+        "lastPhaseTransitionTime": "2026-11-13T04:20:44Z",
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "annotations": {
+          "cnpg.io/nodeSerial": "1",
+          "cnpg.io/operatorVersion": "1.30.1",
+          "cnpg.io/pvcStatus": "ready",
+          "pv.kubernetes.io/bind-completed": "yes",
+          "pv.kubernetes.io/bound-by-controller": "yes",
+          "volume.beta.kubernetes.io/storage-provisioner": "rancher.io/local-path",
+          "volume.kubernetes.io/selected-node": "jewelry-lab-worker",
+          "volume.kubernetes.io/storage-provisioner": "rancher.io/local-path"
+        },
+        "creationTimestamp": "2026-11-13T03:54:09Z",
+        "finalizers": [
+          "kubernetes.io/pvc-protection"
+        ],
+        "labels": {
+          "app.kubernetes.io/component": "database",
+          "app.kubernetes.io/managed-by": "cloudnative-pg",
+          "app.kubernetes.io/name": "postgresql",
+          "cnpg.io/cluster": "jewelry-pg",
+          "cnpg.io/instanceName": "jewelry-pg-1",
+          "cnpg.io/instanceRole": "primary",
+          "cnpg.io/pvcRole": "PG_DATA",
+          "role": "primary"
+        },
+        "name": "jewelry-pg-1",
+        "namespace": "jewelry-demo",
+        "ownerReferences": [
+          {
+            "apiVersion": "postgresql.cnpg.io/v1",
+            "controller": true,
+            "kind": "Cluster",
+            "name": "jewelry-pg",
+            "uid": "5553edd0-8447-41f7-b0a1-f32679b49a2b"
+          }
+        ],
+        "resourceVersion": "8360",
+        "uid": "cd2c8353-2082-43ef-bb19-d285d5f3c3d2"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "5Gi"
+          }
+        },
+        "storageClassName": "jewelry-demo-local",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-cd2c8353-2082-43ef-bb19-d285d5f3c3d2"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "5Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "annotations": {
+          "cnpg.io/nodeSerial": "2",
+          "cnpg.io/operatorVersion": "1.30.1",
+          "cnpg.io/pvcStatus": "ready",
+          "pv.kubernetes.io/bind-completed": "yes",
+          "pv.kubernetes.io/bound-by-controller": "yes",
+          "volume.beta.kubernetes.io/storage-provisioner": "rancher.io/local-path",
+          "volume.kubernetes.io/selected-node": "jewelry-lab-worker2",
+          "volume.kubernetes.io/storage-provisioner": "rancher.io/local-path"
+        },
+        "creationTimestamp": "2026-11-13T04:20:39Z",
+        "finalizers": [
+          "kubernetes.io/pvc-protection"
+        ],
+        "labels": {
+          "app.kubernetes.io/component": "database",
+          "app.kubernetes.io/managed-by": "cloudnative-pg",
+          "app.kubernetes.io/name": "postgresql",
+          "cnpg.io/cluster": "jewelry-pg",
+          "cnpg.io/instanceName": "jewelry-pg-2",
+          "cnpg.io/instanceRole": "replica",
+          "cnpg.io/pvcRole": "PG_DATA",
+          "role": "replica"
+        },
+        "name": "jewelry-pg-2",
+        "namespace": "jewelry-demo",
+        "ownerReferences": [
+          {
+            "apiVersion": "postgresql.cnpg.io/v1",
+            "controller": true,
+            "kind": "Cluster",
+            "name": "jewelry-pg",
+            "uid": "5553edd0-8447-41f7-b0a1-f32679b49a2b"
+          }
+        ],
+        "resourceVersion": "12857",
+        "uid": "dced64e8-81cc-4eff-829e-2a4980211f01"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "5Gi"
+          }
+        },
+        "storageClassName": "jewelry-demo-local",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-dced64e8-81cc-4eff-829e-2a4980211f01"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "5Gi"
+        },
+        "phase": "Bound"
+      }
+    }
+  ],
+  "kind": "List",
+  "metadata": {
+    "resourceVersion": ""
+  }
+}

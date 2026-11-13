@@ -12,7 +12,6 @@ Kim loại và giá, danh mục, phiếu nhập, tồn kho (giai đoạn 3A). M�
 | `src/stock/stock.service.ts`             | Danh sách chiếc, tra theo mã tem kèm giá                           |
 | `src/stock/item-sales.service.ts`        | Báo giá, trừ kho, trả kho cho sales (POS), chống bán trùng một tem |
 | `src/stock/internal-stock.controller.ts` | Cửa vào HTTP nội bộ `/internal/stock/*`                            |
-| `src/stock-count/stock-count.service.ts` | Kiểm kê: mở phiên, quét, đóng, tổng kết                            |
 | `src/stock/label.controller.ts`          | Dữ liệu in tem (`getLabel` ở `stock.service.ts`)                   |
 | `src/branch/branch-events.ts`            | Consumer `branch.created`, `branch.updated` → kho                  |
 | `src/pricing/pricing.ts`                 | Hàm tính giá và làm tròn (duy nhất)                                |
@@ -37,9 +36,9 @@ Kim loại và giá, danh mục, phiếu nhập, tồn kho (giai đoạn 3A). M�
 
 ## Phiếu nhập
 
-1. Tạo nháp cho kho của chi nhánh (MANAGER, STAFF chi nhánh đó, hoặc ADMIN): `create`. Chi nhánh chưa có kho → `404`.
+1. ADMIN chọn chi nhánh nhận hàng và tạo phiếu nháp cho kho của chi nhánh: `create`. Chi nhánh chưa có kho → `404`.
 2. Thêm, xoá dòng (mỗi dòng một chiếc, một mã tem): `addLine`, `removeLine`. Mỗi lần tăng `version` của phiếu bằng UPDATE có điều kiện `status = DRAFT`.
-3. **Duyệt** (MANAGER hoặc ADMIN, kèm `version`): `approve` → `createStock`. Trong MỘT transaction: đổi phiếu sang `APPROVED`, tạo `JewelryItem` `IN_STOCK`, ghi `StockMovement` và `AuditLog`.
+3. **Duyệt** (chỉ ADMIN, kèm `version`): `approve` → `createStock`. Trong MỘT transaction: đổi phiếu sang `APPROVED`, tạo `JewelryItem` `IN_STOCK`, ghi `StockMovement` và `AuditLog`.
 
 **Bảng ghi:** `GoodsReceipt`, `GoodsReceiptLine`, `JewelryItem`, `StockMovement`, `AuditLog`.
 
@@ -109,49 +108,6 @@ Bảng bị ghi: `StockOrderOperation`, `JewelryItem`, `StockMovement`, `OutboxE
 
 **Đồng thời:** `release` và `deduct` cùng đơn khoá cùng dòng `StockOrderOperation` trước các chiếc. Nếu `deduct` commit trước, `release` chờ rồi trả hàng. Nếu `release` commit trước, `deduct` thấy `releasedAt` và bị chặn. Hai `release` song song không ghi trùng. Chiếc đã release vẫn bán lại được cho đơn khác.
 
-## Kiểm kê kho (3C)
-
-Controller: [stock-count.controller.ts](src/stock-count/stock-count.controller.ts). Toàn bộ logic: [stock-count.service.ts](src/stock-count/stock-count.service.ts). Phiên kiểm kê **không tự đổi trạng thái chiếc hàng nào**: chiếc thiếu chỉ được đánh dấu trong phiên và ghi sổ kho, chiếc thừa chỉ được liệt kê; người quản lý quyết định xử lý sau. Chỉ MANAGER (và ADMIN) mở và đóng phiên; STAFF quét và xem.
-
-### Mở phiên: `POST /stock-counts` (`createStockCount`)
-
-1. Kiểm quyền MANAGER ở chi nhánh, tìm kho của chi nhánh (chưa có kho → `404`, kho ngừng hoạt động → `409`).
-2. Trong MỘT transaction (`openSession`): tạo dòng `StockCount` trạng thái `OPEN`, rồi chép danh sách chiếc `IN_STOCK` của kho thành các dòng `StockCountLine` trạng thái `EXPECTED` bằng một câu `INSERT ... SELECT` (`snapshotExpectedItems`), rồi ghi `AuditLog`.
-
-Bảng bị ghi: `StockCount`, `StockCountLine`, `AuditLog`. Không đụng `JewelryItem`.
-
-**Đồng thời:** mỗi kho tối đa một phiên `OPEN`, do partial unique index `StockCount_one_open_per_warehouse` làm trọng tài: hai quản lý bấm cùng lúc thì một bên nhận `409 INVALID_STATE`. Danh sách dự kiến chụp bằng một câu lệnh nên nhất quán tại một thời điểm.
-
-### Quét: `POST /stock-counts/{id}/scan` (`scanTag`)
-
-1. Kiểm quyền (MANAGER, STAFF) và tìm phiên.
-2. Trong một transaction, giữ khoá chia sẻ trên dòng phiên và kiểm phiên còn `OPEN` (`lockSessionWhileOpen`); đã đóng → `409`.
-3. Ghi nhận mã (`recordScan`): chiếc dự kiến `EXPECTED` → `SCANNED` (`MATCHED`); quét lại → `ALREADY_SCANNED`; mã không thuộc danh sách dự kiến (kho khác hoặc không có trong hệ thống) → ghi vào `StockCountExtra` (`EXTRA`), **không** thêm vào kho.
-
-Bảng bị ghi: `StockCountLine`, `StockCountExtra`.
-
-**Đồng thời:** nhiều người quét cùng lúc đều giữ khoá chia sẻ nên không chặn nhau. Quét lại cùng một mã: UPDATE có điều kiện `status = EXPECTED` nên chỉ lần đầu đổi, danh sách thừa có unique `(stockCountId, tagCode)` và `skipDuplicates`.
-
-### Đóng phiên: `POST /stock-counts/{id}/close` (`closeStockCount`)
-
-Trong MỘT transaction (có `runWithLockRetry` và `lock_timeout`), theo thứ tự:
-
-1. Giành quyền đóng bằng UPDATE có điều kiện `status = OPEN` → `CLOSED` (`claimOpenSession`); 0 dòng → `409 INVALID_STATE`.
-2. Lấy các dòng chưa quét (`EXPECTED`), khoá các chiếc tương ứng theo thứ tự `id` và đọc trạng thái (`lockItemsAndFindThoseInStock`).
-3. Chưa quét mà còn `IN_STOCK` → `MISSING`; chưa quét mà không còn `IN_STOCK` (vừa bán hoặc đang giữ) → `MOVED`, không tính thiếu (`setLineStatus`).
-4. Ghi sổ kho `COUNT_MISSING` cho từng chiếc thiếu (`recordMissingMovements`), ghi `AuditLog`.
-
-Bảng bị ghi: `StockCount`, `StockCountLine`, `StockMovement`, `AuditLog`.
-
-**Đồng thời:**
-
-- _Hai người đóng cùng lúc:_ UPDATE ở bước 1 khoá dòng phiên, bên sau thấy 0 dòng và nhận `409`. Chỉ một lần đóng ghi sổ kho.
-- _Đang quét dở:_ bước 1 cần khoá độc quyền nên chờ các lần quét (khoá chia sẻ) xong; quét sau khi đóng nhận `409`. Vì vậy mọi lần quét thành công đều được tính trước khi xét thiếu.
-- _Chiếc vừa được bán:_ khoá theo thứ tự `id` (cùng thứ tự với `deduct`, nên không khoá chéo) rồi mới đọc trạng thái, nên không báo thiếu oan chiếc đã bán.
-
-### Xem: `GET /stock-counts/{id}` (`getStockCount`)
-
-Tổng số dự kiến, đã quét, chưa quét, thiếu, đã bán trong lúc kiểm kê, thừa, cùng danh sách mã tem thiếu và thừa. Chỉ đọc.
 
 ## In tem: `GET /jewelry-items/{tagCode}/label` (`getLabel`)
 
@@ -164,7 +120,7 @@ Tổng số dự kiến, đã quét, chưa quét, thiếu, đã bán trong lúc 
 ## Test
 
 - `src/pricing/pricing.test.ts`: tính giá, làm tròn.
-- `tests/inventory` (`pnpm test:inventory`, Postgres thật): duyệt song song, duyệt sai `version`, `branch.created` trùng; hai đơn tranh một tem (10 vòng), `deduct` lặp cùng `orderId`, `release` trước hoặc sau commit `deduct`; kiểm kê: đóng và quét song song, chiếc thiếu, mã thừa.
+- `tests/inventory` (`pnpm test:inventory`, Postgres thật): duyệt song song, duyệt sai `version`, `branch.created` trùng; hai đơn tranh một tem (10 vòng), `deduct` lặp cùng `orderId`, `release` trước hoặc sau commit `deduct`.
 
 ## Chốt tồn kho đêm (Phase 5.2)
 
@@ -173,4 +129,10 @@ từ 00:05 đến 00:59 giờ Việt Nam để chốt ngày trước. `Inventory
 theo kho/ngày; cùng transaction phát `inventory.snapshot.closed` qua outbox cho Report.
 Unique ngày/kho và advisory lock chống chạy trùng giữa nhiều instance. Nếu toàn bộ khung giờ
 thất bại, ngày đó thiếu bản chốt; không lấy tồn hiện tại dựng lại ngày cũ. Movement dùng
-`RECEIPT`, `RELEASE`, `SALE`; `COUNT_MISSING` chỉ là ghi nhận kiểm kê.
+`RECEIPT`, `RELEASE`, `SALE`; `COUNT_MISSING` chỉ là dữ liệu lịch sử của chức năng đã gỡ.
+
+Quyền phiếu nhập: chỉ ADMIN được xem danh sách/chi tiết, tạo nháp, thêm/xoá dòng và duyệt. STAFF/MANAGER vẫn xem tồn kho theo quyền chi nhánh; không truy cập API phiếu nhập.
+
+## Tổng hợp tồn kho theo biến thể
+
+Trang Tồn kho có hai chế độ theo mẫu/biến thể và theo mã tem, drilldown giữ đúng chi nhánh. API đọc mới `GET /api/admin/inventory/items/summary` bắt buộc `branchId`. Xem [quy tắc đếm và kiểm chứng](../../docs/stock-summary.md). Không thay đổi schema hay quy tắc bán theo tem.

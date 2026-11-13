@@ -1,0 +1,58 @@
+[
+  {
+    "app": "auth",
+    "image": "jewelry/auth-migrate:dev",
+    "imageID": "sha256:1b063775fb934c9b7e8e4a4fb87a09b2916514480aa84a38efcc464a8203ac75",
+    "sourcePrisma": "7.10.1",
+    "imagePrisma": "7.10.1",
+    "migrations": 4,
+    "mismatches": [],
+    "job": "auth-migrate-phase3",
+    "alias": "jewelry/auth-migrate:phase3-1b063775fb93",
+    "completed": true,
+    "history": "20261106120000_outbox|b0eceb57ea3e971a8be3a718cb9a1c563050f58f52994de675e3333f2f819b0e|t|t\n20261107090000_outbox_next_attempt|195e944ef2caae0d095a9210125cfd5517c9945405eacc81f560cf035f1532f5|t|t\n20261107120000_auth_core|6ca0b106d79948a958843d0e584b4a149cb8f47e7fa7a75110de7a36b4f328b1|t|t\n20261110090000_customer_accounts|fef53d3602e4b84e52b3585035dd1206d843222f7ad6dec503539040abc30535|t|t",
+    "tablesConstraints": "10\nc|3\nf|5\np|10\nu|2"
+  },
+  {
+    "app": "inventory",
+    "image": "jewelry/inventory-migrate:dev",
+    "imageID": "sha256:4be09bc2651e4b6221b37bf71c53d1753851e00a7e9ad7bc76c128ca92a2416d",
+    "sourcePrisma": "7.10.1",
+    "imagePrisma": "7.10.1",
+    "migrations": 13,
+    "mismatches": [],
+    "job": "inventory-migrate-phase3",
+    "alias": "jewelry/inventory-migrate:phase3-4be09bc2651e",
+    "completed": true,
+    "history": "20261106120000_outbox|1e0bbf001d9ba321a26882487ee2912f10b6d2bba6e6f87b168afb5d0f89516c|t|t\n20261107090000_outbox_next_attempt|195e944ef2caae0d095a9210125cfd5517c9945405eacc81f560cf035f1532f5|t|t\n20261107150000_inventory_core|5a539c362b2c951b261ca0935c5aca63a3b380b2e90778c1f53b0bd3a61a40aa|t|t\n20261107170000_inventory_stock_sale|00728810ac070281c7251abcc67d397d6e4d4cd540255db34b37d1f3c26e0fbb|t|t\n20261107180000_inventory_stock_count|6a93f693d2bb72faf0ac54649b2dbd48905c1a1e7d336cf104a41388930a4612|t|t\n20261108170000_stock_order_operation|80753cb944416a2060c89a9ffde419e3f5b7df971e632c42dd812f79a86f1d6d|t|t\n20261108230000_inventory_daily_close|61ea76a5b957a69ef60b3a36692a26992869c244fcace169b9e17c6ece1fdc4b|t|t\n20261109100000_public_catalog|cc896d8436b50060bec939c029bab52fe6402728a10d8feb189a765f54e94568|t|t\n20261109110000_online_reservations|c8f13e1d680cff8bc1c33b395ba7387027e884f5a5232b9a2ee5bf974f9020d7|t|t\n20261109120000_paid_reservations|3077e9a1c8af0896727cd8439c7d6969b7f792c5b14eb4a1bb8b5d6b5c680558|t|t\n20261109150000_exchange_hold|ea15874826126bdd6bac3adb2b866d6b9135ed4e6a8ffd0511f3cc73dc5a0f7d|t|t\n20261109160000_buyback_enums|8c1f6ff6ff2d0c1efb4df26ad16d8832c903341718ad2797e2b73d400212caf4|t|t\n20261109161000_buyback_stock|598b76df7e73bd09bf6790dbc5f731365dc854e591cca0cf171537117aa7da3a|t|t",
+    "tablesConstraints": "24\nc|16\nf|19\np|24\nu|2"
+  },
+  {
+    "app": "sales",
+    "image": "jewelry/sales-migrate:dev",
+    "imageID": "sha256:28479898ff4d6fbd8224f7c149a80ce9bdfc012a1ddb4ee5278ce5cf6b3e5ea2",
+    "sourcePrisma": "7.10.1",
+    "imagePrisma": "7.10.1",
+    "migrations": 15,
+    "mismatches": [],
+    "job": "sales-migrate-phase3",
+    "alias": "jewelry/sales-migrate:phase3-28479898ff4d",
+    "completed": true,
+    "history": "20261106120000_outbox|1e0bbf001d9ba321a26882487ee2912f10b6d2bba6e6f87b168afb5d0f89516c|t|t\n20261107090000_outbox_next_attempt|195e944ef2caae0d095a9210125cfd5517c9945405eacc81f560cf035f1532f5|t|t\n20261108150000_sales_pos|f25b04d638ee060d5f692bd0dd537bfbd9f0bda75efffe2ef95b0b3c0cda355c|t|t\n20261108180000_pos_customer|f832a9ca272f043371f8a3404f7859139ecbc3db377d7a921eead2515e8bf429|t|t\n20261108210000_pos_recovery_index|8033b43b97ed269e2d54ea17cddeaac4bc0a98c347db70e6f9ce7769ec28530a|t|t\n20261108220000_pos_report_snapshots|97b43656a57cdd0fb468988ed46dec3f6fa612fd0649a453169e6360ce7b29cb|t|t\n20261109100000_public_catalog|7a3f0c1a8dbdd9d206ff31eac5ce8d4805c4434e0c0e32b9ae2fde6be53e8ec8|t|t\n20261109110000_online_checkout|c9d28c6ab89a5259ef10207744489a192168a05a2dae157faa210f9080c9fdf8|t|t\n20261109120000_online_payments|348029a76bdf69954604b885c9da24d4b53ba9111b4e879dc6077829f9729d13|t|t\n20261109130000_buyback_intake|8855bb933547e12f71094eca45a476b88272dfc1644bcd5d910295883acddce9|t|t\n20261109140000_buyback_appraisal|91fa462f1e77ea90dec4a24d923122587e7e2a21ea78f8a164629e0fbf6f0db2|t|t\n20261109150000_buyback_settlement|98eb8772c71ce5b3d40406bee8e26ee12344804971a953c2f67db19e799fb9e8|t|t\n20261109152000_settlement_integrity|ddc8c201e423683c2a09a7aa632d8ae0ffbe4784d78dc3e54c25404cf342bf7a|t|t\n20261109153000_settlement_strict_checks|80033e83431aebe310e6d4932b0a343947789f41b2c16996e7d0224b3a8ecc5a|t|t\n20261110090000_online_account|942a8f909e8c4e9d96b32520a1a4255c37d15522922d9e512702786345bad0c4|t|t",
+    "tablesConstraints": "29\nc|56\nf|27\np|29\nt|2\nu|21"
+  },
+  {
+    "app": "report",
+    "image": "jewelry/report-migrate:dev",
+    "imageID": "sha256:a9e016d46a93b05bf74056cda6f96a61293276b7a8bd1a89d73e91f53d97f81a",
+    "sourcePrisma": "7.10.1",
+    "imagePrisma": "7.10.1",
+    "migrations": 7,
+    "mismatches": [],
+    "job": "report-migrate-phase3",
+    "alias": "jewelry/report-migrate:phase3-a9e016d46a93",
+    "completed": true,
+    "history": "20261106120000_outbox|1e0bbf001d9ba321a26882487ee2912f10b6d2bba6e6f87b168afb5d0f89516c|t|t\n20261107090000_outbox_next_attempt|195e944ef2caae0d095a9210125cfd5517c9945405eacc81f560cf035f1532f5|t|t\n20261108200000_deferred_stock_event|64861184ab59aceca6712c0601e9829626cdd5ea63c5f6ccb372f981be321d6e|t|t\n20261108221000_order_reporting|e4fb958d48ad44f907b4de6b7e491ba42c05a451318af082927518a7d38e9dc3|t|t\n20261108231000_inventory_snapshots|26c053f5270649ee5622cb45ac3ae23114e6927d7f890e76fcca32f16b50af43|t|t\n20261109090000_dlq_observer|246fdd197359b8a6dc5c8c4976da169d32bb1e9f684fbd8e3dbf0591fc9b6400|t|t\n20261109160000_buyback_facts|e8c8c13f84a77f3254644d397e411980f5fe28e384c491446fc7e802ef5f6a14|t|t",
+    "tablesConstraints": "12\nc|13\nf|3\np|12\nu|2"
+  }
+]

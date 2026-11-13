@@ -7,6 +7,8 @@ import type {
   CreateProductRequest,
   CreateVariantRequest,
   ItemLabel,
+  StockSummaryPage,
+  StockSummaryQuery,
   ItemPage,
   ItemWithPrice,
   Metal,
@@ -16,8 +18,6 @@ import type {
   ProductPage,
   Receipt,
   ReceiptPage,
-  ScanResult,
-  StockCountSummary,
   UpdateCategoryRequest,
   UpdateProductRequest,
   UpdateVariantRequest,
@@ -53,10 +53,12 @@ export interface ListItemsParams {
   pageSize: number;
   branchId: string;
   variantId?: string;
-  status?: 'IN_STOCK' | 'RESERVED' | 'SOLD';
+  status?: 'IN_STOCK' | 'RESERVED' | 'SOLD' | 'PENDING_MELT';
 }
 
 export const inventoryApi = {
+  stockSummary: (params: StockSummaryQuery) =>
+    api.request<StockSummaryPage>(`${INVENTORY}/items/summary${queryString({ ...params })}`),
   // ------------------------------------------------------------ Kim loại và giá
   listMetals: () => api.request<Metal[]>(`${INVENTORY}/metals`),
   createMetal: (body: CreateMetalRequest) =>
@@ -125,22 +127,4 @@ export const inventoryApi = {
     api.request<ItemWithPrice>(`${INVENTORY}/items/by-tag/${encodeURIComponent(tagCode)}`),
   getItemLabel: (tagCode: string) =>
     api.request<ItemLabel>(`${INVENTORY}/jewelry-items/${encodeURIComponent(tagCode)}/label`),
-
-  // ------------------------------------------------------------ Kiểm kê
-  createStockCount: (branchId: string) =>
-    api.request<StockCountSummary>(`${INVENTORY}/stock-counts`, {
-      method: 'POST',
-      body: { branchId },
-    }),
-  getStockCount: (stockCountId: string) =>
-    api.request<StockCountSummary>(`${INVENTORY}/stock-counts/${stockCountId}`),
-  scanStockCount: (stockCountId: string, tagCode: string) =>
-    api.request<ScanResult>(`${INVENTORY}/stock-counts/${stockCountId}/scan`, {
-      method: 'POST',
-      body: { tagCode },
-    }),
-  closeStockCount: (stockCountId: string) =>
-    api.request<StockCountSummary>(`${INVENTORY}/stock-counts/${stockCountId}/close`, {
-      method: 'POST',
-    }),
 };

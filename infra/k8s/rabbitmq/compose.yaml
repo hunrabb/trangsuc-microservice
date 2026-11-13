@@ -1,0 +1,48 @@
+name: jewelry-demo-deps
+services:
+  rabbitmq:
+    image: rabbitmq:4.4.0-management@sha256:af6f50d38098d8bd52fef7f3fa85015dd8b2bf6def58e995bf584ae9ba0f6407
+    container_name: jewelry-demo-rabbitmq
+    hostname: jewelry-demo-rabbitmq
+    restart: unless-stopped
+    cpus: 0.75
+    mem_limit: 768m
+    environment:
+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: +S 2:2 +SDcpu 1 +SDio 1
+    labels:
+      app.kubernetes.io/part-of: jewelry-demo
+    networks:
+    - kind
+    volumes:
+    - rabbitmq-data:/var/lib/rabbitmq
+    - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+    secrets:
+    - broker-definitions
+    healthcheck:
+      test:
+      - CMD
+      - rabbitmq-diagnostics
+      - -q
+      - ping
+      interval: 15s
+      timeout: 8s
+      retries: 8
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: '2'
+networks:
+  kind:
+    external: true
+    name: kind
+volumes:
+  rabbitmq-data:
+    name: jewelry-demo-rabbitmq-data
+    labels:
+      app.kubernetes.io/part-of: jewelry-demo
+secrets:
+  broker-definitions:
+    file: ${JEWELRY_DEMO_RABBIT_DEFINITIONS:?set protected demo definitions file outside
+      Git}

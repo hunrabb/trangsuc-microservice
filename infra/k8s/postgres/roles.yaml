@@ -1,0 +1,175 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: DatabaseRole
+metadata:
+  name: auth-migration
+  namespace: jewelry-demo
+  labels:
+    app.kubernetes.io/part-of: jewelry-demo
+spec:
+  cluster:
+    name: jewelry-pg
+  name: auth_migrator
+  login: true
+  superuser: false
+  createdb: false
+  createrole: false
+  replication: false
+  bypassrls: false
+  connectionLimit: 2
+  passwordSecret:
+    name: auth-migration-creds
+  databaseRoleReclaimPolicy: retain
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: DatabaseRole
+metadata:
+  name: auth-runtime
+  namespace: jewelry-demo
+  labels:
+    app.kubernetes.io/part-of: jewelry-demo
+spec:
+  cluster:
+    name: jewelry-pg
+  name: auth_user
+  login: true
+  superuser: false
+  createdb: false
+  createrole: false
+  replication: false
+  bypassrls: false
+  connectionLimit: 16
+  passwordSecret:
+    name: auth-runtime-creds
+  databaseRoleReclaimPolicy: retain
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: DatabaseRole
+metadata:
+  name: inventory-migration
+  namespace: jewelry-demo
+  labels:
+    app.kubernetes.io/part-of: jewelry-demo
+spec:
+  cluster:
+    name: jewelry-pg
+  name: inventory_migrator
+  login: true
+  superuser: false
+  createdb: false
+  createrole: false
+  replication: false
+  bypassrls: false
+  connectionLimit: 2
+  passwordSecret:
+    name: inventory-migration-creds
+  databaseRoleReclaimPolicy: retain
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: DatabaseRole
+metadata:
+  name: inventory-runtime
+  namespace: jewelry-demo
+  labels:
+    app.kubernetes.io/part-of: jewelry-demo
+spec:
+  cluster:
+    name: jewelry-pg
+  name: inventory_user
+  login: true
+  superuser: false
+  createdb: false
+  createrole: false
+  replication: false
+  bypassrls: false
+  connectionLimit: 35
+  passwordSecret:
+    name: inventory-runtime-creds
+  databaseRoleReclaimPolicy: retain
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: DatabaseRole
+metadata:
+  name: sales-migration
+  namespace: jewelry-demo
+  labels:
+    app.kubernetes.io/part-of: jewelry-demo
+spec:
+  cluster:
+    name: jewelry-pg
+  name: sales_migrator
+  login: true
+  superuser: false
+  createdb: false
+  createrole: false
+  replication: false
+  bypassrls: false
+  connectionLimit: 2
+  passwordSecret:
+    name: sales-migration-creds
+  databaseRoleReclaimPolicy: retain
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: DatabaseRole
+metadata:
+  name: sales-runtime
+  namespace: jewelry-demo
+  labels:
+    app.kubernetes.io/part-of: jewelry-demo
+spec:
+  cluster:
+    name: jewelry-pg
+  name: sales_user
+  login: true
+  superuser: false
+  createdb: false
+  createrole: false
+  replication: false
+  bypassrls: false
+  connectionLimit: 35
+  passwordSecret:
+    name: sales-runtime-creds
+  databaseRoleReclaimPolicy: retain
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: DatabaseRole
+metadata:
+  name: report-migration
+  namespace: jewelry-demo
+  labels:
+    app.kubernetes.io/part-of: jewelry-demo
+spec:
+  cluster:
+    name: jewelry-pg
+  name: report_migrator
+  login: true
+  superuser: false
+  createdb: false
+  createrole: false
+  replication: false
+  bypassrls: false
+  connectionLimit: 2
+  passwordSecret:
+    name: report-migration-creds
+  databaseRoleReclaimPolicy: retain
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: DatabaseRole
+metadata:
+  name: report-runtime
+  namespace: jewelry-demo
+  labels:
+    app.kubernetes.io/part-of: jewelry-demo
+spec:
+  cluster:
+    name: jewelry-pg
+  name: report_user
+  login: true
+  superuser: false
+  createdb: false
+  createrole: false
+  replication: false
+  bypassrls: false
+  connectionLimit: 20
+  passwordSecret:
+    name: report-runtime-creds
+  databaseRoleReclaimPolicy: retain

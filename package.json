@@ -23,7 +23,9 @@
     "keys:generate": "node scripts/generate-jwt-keys.mjs",
     "outbox:requeue": "node scripts/outbox-requeue.mjs",
     "test:inventory": "turbo run test:inventory --concurrency=1",
-    "test:sales": "turbo run test:sales --filter=@jewelry/sales-tests --concurrency=1"
+    "test:sales": "turbo run test:sales --filter=@jewelry/sales-tests --concurrency=1",
+    "seed:dev": "node scripts/seed-development.mjs",
+    "seed:legacy-products": "node scripts/seed-legacy-products.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

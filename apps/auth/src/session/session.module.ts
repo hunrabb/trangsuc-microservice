@@ -1,3 +1,4 @@
+import { CustomerAuthController } from './customer-auth.controller';
 import { Module } from '@nestjs/common';
 import { GoogleLoginService } from '../google/google-login.service';
 import { PasswordService } from '../password/password.service';
@@ -7,7 +8,7 @@ import { RefreshTokenCleanupJob } from './refresh-token-cleanup';
 import { SessionService } from './session.service';
 
 @Module({
-  controllers: [AuthController],
+  controllers: [AuthController, CustomerAuthController],
   providers: [
     AccessTokenService,
     SessionService,

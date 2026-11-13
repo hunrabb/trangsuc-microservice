@@ -21,6 +21,7 @@ export function checkoutAccessHash(authorization: string): string {
   checkoutAuthorizationSchema.parse(authorization);
   return createHash('sha256').update(authorization.slice('Checkout '.length)).digest('hex');
 }
+// chuẩn hóa giỏ hàng
 export function canonicalCheckout(body: CreateOnlineOrder) {
   const checked = createOnlineOrderSchema.parse(body);
   return { ...checked, items: canonicalCart(checked.items) };
@@ -67,7 +68,12 @@ export async function cancelOnline(
 @Injectable()
 export class OnlineOrdersService {
   constructor(private readonly prisma: PrismaService) {}
-  async create(authorization: string, key: string, body: CreateOnlineOrder) {
+  async create(
+    authorization: string,
+    key: string,
+    body: CreateOnlineOrder,
+    accountId: string | null = null,
+  ) {
     const accessHash = checkoutAccessHash(authorization);
     idempotencyKeySchema.parse(key);
     const request = canonicalCheckout(body);
@@ -80,8 +86,9 @@ export class OnlineOrdersService {
         const row = await tx.onlineOrder.create({
           data: {
             id: randomUUID(),
-            code: `WEB${randomUUID().replaceAll('-', '')}`,
+            code: `WEB-${now.toISOString().slice(0, 10).replaceAll('-', '')}-${randomUUID().replaceAll('-', '').slice(0, 12).toUpperCase()}`,
             accessHash,
+            accountId,
             idempotencyKey: key,
             requestHash,
             requestedItems: request.items,
@@ -101,7 +108,7 @@ export class OnlineOrdersService {
       const row = await this.prisma.onlineOrder.findUniqueOrThrow({
         where: { accessHash_idempotencyKey: { accessHash, idempotencyKey: key } },
       });
-      if (row.requestHash !== requestHash)
+      if (row.requestHash !== requestHash || row.accountId !== accountId)
         throw new BusinessError(
           'IDEMPOTENCY_KEY_REUSED',
           'Key đã được dùng cho nội dung khác',
@@ -110,6 +117,33 @@ export class OnlineOrdersService {
       id = row.id;
     }
     return this.get(authorization, id);
+  }
+  async forAccount(accountId: string, page: number, pageSize: number) {
+    const where = { accountId };
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.onlineOrder.findMany({
+        where,
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        include: { items: { orderBy: { id: 'asc' } } },
+      }),
+      this.prisma.onlineOrder.count({ where }),
+    ]);
+    return {
+      items: rows.map((row) => ({ ...this.present(row), createdAt: row.createdAt.toISOString() })),
+      page,
+      pageSize,
+      total,
+    };
+  }
+  async accountOrder(accountId: string, id: string) {
+    const row = await this.prisma.onlineOrder.findFirst({
+      where: { id, accountId },
+      include: { items: { orderBy: { id: 'asc' } } },
+    });
+    if (!row) throw new BusinessError('NOT_FOUND', 'Không tìm thấy đơn hàng', 404);
+    return { ...this.present(row), createdAt: row.createdAt.toISOString() };
   }
   async get(authorization: string, id: string) {
     const row = await this.prisma.onlineOrder.findFirst({
@@ -141,15 +175,29 @@ export class OnlineOrdersService {
       >`SELECT id FROM "sales"."OnlineOrder" WHERE id = ${id}::uuid AND "accessHash" = ${accessHash} FOR UPDATE`;
       if (!locked.length) throw new BusinessError('NOT_FOUND', 'Không tìm thấy đơn hàng', 404);
       const row = await tx.onlineOrder.findUniqueOrThrow({ where: { id } });
-      if (!['PENDING', 'AWAITING_PAYMENT', 'CANCELLED'].includes(row.status) || row.activePaymentId)
-        throw new BusinessError(
-          'INVALID_STATE',
-          'Đơn đã nhận tiền, cần quy trình đối soát/hoàn tiền',
-          409,
-        );
-      await cancelOnline(tx, row, null);
+      await this.cancelLocked(tx, row);
     });
     return this.get(authorization, id);
+  }
+  async cancelAccount(accountId: string, id: string) {
+    await this.prisma.$transaction(async (tx) => {
+      const locked = await tx.$queryRaw<
+        { id: string }[]
+      >`SELECT id FROM "sales"."OnlineOrder" WHERE id = ${id}::uuid AND "accountId" = ${accountId}::uuid FOR UPDATE`;
+      if (!locked.length) throw new BusinessError('NOT_FOUND', 'Không tìm thấy đơn hàng', 404);
+      const row = await tx.onlineOrder.findUniqueOrThrow({ where: { id } });
+      await this.cancelLocked(tx, row);
+    });
+    return this.accountOrder(accountId, id);
+  }
+  private async cancelLocked(tx: Tx, row: OnlineOrder) {
+    if (!['PENDING', 'AWAITING_PAYMENT', 'CANCELLED'].includes(row.status) || row.activePaymentId)
+      throw new BusinessError(
+        'INVALID_STATE',
+        'Đơn đã nhận tiền, cần quy trình đối soát/hoàn tiền',
+        409,
+      );
+    await cancelOnline(tx, row, null);
   }
   private present(row: Prisma.OnlineOrderGetPayload<{ include: { items: true } }>) {
     return onlineOrderViewSchema.parse({

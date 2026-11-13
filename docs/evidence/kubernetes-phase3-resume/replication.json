@@ -1,0 +1,21 @@
+{
+  "primary": "jewelry-pg-1",
+  "standby": "jewelry-pg-2",
+  "placement": [
+    {
+      "pod": "jewelry-pg-1",
+      "node": "jewelry-lab-worker"
+    },
+    {
+      "pod": "jewelry-pg-2",
+      "node": "jewelry-lab-worker2"
+    }
+  ],
+  "metrics": [
+    "jewelry-pg-2|streaming|async|0|||",
+    "jewelry-pg-2|streaming|async|0|||",
+    "jewelry-pg-2|streaming|async|0|||"
+  ],
+  "all4DBsReplicated": true,
+  "probeCleanedBothInstances": true
+}

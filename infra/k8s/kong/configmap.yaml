@@ -1,0 +1,186 @@
+# CHECKPOINT 4.0 DRAFT — NOT APPLIED; review checkpoint gates before use.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kong-phase4-config
+  namespace: jewelry-demo
+  labels:
+    app.kubernetes.io/name: kong-phase4-config
+    app.kubernetes.io/part-of: jewelry-demo
+    app.kubernetes.io/managed-by: phase4-draft
+data:
+  kong.yml: "_format_version: '3.0'\nconsumers:\n- username: jewelry-demo-auth\n \
+    \ jwt_secrets:\n  - key: jewelry-demo-auth\n    algorithm: RS256\n    secret:\
+    \ unused-for-rs256\n    rsa_public_key: '-----BEGIN PUBLIC KEY-----\n\n      MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAkKoZLVfEaG39UGVk1wuO\n\
+    \n      kL3ryCNxuLhw9sn7dReKLL2EmRDsCj631EXKa4MOjO2w9UbUIV6wWDKR5hK+Bfve\n\n \
+    \     qaRMdqW316JtoJXr7JHrIcdZVJZYuo2F+jTy+qFX6Uu/1Q0aDM0rBCC5tgRH629k\n\n   \
+    \   IoCuyehOPBWkbpoblFxOQ4A23kjRvM20BeOXLDGOVTP4Glng4lj8TRLG0U7UW+PV\n\n     \
+    \ k6b3yDtsVg7m8lHJght8W4ohZeNnoDcy0M4d9fhz1k2Wt0ifHk15dmkUajXIr2xf\n\n      jRtV0T1Q8v1mIPOY8TeMNutGELUII3EueTj1pTPDyK3hyQPmSlprQ0pmhghe50qU\n\
+    \n      HwIDAQAB\n\n      -----END PUBLIC KEY-----'\nplugins:\n- name: jewelry-request-boundary\n\
+    - name: correlation-id\n  config:\n    header_name: x-correlation-id\n    generator:\
+    \ uuid\n    echo_downstream: true\nservices:\n- name: auth-public-google\n  url:\
+    \ http://auth.jewelry-demo.svc.cluster.local:3000/auth/google\n  retries: 0\n\
+    \  connect_timeout: 3000\n  read_timeout: 10000\n  write_timeout: 10000\n  routes:\n\
+    \  - name: auth-public-google\n    paths:\n    - ~/api/auth/google/?$\n    regex_priority:\
+    \ 400\n    strip_path: true\n    path_handling: v0\n    plugins:\n    - name:\
+    \ jewelry-route-guard\n      config:\n        prefix: /api/auth/google\n     \
+    \   exact: true\n    - name: jewelry-rate-policy\n      config:\n        kind:\
+    \ google\n- name: auth-public-login\n  url: http://auth.jewelry-demo.svc.cluster.local:3000/auth/login\n\
+    \  retries: 0\n  connect_timeout: 3000\n  read_timeout: 10000\n  write_timeout:\
+    \ 10000\n  routes:\n  - name: auth-public-login\n    paths:\n    - ~/api/auth/login/?$\n\
+    \    regex_priority: 400\n    strip_path: true\n    path_handling: v0\n    plugins:\n\
+    \    - name: jewelry-route-guard\n      config:\n        prefix: /api/auth/login\n\
+    \        exact: true\n    - name: jewelry-rate-policy\n      config:\n       \
+    \ kind: login\n- name: auth-public-refresh\n  url: http://auth.jewelry-demo.svc.cluster.local:3000/auth/refresh\n\
+    \  retries: 0\n  connect_timeout: 3000\n  read_timeout: 10000\n  write_timeout:\
+    \ 10000\n  routes:\n  - name: auth-public-refresh\n    paths:\n    - ~/api/auth/refresh/?$\n\
+    \    regex_priority: 400\n    strip_path: true\n    path_handling: v0\n    plugins:\n\
+    \    - name: jewelry-route-guard\n      config:\n        prefix: /api/auth/refresh\n\
+    \        exact: true\n    - name: jewelry-rate-policy\n      config:\n       \
+    \ kind: refresh\n- name: auth-public-logout\n  url: http://auth.jewelry-demo.svc.cluster.local:3000/auth/logout\n\
+    \  retries: 0\n  connect_timeout: 3000\n  read_timeout: 10000\n  write_timeout:\
+    \ 10000\n  routes:\n  - name: auth-public-logout\n    paths:\n    - ~/api/auth/logout/?$\n\
+    \    regex_priority: 400\n    strip_path: true\n    path_handling: v0\n    plugins:\n\
+    \    - name: jewelry-route-guard\n      config:\n        prefix: /api/auth/logout\n\
+    \        exact: true\n- name: shop-auth-public-register\n  url: http://auth.jewelry-demo.svc.cluster.local:3000/shop/auth/register\n\
+    \  retries: 0\n  connect_timeout: 3000\n  read_timeout: 10000\n  write_timeout:\
+    \ 10000\n  routes:\n  - name: shop-auth-public-register\n    paths:\n    - ~/api/shop/auth/register/?$\n\
+    \    regex_priority: 400\n    strip_path: true\n    path_handling: v0\n    plugins:\n\
+    \    - name: jewelry-route-guard\n      config:\n        prefix: /api/shop/auth/register\n\
+    \        exact: true\n    - name: jewelry-rate-policy\n      config:\n       \
+    \ kind: login\n- name: shop-auth-public-login\n  url: http://auth.jewelry-demo.svc.cluster.local:3000/shop/auth/login\n\
+    \  retries: 0\n  connect_timeout: 3000\n  read_timeout: 10000\n  write_timeout:\
+    \ 10000\n  routes:\n  - name: shop-auth-public-login\n    paths:\n    - ~/api/shop/auth/login/?$\n\
+    \    regex_priority: 400\n    strip_path: true\n    path_handling: v0\n    plugins:\n\
+    \    - name: jewelry-route-guard\n      config:\n        prefix: /api/shop/auth/login\n\
+    \        exact: true\n    - name: jewelry-rate-policy\n      config:\n       \
+    \ kind: login\n- name: shop-auth-public-refresh\n  url: http://auth.jewelry-demo.svc.cluster.local:3000/shop/auth/refresh\n\
+    \  retries: 0\n  connect_timeout: 3000\n  read_timeout: 10000\n  write_timeout:\
+    \ 10000\n  routes:\n  - name: shop-auth-public-refresh\n    paths:\n    - ~/api/shop/auth/refresh/?$\n\
+    \    regex_priority: 400\n    strip_path: true\n    path_handling: v0\n    plugins:\n\
+    \    - name: jewelry-route-guard\n      config:\n        prefix: /api/shop/auth/refresh\n\
+    \        exact: true\n    - name: jewelry-rate-policy\n      config:\n       \
+    \ kind: refresh\n- name: shop-auth-public-logout\n  url: http://auth.jewelry-demo.svc.cluster.local:3000/shop/auth/logout\n\
+    \  retries: 0\n  connect_timeout: 3000\n  read_timeout: 10000\n  write_timeout:\
+    \ 10000\n  routes:\n  - name: shop-auth-public-logout\n    paths:\n    - ~/api/shop/auth/logout/?$\n\
+    \    regex_priority: 400\n    strip_path: true\n    path_handling: v0\n    plugins:\n\
+    \    - name: jewelry-route-guard\n      config:\n        prefix: /api/shop/auth/logout\n\
+    \        exact: true\n- name: auth-me\n  url: http://auth.jewelry-demo.svc.cluster.local:3000/auth/me\n\
+    \  retries: 0\n  connect_timeout: 3000\n  read_timeout: 10000\n  write_timeout:\
+    \ 10000\n  routes:\n  - name: auth-me\n    paths:\n    - ~/(?i)api/auth/me/?$\n\
+    \    regex_priority: 300\n    strip_path: true\n    path_handling: v0\n    plugins:\n\
+    \    - name: jewelry-route-guard\n      config:\n        prefix: /api/auth/me\n\
+    \        exact: true\n    - name: jwt\n      config:\n        key_claim_name:\
+    \ iss\n        header_names:\n        - authorization\n        uri_param_names:\
+    \ []\n        claims_to_verify: []\n        cookie_names: []\n    - name: jewelry-jwt-policy\n\
+    \      config:\n        issuer: jewelry-demo-auth\n        audience: store-backoffice\n\
+    - name: auth-change-password\n  url: http://auth.jewelry-demo.svc.cluster.local:3000/auth/change-password\n\
+    \  retries: 0\n  connect_timeout: 3000\n  read_timeout: 10000\n  write_timeout:\
+    \ 10000\n  routes:\n  - name: auth-change-password\n    paths:\n    - ~/(?i)api/auth/change-password/?$\n\
+    \    regex_priority: 300\n    strip_path: true\n    path_handling: v0\n    plugins:\n\
+    \    - name: jewelry-route-guard\n      config:\n        prefix: /api/auth/change-password\n\
+    \        exact: true\n    - name: jewelry-rate-policy\n      config:\n       \
+    \ kind: change-password\n    - name: jwt\n      config:\n        key_claim_name:\
+    \ iss\n        header_names:\n        - authorization\n        uri_param_names:\
+    \ []\n        claims_to_verify: []\n        cookie_names: []\n    - name: jewelry-jwt-policy\n\
+    \      config:\n        issuer: jewelry-demo-auth\n        audience: store-backoffice\n\
+    - name: auth-logout-all\n  url: http://auth.jewelry-demo.svc.cluster.local:3000/auth/logout-all\n\
+    \  retries: 0\n  connect_timeout: 3000\n  read_timeout: 10000\n  write_timeout:\
+    \ 10000\n  routes:\n  - name: auth-logout-all\n    paths:\n    - ~/(?i)api/auth/logout-all/?$\n\
+    \    regex_priority: 300\n    strip_path: true\n    path_handling: v0\n    plugins:\n\
+    \    - name: jewelry-route-guard\n      config:\n        prefix: /api/auth/logout-all\n\
+    \        exact: true\n    - name: jwt\n      config:\n        key_claim_name:\
+    \ iss\n        header_names:\n        - authorization\n        uri_param_names:\
+    \ []\n        claims_to_verify: []\n        cookie_names: []\n    - name: jewelry-jwt-policy\n\
+    \      config:\n        issuer: jewelry-demo-auth\n        audience: store-backoffice\n\
+    - name: shop-auth-me\n  url: http://auth.jewelry-demo.svc.cluster.local:3000/shop/auth/me\n\
+    \  retries: 0\n  connect_timeout: 3000\n  read_timeout: 10000\n  write_timeout:\
+    \ 10000\n  routes:\n  - name: shop-auth-me\n    paths:\n    - ~/(?i)api/shop/auth/me/?$\n\
+    \    regex_priority: 300\n    strip_path: true\n    path_handling: v0\n    plugins:\n\
+    \    - name: jewelry-route-guard\n      config:\n        prefix: /api/shop/auth/me\n\
+    \        exact: true\n    - name: jwt\n      config:\n        key_claim_name:\
+    \ iss\n        header_names:\n        - authorization\n        uri_param_names:\
+    \ []\n        claims_to_verify: []\n        cookie_names: []\n    - name: jewelry-jwt-policy\n\
+    \      config:\n        issuer: jewelry-demo-auth\n        audience: store-shop\n\
+    - name: shop-my-orders\n  url: http://sales.jewelry-demo.svc.cluster.local:3000/shop/my-orders\n\
+    \  retries: 0\n  connect_timeout: 3000\n  read_timeout: 10000\n  write_timeout:\
+    \ 10000\n  routes:\n  - name: shop-my-orders\n    paths:\n    - ~/(?i)api/shop/my-orders(?:/|$)\n\
+    \    regex_priority: 250\n    strip_path: true\n    path_handling: v0\n    plugins:\n\
+    \    - name: jewelry-route-guard\n      config:\n        prefix: /api/shop/my-orders\n\
+    \        exact: false\n    - name: jewelry-rate-policy\n      config:\n      \
+    \  kind: my-orders\n    - name: jwt\n      config:\n        key_claim_name: iss\n\
+    \        header_names:\n        - authorization\n        uri_param_names: []\n\
+    \        claims_to_verify: []\n        cookie_names: []\n    - name: jewelry-jwt-policy\n\
+    \      config:\n        issuer: jewelry-demo-auth\n        audience: store-shop\n\
+    - name: pos\n  url: http://sales.jewelry-demo.svc.cluster.local:3000/pos\n  retries:\
+    \ 0\n  connect_timeout: 3000\n  read_timeout: 10000\n  write_timeout: 10000\n\
+    \  routes:\n  - name: pos\n    paths:\n    - ~/api/pos(?:/|$)\n    regex_priority:\
+    \ 150\n    strip_path: true\n    path_handling: v0\n    plugins:\n    - name:\
+    \ jewelry-route-guard\n      config:\n        prefix: /api/pos\n        exact:\
+    \ false\n    - name: jwt\n      config:\n        key_claim_name: iss\n       \
+    \ header_names:\n        - authorization\n        uri_param_names: []\n      \
+    \  claims_to_verify: []\n        cookie_names: []\n    - name: jewelry-jwt-policy\n\
+    \      config:\n        issuer: jewelry-demo-auth\n        audience: store-backoffice\n\
+    - name: online-orders\n  url: http://sales.jewelry-demo.svc.cluster.local:3000/online-orders\n\
+    \  retries: 0\n  connect_timeout: 3000\n  read_timeout: 10000\n  write_timeout:\
+    \ 10000\n  routes:\n  - name: online-orders\n    paths:\n    - ~/api/online-orders(?:/|$)\n\
+    \    regex_priority: 150\n    strip_path: true\n    path_handling: v0\n    plugins:\n\
+    \    - name: jewelry-route-guard\n      config:\n        prefix: /api/online-orders\n\
+    \        exact: false\n    - name: jwt\n      config:\n        key_claim_name:\
+    \ iss\n        header_names:\n        - authorization\n        uri_param_names:\
+    \ []\n        claims_to_verify: []\n        cookie_names: []\n    - name: jewelry-jwt-policy\n\
+    \      config:\n        issuer: jewelry-demo-auth\n        audience: store-backoffice\n\
+    - name: shop\n  url: http://sales.jewelry-demo.svc.cluster.local:3000/shop\n \
+    \ retries: 0\n  connect_timeout: 3000\n  read_timeout: 10000\n  write_timeout:\
+    \ 10000\n  routes:\n  - name: shop\n    paths:\n    - ~/api/shop(?:/|$)\n    regex_priority:\
+    \ 100\n    strip_path: true\n    path_handling: v0\n    plugins:\n    - name:\
+    \ jewelry-route-guard\n      config:\n        prefix: /api/shop\n        exact:\
+    \ false\n    - name: jewelry-rate-policy\n      config:\n        kind: catalog-and-orders\n\
+    - name: admin-auth\n  url: http://auth.jewelry-demo.svc.cluster.local:3000/admin\n\
+    \  retries: 0\n  connect_timeout: 3000\n  read_timeout: 10000\n  write_timeout:\
+    \ 10000\n  routes:\n  - name: admin-auth\n    paths:\n    - ~/api/admin/auth(?:/|$)\n\
+    \    regex_priority: 150\n    strip_path: true\n    path_handling: v0\n    plugins:\n\
+    \    - name: jewelry-route-guard\n      config:\n        prefix: /api/admin/auth\n\
+    \        exact: false\n    - name: jwt\n      config:\n        key_claim_name:\
+    \ iss\n        header_names:\n        - authorization\n        uri_param_names:\
+    \ []\n        claims_to_verify: []\n        cookie_names: []\n    - name: jewelry-jwt-policy\n\
+    \      config:\n        issuer: jewelry-demo-auth\n        audience: store-backoffice\n\
+    - name: admin-inventory\n  url: http://inventory.jewelry-demo.svc.cluster.local:3000/admin\n\
+    \  retries: 0\n  connect_timeout: 3000\n  read_timeout: 10000\n  write_timeout:\
+    \ 10000\n  routes:\n  - name: admin-inventory\n    paths:\n    - ~/api/admin/inventory(?:/|$)\n\
+    \    regex_priority: 150\n    strip_path: true\n    path_handling: v0\n    plugins:\n\
+    \    - name: jewelry-route-guard\n      config:\n        prefix: /api/admin/inventory\n\
+    \        exact: false\n    - name: jwt\n      config:\n        key_claim_name:\
+    \ iss\n        header_names:\n        - authorization\n        uri_param_names:\
+    \ []\n        claims_to_verify: []\n        cookie_names: []\n    - name: jewelry-jwt-policy\n\
+    \      config:\n        issuer: jewelry-demo-auth\n        audience: store-backoffice\n\
+    - name: admin-sales\n  url: http://sales.jewelry-demo.svc.cluster.local:3000/admin\n\
+    \  retries: 0\n  connect_timeout: 3000\n  read_timeout: 10000\n  write_timeout:\
+    \ 10000\n  routes:\n  - name: admin-sales\n    paths:\n    - ~/api/admin/sales(?:/|$)\n\
+    \    regex_priority: 150\n    strip_path: true\n    path_handling: v0\n    plugins:\n\
+    \    - name: jewelry-route-guard\n      config:\n        prefix: /api/admin/sales\n\
+    \        exact: false\n    - name: jewelry-rate-policy\n      config:\n      \
+    \  kind: payments\n    - name: jwt\n      config:\n        key_claim_name: iss\n\
+    \        header_names:\n        - authorization\n        uri_param_names: []\n\
+    \        claims_to_verify: []\n        cookie_names: []\n    - name: jewelry-jwt-policy\n\
+    \      config:\n        issuer: jewelry-demo-auth\n        audience: store-backoffice\n\
+    - name: admin-reports\n  url: http://report.jewelry-demo.svc.cluster.local:3000/admin\n\
+    \  retries: 0\n  connect_timeout: 3000\n  read_timeout: 10000\n  write_timeout:\
+    \ 10000\n  routes:\n  - name: admin-reports\n    paths:\n    - ~/api/admin/reports(?:/|$)\n\
+    \    regex_priority: 150\n    strip_path: true\n    path_handling: v0\n    plugins:\n\
+    \    - name: jewelry-route-guard\n      config:\n        prefix: /api/admin/reports\n\
+    \        exact: false\n    - name: jwt\n      config:\n        key_claim_name:\
+    \ iss\n        header_names:\n        - authorization\n        uri_param_names:\
+    \ []\n        claims_to_verify: []\n        cookie_names: []\n    - name: jewelry-jwt-policy\n\
+    \      config:\n        issuer: jewelry-demo-auth\n        audience: store-backoffice\n\
+    - name: bank-webhook\n  url: http://sales.jewelry-demo.svc.cluster.local:3000/webhooks/bank\n\
+    \  retries: 0\n  connect_timeout: 3000\n  read_timeout: 10000\n  write_timeout:\
+    \ 10000\n  routes:\n  - name: bank-webhook\n    paths:\n    - ~/webhooks/bank$\n\
+    \    regex_priority: 300\n    strip_path: true\n    path_handling: v0\n    plugins:\n\
+    \    - name: jewelry-route-guard\n      config:\n        prefix: /webhooks/bank\n\
+    \        exact: true\n- name: ping\n  url: http://inventory.jewelry-demo.svc.cluster.local:3000/internal/ping\n\
+    \  retries: 0\n  connect_timeout: 3000\n  read_timeout: 10000\n  write_timeout:\
+    \ 10000\n  routes:\n  - name: ping\n    paths:\n    - ~/api/ping$\n    regex_priority:\
+    \ 300\n    strip_path: true\n    path_handling: v0\n    plugins:\n    - name:\
+    \ jewelry-route-guard\n      config:\n        prefix: /api/ping\n        exact:\
+    \ true\n    methods:\n    - GET\n"

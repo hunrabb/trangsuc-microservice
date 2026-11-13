@@ -1,0 +1,4 @@
+{"BlockIO":"1.29GB / 1.57GB","CPUPerc":"41.43%","Container":"jewelry-lab-control-plane","ID":"88503b088ccb","MemPerc":"15.36%","MemUsage":"1.184GiB / 7.708GiB","Name":"jewelry-lab-control-plane","NetIO":"63.3MB / 80.7MB","PIDs":"270"}
+{"BlockIO":"1.22GB / 5.42GB","CPUPerc":"3.95%","Container":"jewelry-lab-worker","ID":"3e056176b8f3","MemPerc":"8.56%","MemUsage":"675.8MiB / 7.708GiB","Name":"jewelry-lab-worker","NetIO":"678MB / 225MB","PIDs":"106"}
+{"BlockIO":"759MB / 2.07GB","CPUPerc":"4.56%","Container":"jewelry-lab-worker2","ID":"51b971edcb34","MemPerc":"5.16%","MemUsage":"407.6MiB / 7.708GiB","Name":"jewelry-lab-worker2","NetIO":"582MB / 17.8MB","PIDs":"106"}
+{"BlockIO":"31.6MB / 1.47MB","CPUPerc":"1.90%","Container":"jewelry-demo-rabbitmq","ID":"88835564b1f5","MemPerc":"14.87%","MemUsage":"114.2MiB / 768MiB","Name":"jewelry-demo-rabbitmq","NetIO":"10.7kB / 9.09kB","PIDs":"15"}

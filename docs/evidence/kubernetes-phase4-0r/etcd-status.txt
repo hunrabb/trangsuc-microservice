@@ -1,0 +1,1 @@
+[{"Endpoint":"https://127.0.0.1:2379","Status":{"header":{"cluster_id":1716844788715469827,"member_id":15508149267212290960,"revision":27253,"raft_term":2},"version":"3.6.8","dbSize":5619712,"leader":15508149267212290960,"raftIndex":32473,"raftTerm":2,"raftAppliedIndex":32473,"dbSizeInUse":2703360,"storageVersion":"3.6.0","dbSizeQuota":2147483648,"downgradeInfo":{}}}]

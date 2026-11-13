@@ -1,0 +1,43 @@
+name: jewelry-phase74-acceptance
+services:
+  postgres:
+    image: postgres:16.15
+    mem_limit: 384m
+    shm_size: 64m
+    environment:
+      POSTGRES_USER: phase74_admin
+      POSTGRES_PASSWORD: ${PHASE74_POSTGRES_PASSWORD:?Separate test password required}
+      POSTGRES_DB: phase74_test
+      SHADOW_DB_NAME: phase74_test_shadow
+      AUTH_DB_PASSWORD: ${PHASE74_AUTH_PASSWORD:?Separate test password required}
+      INVENTORY_DB_PASSWORD: ${PHASE74_INVENTORY_PASSWORD:?Separate test password required}
+      SALES_DB_PASSWORD: ${PHASE74_SALES_PASSWORD:?Separate test password required}
+      REPORT_DB_PASSWORD: ${PHASE74_REPORT_PASSWORD:?Separate test password required}
+    ports: ['127.0.0.1:55435:5432']
+    volumes:
+      - buyback_pg:/var/lib/postgresql/data
+      - ../postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -h 127.0.0.1 -U phase74_admin -d phase74_test']
+      interval: 5s
+      timeout: 3s
+      retries: 12
+  rabbitmq:
+    image: rabbitmq:4.4.0-management
+    hostname: phase74-rabbit
+    mem_limit: 384m
+    environment:
+      RABBITMQ_DEFAULT_USER: phase74_admin
+      RABBITMQ_DEFAULT_PASS: ${PHASE74_RABBIT_ADMIN_PASSWORD:?Separate test password required}
+    ports: ['127.0.0.1:5674:5672', '127.0.0.1:15674:15672']
+    volumes:
+      - buyback_rabbit:/var/lib/rabbitmq
+    healthcheck:
+      test: ['CMD', 'gosu', 'rabbitmq', 'rabbitmq-diagnostics', '-q', 'check_port_connectivity']
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+volumes:
+  buyback_pg:
+  buyback_rabbit:

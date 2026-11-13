@@ -17,6 +17,7 @@ describe('resolveRoute', () => {
     ['/api/admin/inventory/products/1', 'inventory', '/admin/products/1', 'backoffice'],
     ['/api/admin/sales/pos/x', 'sales', '/admin/pos/x', 'backoffice'],
     ['/api/admin/reports/daily', 'report', '/admin/daily', 'backoffice'],
+    ['/api/admin/reports/buybacks', 'report', '/admin/buybacks', 'backoffice'],
     ['/webhooks/bank', 'sales', '/webhooks/bank', null],
     ['/api/admin/reports', 'report', '/admin', 'backoffice'],
     ['/api/pos/orders/', 'sales', '/pos/orders/', 'backoffice'],

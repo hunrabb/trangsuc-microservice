@@ -11,6 +11,14 @@ const MESSAGES: Partial<Record<string, string>> = {
   FORBIDDEN: 'Bạn không có quyền thực hiện thao tác này.',
   NOT_FOUND: 'Không tìm thấy dữ liệu. Có thể nó đã bị xoá hoặc đổi.',
   VERSION_CONFLICT: 'Dữ liệu đã bị người khác sửa, tải lại?',
+  BUYBACK_POLICY_REQUIRED: 'Chưa có chính sách thu mua phù hợp cho món kiểm định.',
+  BUYBACK_APPRAISAL_INCOMPLETE: 'Cần kiểm định đủ tất cả món trước khi báo giá.',
+  BUYBACK_PRICE_INVALID: 'Giá mua vào không hợp lệ hoặc chưa có. Hãy kiểm tra giá Inventory.',
+  BUYBACK_SEPARATE_APPROVER_REQUIRED:
+    'Người duyệt phải khác người tiếp nhận, kiểm định và lập báo giá.',
+  IDEMPOTENCY_KEY_REUSED: 'Yêu cầu đã dùng khóa này với nội dung khác; tải lại trước khi thử.',
+  PAYMENT_REFERENCE_CONFLICT:
+    'Mã chứng từ đã được dùng cho giao dịch khác. Hãy đối chiếu trước khi tiếp tục.',
   LAST_ADMIN: 'Không thể: hệ thống phải còn ít nhất một quản trị viên.',
   METAL_PRICE_NOT_SET:
     'Kim loại này chưa có giá. Hãy nhập giá kim loại ở trang "Giá kim loại" trước.',

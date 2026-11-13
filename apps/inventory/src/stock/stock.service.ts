@@ -1,3 +1,5 @@
+import type { StockSummaryPage, StockSummaryQuery } from '@jewelry/contracts';
+import { Prisma as Sql } from '../generated/prisma/client';
 import type { AuthUser } from '@jewelry/common';
 import type { Item, ItemLabel, ItemPage, ItemWithPrice, ListItemsQuery } from '@jewelry/contracts';
 import { Injectable } from '@nestjs/common';
@@ -62,6 +64,61 @@ export class StockService {
       this.prisma.jewelryItem.count({ where }),
     ]);
     return { items: rows.map((row) => toItem(row, user)), total, ...paging };
+  }
+
+  /** Một snapshot SQL, mỗi chiếc chỉ xuất hiện một lần; EXISTS không nhân bản theo lịch sử giữ hàng. */
+  async summary(user: AuthUser, query: StockSummaryQuery): Promise<StockSummaryPage> {
+    assertListScope(user, query.branchId, VIEW_ROLES);
+    const { branchId, variantId, page, pageSize } = query;
+    const [result] = await this.prisma.$queryRaw<
+      { items: StockSummaryPage['items']; total: number }[]
+    >(Sql.sql`
+      WITH classified AS (
+        SELECT i.*, w."branchId", w.name AS "branchName",
+          v.sku, v.name AS "variantName", p.name AS "productName", m.name AS "metalName",
+          (w."isActive" AND v."isActive" AND p."isActive" AND c."isActive" AND m."isActive" AND EXISTS (
+            SELECT 1 FROM "inventory"."MetalPrice" mp
+            WHERE mp."metalId" = m.id AND mp."effectiveFrom" <= now()
+          )) AS enabled,
+          (
+            EXISTS (
+              SELECT 1 FROM "inventory"."StockReservationItem" ri
+              JOIN "inventory"."StockReservation" r ON r.id = ri."reservationId"
+              WHERE ri."jewelryItemId" = i.id AND ri."isActive"
+                AND r.status IN ('ACTIVE', 'PAID_HELD') AND r."expiresAt" > now()
+            ) OR EXISTS (
+              SELECT 1 FROM "inventory"."ExchangeHold" h
+              WHERE h."itemId" = i.id AND h.status IN ('ACTIVE', 'PROTECTED')
+                AND h."expiresAt" > now()
+            )
+          ) AS held
+        FROM "inventory"."JewelryItem" i
+        JOIN "inventory"."Warehouse" w ON w.id = i."warehouseId"
+        JOIN "inventory"."ProductVariant" v ON v.id = i."variantId"
+        JOIN "inventory"."Product" p ON p.id = v."productId"
+        JOIN "inventory"."Category" c ON c.id = p."categoryId"
+        JOIN "inventory"."Metal" m ON m.id = v."metalId"
+        WHERE w."branchId" = ${branchId}::uuid
+          ${variantId ? Sql.sql`AND i."variantId" = ${variantId}::uuid` : Sql.empty}
+      ), grouped AS (
+        SELECT "branchId", "branchName", "variantId", sku, "variantName", "productName", "metalName",
+          count(*)::int AS total,
+          count(*) FILTER (WHERE status = 'IN_STOCK' AND enabled)::int AS available,
+          count(*) FILTER (WHERE status = 'RESERVED' AND held)::int AS reserved,
+          count(*) FILTER (WHERE status = 'SOLD')::int AS sold,
+          count(*) FILTER (WHERE status = 'PENDING_MELT')::int AS "pendingMelt",
+          count(*) FILTER (WHERE (status = 'IN_STOCK' AND NOT enabled)
+            OR (status = 'RESERVED' AND NOT held))::int AS other
+        FROM classified
+        GROUP BY "branchId", "branchName", "variantId", sku, "variantName", "productName", "metalName"
+      ), paged AS (
+        SELECT * FROM grouped ORDER BY "productName", sku, "variantId"
+        LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}
+      )
+      SELECT COALESCE((SELECT jsonb_agg(to_jsonb(paged) ORDER BY "productName", sku, "variantId") FROM paged), '[]'::jsonb) AS items,
+        (SELECT count(*)::int FROM grouped) AS total
+    `);
+    return { items: result?.items ?? [], total: result?.total ?? 0, page, pageSize };
   }
 
   /** Tra theo mã tem kèm giá hiện tại (`computeItemPrice`). Kim loại chưa có giá → `409 METAL_PRICE_NOT_SET`. */

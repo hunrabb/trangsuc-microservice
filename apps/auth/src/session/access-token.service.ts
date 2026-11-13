@@ -29,13 +29,21 @@ export class AccessTokenService implements OnModuleInit {
     this.privateKey = privateKey;
   }
 
-  /** Ký access token 15 phút cho nhân viên. Vai trò nằm trong token nên service không phải gọi DB khi kiểm quyền. */
-  sign(userId: string, branches: BranchRole[]): Promise<string> {
+  /** Ký JWT 15 phút; mặc định nhân viên, tài khoản khách dùng audience shop và branches rỗng. */
+  sign(
+    userId: string,
+    branches: BranchRole[],
+    audience: 'backoffice' | 'shop' = 'backoffice',
+  ): Promise<string> {
     return new SignJWT({ branches })
       .setProtectedHeader({ alg: 'RS256', typ: 'JWT' })
       .setSubject(userId)
       .setIssuer(this.config.get('JWT_ISSUER', { infer: true }))
-      .setAudience(this.config.get('JWT_AUDIENCE_BACKOFFICE', { infer: true }))
+      .setAudience(
+        this.config.get(audience === 'shop' ? 'JWT_AUDIENCE_SHOP' : 'JWT_AUDIENCE_BACKOFFICE', {
+          infer: true,
+        }),
+      )
       .setIssuedAt()
       .setExpirationTime(`${ACCESS_TOKEN_TTL_SECONDS}s`)
       .setJti(randomUUID())

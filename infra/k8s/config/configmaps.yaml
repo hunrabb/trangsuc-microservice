@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jewelry-common
+  namespace: jewelry-demo
+data:
+  NODE_ENV: production
+  PORT: '3000'
+  JWT_PUBLIC_KEY_PATH: /run/secrets/jwt-public/public.pem
+  JWT_ISSUER: jewelry-demo-auth
+  JWT_AUDIENCE_BACKOFFICE: store-backoffice
+  JWT_AUDIENCE_SHOP: store-shop
+  AUTH_URL: http://auth.jewelry-demo.svc.cluster.local:3000
+  INVENTORY_URL: http://inventory.jewelry-demo.svc.cluster.local:3000
+  SALES_URL: http://sales.jewelry-demo.svc.cluster.local:3000
+  REPORT_URL: http://report.jewelry-demo.svc.cluster.local:3000
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: auth-config
+  namespace: jewelry-demo
+data:
+  DATABASE_POOL_MAX: '5'
+  JWT_PRIVATE_KEY_PATH: /run/secrets/jwt-private/private.pem
+  GOOGLE_CLIENT_ID: jewelry-demo-local-disabled
+  GOOGLE_JWKS_URL: https://www.googleapis.com/oauth2/v3/certs
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: inventory-config
+  namespace: jewelry-demo
+data:
+  DATABASE_POOL_MAX: '15'
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sales-config
+  namespace: jewelry-demo
+data:
+  DATABASE_POOL_MAX: '15'
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: report-config
+  namespace: jewelry-demo
+data:
+  DATABASE_POOL_MAX: '15'

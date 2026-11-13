@@ -1,0 +1,50 @@
+# CHECKPOINT 4.0 DRAFT — NOT APPLIED; review checkpoint gates before use.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-phase4-config
+  namespace: jewelry-demo
+  labels:
+    app.kubernetes.io/name: nginx-phase4-config
+    app.kubernetes.io/part-of: jewelry-demo
+    app.kubernetes.io/managed-by: phase4-draft
+data:
+  nginx.conf: "worker_processes 1;\npid /tmp/nginx.pid;\nerror_log /dev/stderr warn;\n\
+    events { worker_connections 512; }\nhttp {\n  include /etc/nginx/mime.types;\n\
+    \  default_type application/octet-stream;\n  access_log /dev/stdout;\n  sendfile\
+    \ on;\n  server_tokens off;\n  client_max_body_size 2m;\n  client_body_temp_path\
+    \ /tmp/client_temp;\n  proxy_temp_path /tmp/proxy_temp;\n  fastcgi_temp_path /tmp/fastcgi_temp;\n\
+    \  uwsgi_temp_path /tmp/uwsgi_temp;\n  scgi_temp_path /tmp/scgi_temp;\n  # Observed\
+    \ kube-dns ClusterIP, never a Pod IP; recheck before 4.6.\n  resolver 10.96.0.10\
+    \ valid=10s ipv6=off;\n  server {\n    listen 8080;\n    root /web/backoffice;\n\
+    \    index index.html;\n    add_header X-Content-Type-Options nosniff always;\n\
+    \    location = /healthz { access_log off; return 200 \"ok\\n\"; }\n    location\
+    \ = /api { return 404; }\n    location ^~ /api/ {\n      set $kong_upstream http://kong.jewelry-demo.svc.cluster.local:8000;\n\
+    \      proxy_pass $kong_upstream$request_uri;\n      proxy_http_version 1.1;\n\
+    \      proxy_set_header Host $host;\n      proxy_set_header X-Forwarded-Host $http_host;\n\
+    \      proxy_set_header X-Forwarded-Proto $scheme;\n      proxy_set_header X-Forwarded-For\
+    \ $remote_addr;\n      proxy_set_header X-Real-IP $remote_addr;\n      proxy_set_header\
+    \ Connection \"\";\n      proxy_connect_timeout 3s;\n      proxy_read_timeout\
+    \ 30s;\n      proxy_send_timeout 30s;\n      proxy_next_upstream off;\n    }\n\
+    \    location = /internal { return 404; }\n    location ^~ /internal/ { return\
+    \ 404; }\n    location = /webhooks { return 404; }\n    location ^~ /webhooks/\
+    \ { return 404; }\n    location ^~ /assets/ { try_files $uri =404; expires 1y;\
+    \ }\n    location ^~ /catalog-images/ { try_files $uri =404; expires 1h; }\n \
+    \   location = /index.html { add_header Cache-Control \"no-cache\"; }\n    location\
+    \ / { try_files $uri $uri/ /index.html; }\n  }\n  server {\n    listen 8081;\n\
+    \    root /web/storefront;\n    index index.html;\n    add_header X-Content-Type-Options\
+    \ nosniff always;\n    location = /healthz { access_log off; return 200 \"ok\\\
+    n\"; }\n    location = /api { return 404; }\n    location ^~ /api/ {\n      set\
+    \ $kong_upstream http://kong.jewelry-demo.svc.cluster.local:8000;\n      proxy_pass\
+    \ $kong_upstream$request_uri;\n      proxy_http_version 1.1;\n      proxy_set_header\
+    \ Host $host;\n      proxy_set_header X-Forwarded-Host $http_host;\n      proxy_set_header\
+    \ X-Forwarded-Proto $scheme;\n      proxy_set_header X-Forwarded-For $remote_addr;\n\
+    \      proxy_set_header X-Real-IP $remote_addr;\n      proxy_set_header Connection\
+    \ \"\";\n      proxy_connect_timeout 3s;\n      proxy_read_timeout 30s;\n    \
+    \  proxy_send_timeout 30s;\n      proxy_next_upstream off;\n    }\n    location\
+    \ = /internal { return 404; }\n    location ^~ /internal/ { return 404; }\n  \
+    \  location = /webhooks { return 404; }\n    location ^~ /webhooks/ { return 404;\
+    \ }\n    location ^~ /assets/ { try_files $uri =404; expires 1y; }\n    location\
+    \ ^~ /catalog-images/ { try_files $uri =404; expires 1h; }\n    location = /index.html\
+    \ { add_header Cache-Control \"no-cache\"; }\n    location / { try_files $uri\
+    \ $uri/ /index.html; }\n  }\n}\n"

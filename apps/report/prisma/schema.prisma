@@ -141,6 +141,44 @@ model OrderLineSales {
   @@index([metalId])
 }
 
+// Thu mua là giá trị hàng nhận/chi trả, tuyệt đối không nhập vào OrderRevenue.
+model BuybackSettlementFact {
+  settlementId   String   @id @db.Uuid
+  intakeId       String   @db.Uuid
+  quoteId        String   @db.Uuid
+  branchId       String   @db.Uuid
+  kind           String
+  localDate      String
+  settledAt      DateTime @db.Timestamptz(3)
+  approvedAmount Decimal  @db.Decimal(20, 2)
+  saleAmount     Decimal? @db.Decimal(20, 2)
+  direction      String
+  amountDue      Decimal  @db.Decimal(20, 2)
+  expectedItems  Int
+  snapshotHash   String
+  snapshot       Json
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([localDate, branchId])
+}
+
+// Một receipt nhập kho/một settlement. Event có thể tới trước buyback.settled.
+model BuybackStockFact {
+  settlementId String   @id @db.Uuid
+  branchId     String   @db.Uuid
+  warehouseId  String   @db.Uuid
+  receiptId    String   @unique @db.Uuid
+  localDate    String
+  receivedAt   DateTime @db.Timestamptz(3)
+  itemCount    Int
+  costValue    Decimal  @db.Decimal(20, 2)
+  snapshotHash String
+  snapshot     Json
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([localDate, branchId])
+}
+
 // Header xác nhận một kho đã chốt ngày; thiếu header thì báo cáo không tự suy diễn số không.
 model InventorySnapshotBatch {
   id                 String              @id @db.Uuid

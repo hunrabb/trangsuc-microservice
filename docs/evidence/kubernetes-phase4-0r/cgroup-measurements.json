@@ -1,0 +1,44 @@
+[
+  {
+    "pod": "cnpg-controller-manager-7df6db7d87-hx7hk",
+    "node": "jewelry-lab-control-plane",
+    "cgroupPath": "/sys/fs/cgroup/kubelet.slice/kubelet-kubepods.slice/kubelet-kubepods-burstable.slice/kubelet-kubepods-burstable-pod634f8381_f8d2_4904_b7fd_1964cded3e65.slice",
+    "raw": "cpu.max\n50000 100000\ncpu.stat\nusage_usec 63094104\nuser_usec 31551886\nsystem_usec 31542217\nnice_usec 0\nnr_periods 39838\nnr_throttled 98\nthrottled_usec 5975958\nnr_bursts 0\nburst_usec 0\nmemory.current\n111849472\nmemory.events\nlow 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\n"
+  },
+  {
+    "pod": "jewelry-pg-1",
+    "node": "jewelry-lab-worker",
+    "cgroupPath": "/sys/fs/cgroup/kubelet.slice/kubelet-kubepods.slice/kubelet-kubepods-burstable.slice/kubelet-kubepods-burstable-pod6d0364bd_f500_48f3_920b_7c027e851adb.slice",
+    "raw": "cpu.max\n100000 100000\ncpu.stat\nusage_usec 138101727\nuser_usec 77384194\nsystem_usec 60717533\nnice_usec 0\nnr_periods 27057\nnr_throttled 56\nthrottled_usec 888344\nnr_bursts 0\nburst_usec 0\nmemory.current\n198160384\nmemory.events\nlow 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\n"
+  },
+  {
+    "pod": "jewelry-pg-2",
+    "node": "jewelry-lab-worker2",
+    "cgroupPath": "/sys/fs/cgroup/kubelet.slice/kubelet-kubepods.slice/kubelet-kubepods-burstable.slice/kubelet-kubepods-burstable-podbc65c9ec_3a13_47a5_8aa1_3187b1a0e229.slice",
+    "raw": "cpu.max\n100000 100000\ncpu.stat\nusage_usec 111466624\nuser_usec 61918673\nsystem_usec 49547951\nnice_usec 0\nnr_periods 29026\nnr_throttled 28\nthrottled_usec 665975\nnr_bursts 0\nburst_usec 0\nmemory.current\n200003584\nmemory.events\nlow 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\n"
+  },
+  {
+    "pod": "etcd-jewelry-lab-control-plane",
+    "node": "jewelry-lab-control-plane",
+    "cgroupPath": "/sys/fs/cgroup/kubelet.slice/kubelet-kubepods.slice/kubelet-kubepods-burstable.slice/kubelet-kubepods-burstable-podbe20f9ea11792b7e7c81f0ad8d302803.slice",
+    "raw": "cpu.max\nmax 100000\ncpu.stat\nusage_usec 679044102\nuser_usec 284968860\nsystem_usec 394075242\nnice_usec 0\nnr_periods 0\nnr_throttled 0\nthrottled_usec 0\nnr_bursts 0\nburst_usec 0\nmemory.current\n95592448\nmemory.events\nlow 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\n"
+  },
+  {
+    "pod": "kube-apiserver-jewelry-lab-control-plane",
+    "node": "jewelry-lab-control-plane",
+    "cgroupPath": "/sys/fs/cgroup/kubelet.slice/kubelet-kubepods.slice/kubelet-kubepods-burstable.slice/kubelet-kubepods-burstable-poddf672f58e77befcc6385763f83a36c65.slice",
+    "raw": "cpu.max\nmax 100000\ncpu.stat\nusage_usec 1255718033\nuser_usec 701944518\nsystem_usec 553773515\nnice_usec 0\nnr_periods 0\nnr_throttled 0\nthrottled_usec 0\nnr_bursts 0\nburst_usec 0\nmemory.current\n389730304\nmemory.events\nlow 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\n"
+  },
+  {
+    "pod": "kube-controller-manager-jewelry-lab-control-plane",
+    "node": "jewelry-lab-control-plane",
+    "cgroupPath": "/sys/fs/cgroup/kubelet.slice/kubelet-kubepods.slice/kubelet-kubepods-burstable.slice/kubelet-kubepods-burstable-podfd166f53dc1b2cf84d8da006b16170a6.slice",
+    "raw": "cpu.max\nmax 100000\ncpu.stat\nusage_usec 480112188\nuser_usec 194024946\nsystem_usec 286087241\nnice_usec 0\nnr_periods 0\nnr_throttled 0\nthrottled_usec 0\nnr_bursts 0\nburst_usec 0\nmemory.current\n82997248\nmemory.events\nlow 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\n"
+  },
+  {
+    "pod": "kube-scheduler-jewelry-lab-control-plane",
+    "node": "jewelry-lab-control-plane",
+    "cgroupPath": "/sys/fs/cgroup/kubelet.slice/kubelet-kubepods.slice/kubelet-kubepods-burstable.slice/kubelet-kubepods-burstable-pod8e60a06a1174356009aacc93267baf57.slice",
+    "raw": "cpu.max\nmax 100000\ncpu.stat\nusage_usec 211697212\nuser_usec 123597713\nsystem_usec 88099499\nnice_usec 0\nnr_periods 0\nnr_throttled 0\nthrottled_usec 0\nnr_bursts 0\nburst_usec 0\nmemory.current\n49152000\nmemory.events\nlow 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\n"
+  }
+]

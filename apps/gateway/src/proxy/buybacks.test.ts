@@ -3,7 +3,25 @@ import test from 'node:test';
 import { resolveRoute } from './routes.ts';
 
 test('buyback endpoints use existing backoffice Sales routing, never a public/admin alias', () => {
-  for (const suffix of ['', '/by-key', '/i', '/i/submit', '/i/cancel']) {
+  for (const suffix of [
+    '',
+    '/by-key',
+    '/i',
+    '/i/submit',
+    '/i/cancel',
+    '/price-policies',
+    '/price-policies/p',
+    '/i/appraisals',
+    '/i/items/j/appraisal',
+    '/i/quotes',
+    '/i/quotes/q/approve',
+    '/i/quotes/q/reject',
+    '/i/settlements',
+    '/i/exchanges',
+    '/i/settlements/s/payment',
+    '/i/settlements/s/confirm',
+    '/i/settlements/s/cancel',
+  ]) {
     const path = `/branches/b/buybacks${suffix}`;
     assert.deepEqual(resolveRoute(`/api/admin/sales${path}`), {
       service: 'sales',
@@ -14,6 +32,7 @@ test('buyback endpoints use existing backoffice Sales routing, never a public/ad
   }
   for (const path of [
     '/internal/buybacks',
+    '/api/admin/inventory/internal/buyback-prices/m',
     '/api/admin/sales/internal/buybacks',
     '/api/admin/sales/%69nternal/buybacks',
     '/api/admin/sales/../internal/buybacks',

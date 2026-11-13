@@ -1,0 +1,75 @@
+[
+  {
+    "service": "auth",
+    "databaseSecret": "auth-runtime-creds",
+    "dbHost": "jewelry-pg-rw.jewelry-demo.svc.cluster.local",
+    "db": "auth_db",
+    "schema": "auth",
+    "passwordPresent": true,
+    "sslmode": "verify-full"
+  },
+  {
+    "service": "inventory",
+    "databaseSecret": "inventory-runtime-creds",
+    "dbHost": "jewelry-pg-rw.jewelry-demo.svc.cluster.local",
+    "db": "inventory_db",
+    "schema": "inventory",
+    "passwordPresent": true,
+    "sslmode": "verify-full"
+  },
+  {
+    "service": "sales",
+    "databaseSecret": "sales-runtime-creds",
+    "dbHost": "jewelry-pg-rw.jewelry-demo.svc.cluster.local",
+    "db": "sales_db",
+    "schema": "sales",
+    "passwordPresent": true,
+    "sslmode": "verify-full"
+  },
+  {
+    "service": "report",
+    "databaseSecret": "report-runtime-creds",
+    "dbHost": "jewelry-pg-rw.jewelry-demo.svc.cluster.local",
+    "db": "report_db",
+    "schema": "report",
+    "passwordPresent": true,
+    "sslmode": "verify-full"
+  },
+  {
+    "rabbitSecret": "rabbitmq-demo-app",
+    "host": "rabbitmq.jewelry-demo.svc.cluster.local",
+    "vhost": "jewelry-demo",
+    "passwordPresent": true
+  },
+  {
+    "service": "auth",
+    "configMap": "auth-config",
+    "pool": 5,
+    "googlePlaceholder": true
+  },
+  {
+    "service": "inventory",
+    "configMap": "inventory-config",
+    "pool": 15,
+    "googlePlaceholder": null
+  },
+  {
+    "service": "sales",
+    "configMap": "sales-config",
+    "pool": 15,
+    "googlePlaceholder": null
+  },
+  {
+    "service": "report",
+    "configMap": "report-config",
+    "pool": 15,
+    "googlePlaceholder": null
+  },
+  {
+    "publicKeySecret": "jwt-verification",
+    "publicKeySHA256": "ea18fe0c071b4aa202541cef643cfe092209882658c40d134c07244a49aaf8c9",
+    "privateKeySecret": "auth-jwt-signing",
+    "privateContentsRead": false,
+    "pairVerification": "Phase3 Auth-specific probe PASS; no key rotation"
+  }
+]

@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jewelry-resource-profiles
+  namespace: jewelry-demo
+data:
+  profiles.yaml: "warning: Planning data only; future Deployments must reference approved\
+    \ profiles and\n  be applied in Phase 4.\nauth:\n  replicas: 2\n  poolMax: 5\n\
+    \  requests:\n    memory: 192Mi\n    cpu: 100m\n  limits:\n    memory: 384Mi\n\
+    \    cpu: 500m\ninventory:\n  replicas: 2\n  poolMax: 15\n  requests:\n    memory:\
+    \ 256Mi\n    cpu: 100m\n  limits:\n    memory: 512Mi\n    cpu: 750m\nsales:\n\
+    \  replicas: 2\n  poolMax: 15\n  requests:\n    memory: 256Mi\n    cpu: 100m\n\
+    \  limits:\n    memory: 512Mi\n    cpu: 750m\nreport:\n  replicas: 1\n  poolMax:\
+    \ 15\n  requests:\n    memory: 256Mi\n    cpu: 100m\n  limits:\n    memory: 512Mi\n\
+    \    cpu: 500m\nrollout:\n  maxSurge: 0\n  maxUnavailable: 1\n  parallelMigrations:\
+    \ 1\n"

@@ -17,7 +17,7 @@ import { Injectable } from '@nestjs/common';
 import type { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { writeAudit } from '../common/audit';
-import { assertListScope, assertRoleAtBranch } from '../common/branch-access';
+import { isSystemAdmin } from '../common/branch-access';
 import { fieldError, invalidState, notFound, pageArgs, versionConflict } from '../common/errors';
 
 const WITH_LINES = {
@@ -47,10 +47,6 @@ const toReceipt = (row: ReceiptRow): Receipt => ({
   })),
 });
 
-/** Ai được làm gì với phiếu nhập: MANAGER và STAFF của chi nhánh lập phiếu; chỉ MANAGER (và ADMIN) duyệt. */
-const DRAFT_ROLES = ['MANAGER', 'STAFF'] as const;
-const APPROVE_ROLES = ['MANAGER'] as const;
-
 const newReceiptCode = (): string => {
   const day = new Date().toISOString().slice(0, 10).replaceAll('-', '');
   return `PN-${day}-${randomBytes(4).toString('hex').toUpperCase()}`;
@@ -62,7 +58,7 @@ export class ReceiptsService {
 
   /** Tạo phiếu nháp cho kho của chi nhánh. Chi nhánh chưa có kho (chưa nhận `branch.created`) → `404`. */
   async create(user: AuthUser, body: CreateReceiptRequest): Promise<Receipt> {
-    assertRoleAtBranch(user, body.branchId, DRAFT_ROLES);
+    this.assertAdmin(user);
     const warehouse = await this.prisma.warehouse.findUnique({
       where: { branchId: body.branchId },
     });
@@ -85,8 +81,9 @@ export class ReceiptsService {
   }
 
   async get(user: AuthUser, receiptId: string): Promise<Receipt> {
+    this.assertAdmin(user);
     const row = await this.load(this.prisma, receiptId);
-    assertRoleAtBranch(user, row.warehouse.branchId, DRAFT_ROLES);
+
     return toReceipt(row);
   }
 
@@ -94,7 +91,7 @@ export class ReceiptsService {
     user: AuthUser,
     { branchId, status, ...paging }: ListReceiptsQuery,
   ): Promise<ReceiptPage> {
-    assertListScope(user, branchId, DRAFT_ROLES);
+    this.assertAdmin(user);
     const where: Prisma.GoodsReceiptWhereInput = {
       ...(branchId === undefined ? {} : { warehouse: { branchId } }),
       ...(status === undefined ? {} : { status }),
@@ -177,8 +174,8 @@ export class ReceiptsService {
     receiptId: string,
     { version }: ApproveReceiptRequest,
   ): Promise<Receipt> {
-    const before = await this.load(this.prisma, receiptId);
-    assertRoleAtBranch(user, before.warehouse.branchId, APPROVE_ROLES);
+    this.assertAdmin(user);
+
     try {
       await runWithLockRetry(() =>
         this.prisma.$transaction(async (tx) => {
@@ -274,9 +271,15 @@ export class ReceiptsService {
     );
   }
 
+  private assertAdmin(user: AuthUser): void {
+    if (!isSystemAdmin(user))
+      throw new BusinessError('FORBIDDEN', 'Chỉ quản trị viên được quản lý nhập hàng', 403);
+  }
+
   private async assertCanEditDraft(user: AuthUser, receiptId: string): Promise<void> {
+    this.assertAdmin(user);
     const row = await this.load(this.prisma, receiptId);
-    assertRoleAtBranch(user, row.warehouse.branchId, DRAFT_ROLES);
+
     if (row.status !== 'DRAFT') {
       throw invalidState('Phiếu đã được duyệt, không sửa được');
     }

@@ -1,0 +1,519 @@
+[
+  {
+    "key": "VB-28",
+    "name": "nhẫn 24k",
+    "category": "Nhẫn",
+    "metal": "AU9999",
+    "weight": "4.0",
+    "labor": "55000.0",
+    "image": "/catalog-images/0f73d9a7fb2ccaf80cf8ed442cd2bc806f50c01800fade16cc54a0802533c448.png",
+    "source": {
+      "id_loai": 1,
+      "tien_da": 5000.0,
+      "gioi_tinh": null,
+      "image_url": "products/K1Rc1jHuldK1WVuEPPCcDjkHVfy7xdxPs64TgkQg.png",
+      "khoiluong": 4.0,
+      "tien_cong": 50000.0,
+      "id_kimloai": null,
+      "id_product": 28,
+      "don_vi_tinh": "Chỉ",
+      "name_product": "nhẫn 24k",
+      "id_nhacungcap": null
+    },
+    "notes": "Giá kim loại và tồn kho demo. Nguồn thiếu chất liệu: dùng vàng 9999 demo. Tiền đá gộp vào công chế tác vì hệ thống chưa có cột riêng."
+  },
+  {
+    "key": "VB-29",
+    "name": "DHUNG",
+    "category": "Lắc Tay & Chân",
+    "metal": "AU9999",
+    "weight": "1.0",
+    "labor": "0.0",
+    "image": "/catalog-images/5aa7b7efcac218451b179cd0b65bc610e2eb3e6c6878790b798526570caf0f00.png",
+    "source": {
+      "id_loai": 4,
+      "tien_da": null,
+      "gioi_tinh": null,
+      "image_url": "products/cHbDzKKVjN2vsFiv516a7z6CKCPkaJLiE4uhj8SH.png",
+      "khoiluong": 1.0,
+      "tien_cong": null,
+      "id_kimloai": 1,
+      "id_product": 29,
+      "don_vi_tinh": "Chỉ",
+      "name_product": "DHUNG",
+      "id_nhacungcap": null
+    },
+    "notes": "Giá kim loại và tồn kho demo. Tiền đá gộp vào công chế tác vì hệ thống chưa có cột riêng."
+  },
+  {
+    "key": "VB-30",
+    "name": "nhẫn 24k",
+    "category": "Nhẫn",
+    "metal": "AU9999",
+    "weight": "1.0",
+    "labor": "10050.0",
+    "image": "/catalog-images/067123287899422109d7ccd23e1f6f452e143921eb27250c7420eda6a6f4c969.png",
+    "source": {
+      "id_loai": 1,
+      "tien_da": 5000.0,
+      "gioi_tinh": null,
+      "image_url": "products/2HOOwYAKa6ehwp87ANgFzOgEwbakNfvNs1uqx2PU.png",
+      "khoiluong": 1.0,
+      "tien_cong": 5050.0,
+      "id_kimloai": null,
+      "id_product": 30,
+      "don_vi_tinh": "Chỉ",
+      "name_product": "nhẫn 24k",
+      "id_nhacungcap": null
+    },
+    "notes": "Giá kim loại và tồn kho demo. Nguồn thiếu chất liệu: dùng vàng 9999 demo. Tiền đá gộp vào công chế tác vì hệ thống chưa có cột riêng."
+  },
+  {
+    "key": "VB-31",
+    "name": "DHUNG",
+    "category": "Nhẫn",
+    "metal": "AU9999",
+    "weight": "1.0",
+    "labor": "205000.0",
+    "image": "/catalog-images/0db0f421645bc678c32c5abad2ac929687b0e8a822539056e076535473a1751e.png",
+    "source": {
+      "id_loai": 1,
+      "tien_da": 5000.0,
+      "gioi_tinh": null,
+      "image_url": "products/0kGeKV49S9NO0tF36cwWEzlkAW9vkUuTPaw6kCGT.png",
+      "khoiluong": 1.0,
+      "tien_cong": 200000.0,
+      "id_kimloai": null,
+      "id_product": 31,
+      "don_vi_tinh": "Chỉ",
+      "name_product": "DHUNG",
+      "id_nhacungcap": null
+    },
+    "notes": "Giá kim loại và tồn kho demo. Nguồn thiếu chất liệu: dùng vàng 9999 demo. Tiền đá gộp vào công chế tác vì hệ thống chưa có cột riêng."
+  },
+  {
+    "key": "VB-32",
+    "name": "dhungdfg",
+    "category": "Nhẫn",
+    "metal": "AU9999",
+    "weight": "1.0",
+    "labor": "80070.0",
+    "image": "/catalog-images/1c78f2958af882a3e85703f3156ffcadf7f985c6d9aa64d06be9598c953bb0d1.png",
+    "source": {
+      "id_loai": 1,
+      "tien_da": 80000.0,
+      "gioi_tinh": null,
+      "image_url": "products/HeiNRH2D7AJs8CgoQxQVHgaKX8xLYnGAkMUmzfJ0.png",
+      "khoiluong": 1.0,
+      "tien_cong": 70.0,
+      "id_kimloai": null,
+      "id_product": 32,
+      "don_vi_tinh": "Chỉ",
+      "name_product": "dhungdfg",
+      "id_nhacungcap": null
+    },
+    "notes": "Giá kim loại và tồn kho demo. Nguồn thiếu chất liệu: dùng vàng 9999 demo. Tiền đá gộp vào công chế tác vì hệ thống chưa có cột riêng."
+  },
+  {
+    "key": "VB-33",
+    "name": "nhẫn",
+    "category": "Nhẫn",
+    "metal": "AU9999",
+    "weight": "1.0",
+    "labor": "85005.0",
+    "image": "/catalog-images/de1cc802d58ae4b83e8f2d9a0205e1f9e89ba936008955fcfaf0009ac76a224d.png",
+    "source": {
+      "id_loai": 1,
+      "tien_da": 80000.0,
+      "gioi_tinh": null,
+      "image_url": "products/mElEwyVHtjqcMiKfduJ0EDCgEXDIa10GKwdO9lWl.png",
+      "khoiluong": 1.0,
+      "tien_cong": 5005.0,
+      "id_kimloai": 1,
+      "id_product": 33,
+      "don_vi_tinh": "Chỉ",
+      "name_product": "nhẫn",
+      "id_nhacungcap": null
+    },
+    "notes": "Giá kim loại và tồn kho demo. Tiền đá gộp vào công chế tác vì hệ thống chưa có cột riêng."
+  },
+  {
+    "key": "VB-34",
+    "name": "nhẫn",
+    "category": "Dây Chuyền",
+    "metal": "AU9999",
+    "weight": "1.0",
+    "labor": "80000000.0",
+    "image": "/catalog-images/8244a141c3853fb9c8871ad54e21af8349432608df048f225238584492fb4c92.png",
+    "source": {
+      "id_loai": 2,
+      "tien_da": null,
+      "gioi_tinh": "Nam",
+      "image_url": "products/gVw2UYHBYCnTdT5PdwJsdyTZANqdhEJUmcyh8t1u.png",
+      "khoiluong": 1.0,
+      "tien_cong": 80000000.0,
+      "id_kimloai": 1,
+      "id_product": 34,
+      "don_vi_tinh": "Chỉ",
+      "name_product": "nhẫn",
+      "id_nhacungcap": null
+    },
+    "notes": "Giá kim loại và tồn kho demo. Tiền đá gộp vào công chế tác vì hệ thống chưa có cột riêng."
+  },
+  {
+    "key": "VB-35",
+    "name": "ewr",
+    "category": "Dây Chuyền",
+    "metal": "AG925",
+    "weight": "1.0",
+    "labor": "80005000.0",
+    "image": "/catalog-images/4bca5ad7f77e7fb2d77a36c28c6b8f92a762c9999f3120ce0466356560742551.png",
+    "source": {
+      "id_loai": 2,
+      "tien_da": 5000.0,
+      "gioi_tinh": null,
+      "image_url": "products/nVqhSrPtuuPD09URCDelLCXcObvZHxp63bvfwA7M.png",
+      "khoiluong": 1.0,
+      "tien_cong": 80000000.0,
+      "id_kimloai": 2,
+      "id_product": 35,
+      "don_vi_tinh": "Chỉ",
+      "name_product": "ewr",
+      "id_nhacungcap": null
+    },
+    "notes": "Giá kim loại và tồn kho demo. Tiền đá gộp vào công chế tác vì hệ thống chưa có cột riêng."
+  },
+  {
+    "key": "VB-36",
+    "name": "lắc tay bạc",
+    "category": "Lắc Tay & Chân",
+    "metal": "AG925",
+    "weight": "1.0",
+    "labor": "10050.0",
+    "image": "/catalog-images/e8b2f40e6fb212b4c837391df38e666364761c0766d192d9ddf6df6d20b0719e.png",
+    "source": {
+      "id_loai": 4,
+      "tien_da": 5000.0,
+      "gioi_tinh": "Nam",
+      "image_url": "products/cLcYzowJviwslkk6VRTsK3ZXLt56bWfCSeUEtLHU.png",
+      "khoiluong": 1.0,
+      "tien_cong": 5050.0,
+      "id_kimloai": 2,
+      "id_product": 36,
+      "don_vi_tinh": "Chỉ",
+      "name_product": "lắc tay bạc",
+      "id_nhacungcap": null
+    },
+    "notes": "Giá kim loại và tồn kho demo. Tiền đá gộp vào công chế tác vì hệ thống chưa có cột riêng."
+  },
+  {
+    "key": "VB-37",
+    "name": "dây chuyền bạc",
+    "category": "Dây Chuyền",
+    "metal": "AG925",
+    "weight": "1.0",
+    "labor": "12005.0",
+    "image": "/catalog-images/4bca5ad7f77e7fb2d77a36c28c6b8f92a762c9999f3120ce0466356560742551.png",
+    "source": {
+      "id_loai": 2,
+      "tien_da": 7000.0,
+      "gioi_tinh": "Nam",
+      "image_url": "products/fYiuYIXzntPPuT0Zit8YMAfQpq8on6CVumTub3a2.png",
+      "khoiluong": 1.0,
+      "tien_cong": 5005.0,
+      "id_kimloai": 2,
+      "id_product": 37,
+      "don_vi_tinh": "Chỉ",
+      "name_product": "dây chuyền bạc",
+      "id_nhacungcap": null
+    },
+    "notes": "Giá kim loại và tồn kho demo. Tiền đá gộp vào công chế tác vì hệ thống chưa có cột riêng."
+  },
+  {
+    "key": "VB-38",
+    "name": "nhẫn bạc",
+    "category": "Nhẫn",
+    "metal": "AG925",
+    "weight": "1.0",
+    "labor": "83000.0",
+    "image": "/catalog-images/7a438d1db555f5d27d38db7fafb17ba2035909ce0a7ad5cfa9d99844ba404a73.png",
+    "source": {
+      "id_loai": 1,
+      "tien_da": 8000.0,
+      "gioi_tinh": "Nam",
+      "image_url": "products/gW9hx8DxG2WlmwAzhGLVmA3vTVOTXum7Zwitxcfa.png",
+      "khoiluong": 1.0,
+      "tien_cong": 75000.0,
+      "id_kimloai": 2,
+      "id_product": 38,
+      "don_vi_tinh": "Chỉ",
+      "name_product": "nhẫn bạc",
+      "id_nhacungcap": null
+    },
+    "notes": "Giá kim loại và tồn kho demo. Tiền đá gộp vào công chế tác vì hệ thống chưa có cột riêng."
+  },
+  {
+    "key": "VB-39",
+    "name": "bông tai 24k",
+    "category": "Bông Tai",
+    "metal": "AU9999",
+    "weight": "1.0",
+    "labor": "0.0",
+    "image": "/catalog-images/5aa7b7efcac218451b179cd0b65bc610e2eb3e6c6878790b798526570caf0f00.png",
+    "source": {
+      "id_loai": 3,
+      "tien_da": null,
+      "gioi_tinh": "Nu",
+      "image_url": "products/Si6NHZYgUL6JCsKDH7VSSjN6uYBhsQlh6vKaJGYv.png",
+      "khoiluong": 1.0,
+      "tien_cong": null,
+      "id_kimloai": 1,
+      "id_product": 39,
+      "don_vi_tinh": "Chỉ",
+      "name_product": "bông tai 24k",
+      "id_nhacungcap": null
+    },
+    "notes": "Giá kim loại và tồn kho demo. Tiền đá gộp vào công chế tác vì hệ thống chưa có cột riêng."
+  },
+  {
+    "key": "VB-40",
+    "name": "gynf",
+    "category": "Nhẫn",
+    "metal": "AG925",
+    "weight": "1.0",
+    "labor": "80070.0",
+    "image": "/catalog-images/accfc81ebf99b53fa9349fe769b01d440a2f950852db7c521c174214cd27d0d2.png",
+    "source": {
+      "id_loai": 1,
+      "tien_da": 80000.0,
+      "gioi_tinh": "Nam",
+      "image_url": "products/qWLOHznMSaPWvNSkm6NN1iOcUCIWOPP4eSj4Ihqf.png",
+      "khoiluong": 1.0,
+      "tien_cong": 70.0,
+      "id_kimloai": 2,
+      "id_product": 40,
+      "don_vi_tinh": "Chỉ",
+      "name_product": "gynf",
+      "id_nhacungcap": null
+    },
+    "notes": "Giá kim loại và tồn kho demo. Tiền đá gộp vào công chế tác vì hệ thống chưa có cột riêng."
+  },
+  {
+    "key": "VB-41",
+    "name": "dây chuyền 9999k",
+    "category": "Dây Chuyền",
+    "metal": "AU9999",
+    "weight": "1.0",
+    "labor": "80007000.0",
+    "image": "/catalog-images/067123287899422109d7ccd23e1f6f452e143921eb27250c7420eda6a6f4c969.png",
+    "source": {
+      "id_loai": 2,
+      "tien_da": 7000.0,
+      "gioi_tinh": "Nam",
+      "image_url": "products/yi7XpcTgjLx9SlxUIRR1cgLjLRXfeBDCS2ATq8uI.png",
+      "khoiluong": 1.0,
+      "tien_cong": 80000000.0,
+      "id_kimloai": 1,
+      "id_product": 41,
+      "don_vi_tinh": "Chỉ",
+      "name_product": "dây chuyền 9999k",
+      "id_nhacungcap": null
+    },
+    "notes": "Giá kim loại và tồn kho demo. Tiền đá gộp vào công chế tác vì hệ thống chưa có cột riêng."
+  },
+  {
+    "key": "HTML-9FD306DEE1BA",
+    "name": "Nhẫn nữ",
+    "category": "Nhẫn",
+    "metal": "AG925",
+    "weight": "1",
+    "labor": "180000",
+    "image": "/catalog-images/4fe68658f217c36a82e78d62a1d06ee6d1f4a54c59f3a2a7c42592a0fba2becc.jpg",
+    "source": {
+      "file": "Nhan.html",
+      "image": "store/nu1.jfif",
+      "displayPrice": "350.000VND"
+    },
+    "notes": "HTML chỉ có tên, ảnh và giá hiển thị; bạc 925, trọng lượng 1 chỉ, tiền công và tồn kho là giả định DEMO. Giá hiển thị nguồn: 350.000VND."
+  },
+  {
+    "key": "HTML-E897656B66A3",
+    "name": "Nhẫn nữ",
+    "category": "Nhẫn",
+    "metal": "AG925",
+    "weight": "1",
+    "labor": "180000",
+    "image": "/catalog-images/8595497cf8e8ea97cf8697ef68d4d8b166cc550027f64dd0a1479684f33d75c1.jpg",
+    "source": {
+      "file": "Nhan.html",
+      "image": "store/nhẫn nữ 1.jfif",
+      "displayPrice": "350.000VND"
+    },
+    "notes": "HTML chỉ có tên, ảnh và giá hiển thị; bạc 925, trọng lượng 1 chỉ, tiền công và tồn kho là giả định DEMO. Giá hiển thị nguồn: 350.000VND."
+  },
+  {
+    "key": "HTML-5A670601E7EE",
+    "name": "Nhẫn nữ",
+    "category": "Nhẫn",
+    "metal": "AG925",
+    "weight": "1",
+    "labor": "180000",
+    "image": "/catalog-images/b5a9ccf394045c027cdaff4ac91e422579b5b2556890f408aeed400301792bdb.jpg",
+    "source": {
+      "file": "Nhan.html",
+      "image": "store/nhân nữ 2.jfif",
+      "displayPrice": "350.000VND"
+    },
+    "notes": "HTML chỉ có tên, ảnh và giá hiển thị; bạc 925, trọng lượng 1 chỉ, tiền công và tồn kho là giả định DEMO. Giá hiển thị nguồn: 350.000VND."
+  },
+  {
+    "key": "HTML-CF72F7E58E89",
+    "name": "Nhẫn nữ",
+    "category": "Nhẫn",
+    "metal": "AG925",
+    "weight": "1",
+    "labor": "180000",
+    "image": "/catalog-images/fc217fac869cf7b965b9d62c62d32feb8680f115717cf7a1b39044ff3d8968dc.jpg",
+    "source": {
+      "file": "Nhan.html",
+      "image": "store/nhẫn nữ 3.jfif",
+      "displayPrice": "350.000VND"
+    },
+    "notes": "HTML chỉ có tên, ảnh và giá hiển thị; bạc 925, trọng lượng 1 chỉ, tiền công và tồn kho là giả định DEMO. Giá hiển thị nguồn: 350.000VND."
+  },
+  {
+    "key": "HTML-F369AE895882",
+    "name": "Nhẫn nữ",
+    "category": "Nhẫn",
+    "metal": "AG925",
+    "weight": "1",
+    "labor": "180000",
+    "image": "/catalog-images/857ea09dcc90020d5e68f5c3a0a6f37b16bdab0c81c1848253dd4e972b79447a.jpg",
+    "source": {
+      "file": "Nhan.html",
+      "image": "store/nhân nữ 4.jfif",
+      "displayPrice": "350.000VND"
+    },
+    "notes": "HTML chỉ có tên, ảnh và giá hiển thị; bạc 925, trọng lượng 1 chỉ, tiền công và tồn kho là giả định DEMO. Giá hiển thị nguồn: 350.000VND."
+  },
+  {
+    "key": "HTML-9C3AFC79962F",
+    "name": "Nhẫn nữ",
+    "category": "Nhẫn",
+    "metal": "AG925",
+    "weight": "1",
+    "labor": "180000",
+    "image": "/catalog-images/b2f11f1d86fbb0ce5e04c3ec76cb179a73129c105634171b14abd7e6a190e033.jpg",
+    "source": {
+      "file": "Nhan.html",
+      "image": "store/a.jfif",
+      "displayPrice": "350.000VND"
+    },
+    "notes": "HTML chỉ có tên, ảnh và giá hiển thị; bạc 925, trọng lượng 1 chỉ, tiền công và tồn kho là giả định DEMO. Giá hiển thị nguồn: 350.000VND."
+  },
+  {
+    "key": "HTML-08990723AC92",
+    "name": "Nhẫn nữ",
+    "category": "Nhẫn",
+    "metal": "AG925",
+    "weight": "1",
+    "labor": "180000",
+    "image": "/catalog-images/64c4b6cb76385dcb1c0b94255c1f322f5c3260fcc5004ff416fab1b37d0491c1.jpg",
+    "source": {
+      "file": "Nhan.html",
+      "image": "store/a (5).jfif",
+      "displayPrice": "350.000VND"
+    },
+    "notes": "HTML chỉ có tên, ảnh và giá hiển thị; bạc 925, trọng lượng 1 chỉ, tiền công và tồn kho là giả định DEMO. Giá hiển thị nguồn: 350.000VND."
+  },
+  {
+    "key": "HTML-F30F15375DDB",
+    "name": "Nhẫn nữ",
+    "category": "Nhẫn",
+    "metal": "AG925",
+    "weight": "1",
+    "labor": "180000",
+    "image": "/catalog-images/c89ec0989c8e42e7bbecd2462e2ab2c1681ec5e379e8b982bf43780c5f845f86.jpg",
+    "source": {
+      "file": "Nhan.html",
+      "image": "store/a (4).jfif",
+      "displayPrice": "350.000VND"
+    },
+    "notes": "HTML chỉ có tên, ảnh và giá hiển thị; bạc 925, trọng lượng 1 chỉ, tiền công và tồn kho là giả định DEMO. Giá hiển thị nguồn: 350.000VND."
+  },
+  {
+    "key": "HTML-3EFDA75E81FA",
+    "name": "Nhẫn nữ",
+    "category": "Nhẫn",
+    "metal": "AG925",
+    "weight": "1",
+    "labor": "180000",
+    "image": "/catalog-images/384af1ad534e4a409ff1d7189ac12dd0a839f355b09ec8df8c744ff7ef54568f.jpg",
+    "source": {
+      "file": "Nhan.html",
+      "image": "store/a (3).jfif",
+      "displayPrice": "350.000VND"
+    },
+    "notes": "HTML chỉ có tên, ảnh và giá hiển thị; bạc 925, trọng lượng 1 chỉ, tiền công và tồn kho là giả định DEMO. Giá hiển thị nguồn: 350.000VND."
+  },
+  {
+    "key": "HTML-9CDF26FD1F81",
+    "name": "Nhẫn nữ",
+    "category": "Nhẫn",
+    "metal": "AG925",
+    "weight": "1",
+    "labor": "180000",
+    "image": "/catalog-images/affd9f429e9948a88c6206076120b24b0a6f4daeacba81c5949f92b0ef66d5ef.jpg",
+    "source": {
+      "file": "Nhan.html",
+      "image": "store/a (1).jfif",
+      "displayPrice": "350.000VND"
+    },
+    "notes": "HTML chỉ có tên, ảnh và giá hiển thị; bạc 925, trọng lượng 1 chỉ, tiền công và tồn kho là giả định DEMO. Giá hiển thị nguồn: 350.000VND."
+  },
+  {
+    "key": "HTML-311B3BCD1093",
+    "name": "Nhẫn nữ",
+    "category": "Nhẫn",
+    "metal": "AG925",
+    "weight": "1",
+    "labor": "180000",
+    "image": "/catalog-images/353cdef8774b00b9882811bc52a81b6e0b8480188dc8c01bb7ed986d78eab918.jpg",
+    "source": {
+      "file": "Nhan.html",
+      "image": "store/a (2).jfif",
+      "displayPrice": "350.000VND"
+    },
+    "notes": "HTML chỉ có tên, ảnh và giá hiển thị; bạc 925, trọng lượng 1 chỉ, tiền công và tồn kho là giả định DEMO. Giá hiển thị nguồn: 350.000VND."
+  },
+  {
+    "key": "HTML-A86117B471EA",
+    "name": "Nhẫn nữ",
+    "category": "Nhẫn",
+    "metal": "AG925",
+    "weight": "1",
+    "labor": "180000",
+    "image": "/catalog-images/657c16e3aa0175c7502d6d813914ff3317c84ee79117da28a267f4877380d6ca.jpg",
+    "source": {
+      "file": "Nhan.html",
+      "image": "store/a (6).jfif",
+      "displayPrice": "350.000VND"
+    },
+    "notes": "HTML chỉ có tên, ảnh và giá hiển thị; bạc 925, trọng lượng 1 chỉ, tiền công và tồn kho là giả định DEMO. Giá hiển thị nguồn: 350.000VND."
+  },
+  {
+    "key": "HTML-DE3C2EAE9F61",
+    "name": "Nhẫn nữ",
+    "category": "Nhẫn",
+    "metal": "AG925",
+    "weight": "1",
+    "labor": "180000",
+    "image": "/catalog-images/32eab911cc4d6c13dc611ee58782ca2023b8d8521e84c97997d4c184564edfeb.jpg",
+    "source": {
+      "file": "Nhan.html",
+      "image": "store/a (7).jfif",
+      "displayPrice": "350.000VND"
+    },
+    "notes": "HTML chỉ có tên, ảnh và giá hiển thị; bạc 925, trọng lượng 1 chỉ, tiền công và tồn kho là giả định DEMO. Giá hiển thị nguồn: 350.000VND."
+  }
+]

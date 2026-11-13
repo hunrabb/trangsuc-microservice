@@ -2,6 +2,8 @@
 
 Monorepo (pnpm workspaces + Turborepo). Luật làm việc và kiến trúc nằm ở [CLAUDE.md](CLAUDE.md); thiết kế chi tiết ở [docs/](docs/).
 
+**PostgreSQL development đã cutover ngày 2026-11-10:** `docker compose up` mặc định dùng bốn PostgreSQL/volume độc lập cho Auth, Inventory, Sales và Report. DB legacy cùng volume vẫn giữ nguyên nhưng role ứng dụng đã khóa đăng nhập; đừng dùng cấu hình legacy để ghi dữ liệu mới. Xem [tiến độ](docs/database-separation-progress.md) và [runbook](docs/database-migration-runbook.md). Không dùng `down -v` hoặc `--remove-orphans`.
+
 Giai đoạn hiện tại: **5 — sự kiện và báo cáo**, đang triển khai. POS Phase 4 đã có backend,
 giao diện và cơ chế phục hồi; Report Phase 5 đã có phần doanh thu POS nhưng chưa đủ toàn bộ
 acceptance criteria. Xem `docs/phase5-progress.md` và README của từng service để đối chiếu tiến độ.
@@ -13,7 +15,7 @@ acceptance criteria. Xem `docs/phase5-progress.md` và README của từng servi
 | `apps/backoffice` (admin + POS)             | React 19 + Vite 8             | 5173                            | `BACKOFFICE_PORT` (8080) |
 | `apps/storefront` (website cho khách)       | React 19 + Vite 8             | 5174                            | `STOREFRONT_PORT` (8081) |
 | `libs/contracts`, `libs/common`             | TypeScript (build bằng `tsc`) | —                               | —                        |
-| PostgreSQL 16.15, RabbitMQ 4.4.0            | Docker                        | 5432 / 5672 / 15672 (127.0.0.1) | không mở ra ngoài        |
+| PostgreSQL 16.15, RabbitMQ 4.4.0            | Docker                        | DB: 15433–15436; MQ: 5672 / 15672 (127.0.0.1) | không mở ra ngoài |
 
 ## Yêu cầu
 
@@ -27,13 +29,13 @@ acceptance criteria. Xem `docs/phase5-progress.md` và README của từng servi
 pnpm install
 
 # 1. Hạ tầng. Lần đầu: điền mật khẩu trong .env (xem ghi chú trong file).
-cp .env.example .env
-docker compose up -d postgres rabbitmq rabbitmq-setup
-docker compose ps          # postgres, rabbitmq: healthy; rabbitmq-setup: exited (0)
+test -f .env || cp .env.example .env
+docker compose up -d auth-postgres inventory-postgres sales-postgres report-postgres rabbitmq rabbitmq-setup
+docker compose ps          # 4 DB và rabbitmq: healthy; rabbitmq-setup: exited (0)
 
 # 2. Cấu hình từng app (chạy trên máy nên dùng localhost, mỗi app một cổng).
 #    Mật khẩu trong DATABASE_URL phải KHỚP mật khẩu cùng tên trong .env ở gốc.
-for app in gateway auth inventory sales report; do cp apps/$app/.env.example apps/$app/.env; done
+for app in gateway auth inventory sales report; do test -f apps/$app/.env || cp apps/$app/.env.example apps/$app/.env; done
 #    → sửa DIEN_MAT_KHAU trong apps/{auth,inventory,sales,report}/.env
 
 # 3. Sinh khoá JWT (mọi app đều cần để khởi động)
@@ -55,14 +57,14 @@ Mỗi app có DB có `prisma/schema.prisma` riêng, `prisma.config.ts` (Prisma 7
 pnpm --filter @jewelry/inventory exec prisma migrate dev --name <ten>
 ```
 
-- `migrate dev` cần **shadow database**: Prisma chạy thử toàn bộ migration trên một database trống để so sánh. User của từng service không có quyền tạo database, nên `infra/postgres/init/01-init.sh` tạo sẵn database `POSTGRES_SHADOW_DB` (mặc định `jewelry_shadow`) và cấp cho 4 user quyền `CREATE`; biến `SHADOW_DATABASE_URL` trong `apps/<app>/.env` trỏ tới đó (cùng user, cùng `?schema=<tên>`).
+- `migrate dev` cần **shadow database**: Prisma chạy thử toàn bộ migration trên một database trống để so sánh. `infra/postgres/service-init` tạo `<service>_shadow` trong đúng instance service; biến `SHADOW_DATABASE_URL` trong `apps/<app>/.env` trỏ tới đó bằng user riêng của service.
 - `migrate deploy` (container `*-migrate` và môi trường thật) **không cần shadow database**; `prisma.config.ts` coi `SHADOW_DATABASE_URL` là tuỳ chọn, và container `*-migrate` không được truyền biến này.
-- Script init chỉ chạy khi volume `pg_data` còn trống. Thêm user/schema/database sau này phải viết migration SQL hoặc `docker compose down -v` (xoá dữ liệu).
+- Script init chỉ chạy khi volume DB tương ứng còn trống. Thêm user/schema/database sau này phải dùng migration/quy trình DBA có backup; không xóa volume để chạy lại init.
 
 ## Cách 2 — Chạy toàn bộ trong Docker
 
 ```bash
-cp .env.example .env       # điền mật khẩu
+test -f .env || cp .env.example .env       # điền mật khẩu nếu mới tạo
 docker compose up --build
 ```
 
@@ -72,22 +74,22 @@ docker compose up --build
 - Script này tới image qua build context riêng `migrate-scripts` (`additional_contexts` trong `docker-compose.yml`), còn `infra` bị `.dockerignore` loại khỏi context chính: sửa script chỉ build lại bước cuối của `*-migrate`, không đụng tầng `COPY . .`. Build tay đích `migrate` thì thêm `--build-context migrate-scripts=infra/migrate`.
 - Gateway: <http://localhost:3000> (hoặc `GATEWAY_PORT`) · Backoffice: <http://localhost:8080> · Storefront: <http://localhost:8081>.
 - Hai app frontend là file tĩnh phục vụ bởi nginx; nginx cũng chuyển `/api/*` về gateway (cùng origin, không cần CORS). Mọi đường `/internal/*` trả **404** (không rơi vào trang SPA).
-- **Chỉ** gateway, backoffice, storefront có `ports` trong `docker-compose.yml`. Chạy như production (không mở Postgres/RabbitMQ ra 127.0.0.1): `docker compose -f docker-compose.yml up --build`.
-- Dừng: `docker compose down` (giữ dữ liệu). `docker compose down -v` xoá luôn volume `pg_data`, `rabbitmq_data`.
+- **Chỉ** gateway, backoffice, storefront có `ports` trong `docker-compose.yml`; `docker-compose.override.yml` chỉ mở bốn DB và RabbitMQ trên loopback cho dev. Chạy không mở các cổng này: `docker compose -f docker-compose.yml up -d --wait`.
+- Dừng ứng dụng khi cần: `docker compose stop`. Giữ nguyên mọi volume, đặc biệt `jewelry_pg_data` legacy.
 
 ### Máy yếu (ít RAM, ví dụ WSL 2 ~4 GB): build từng image một
 
 Lần `docker compose up --build` đầu tiên build cùng lúc cả chục image (mỗi image chạy `pnpm install`/`pnpm deploy`). Trên máy ít RAM việc này có thể mất 20–25 phút, làm máy treo (`wsl.exe` timeout) và khiến Postgres/RabbitMQ chập chờn. Hãy build **tuần tự** rồi mới chạy:
 
 ```bash
-for s in $(docker compose config --services | grep -vE '^(postgres|rabbitmq|rabbitmq-setup)$'); do
+for s in $(docker compose config --services | grep -vE '^((auth|inventory|sales|report)-postgres|rabbitmq|rabbitmq-setup)$'); do
   docker compose build "$s"
 done
 docker compose up -d --wait
 ```
 
 - **`COMPOSE_PARALLEL_LIMIT` và `docker compose --parallel N` không giới hạn được việc build** ở Compose 5.x. Đã đo với 5.6.1: ba service vẫn build cùng lúc (kể cả khi đặt `COMPOSE_BAKE=false`), nên đừng trông cậy vào chúng; vòng lặp ở trên mới thật sự tuần tự.
-- Các lần sau (đã có cache) chạy `docker compose up --build -d --wait` như bình thường là đủ.
+- Các lần sau có thể chạy `docker compose up -d --wait`; khi cần build lại trên máy ít RAM, tiếp tục build từng image bằng vòng lặp trên.
 
 ### Gateway chuyển tiếp request
 
@@ -217,10 +219,10 @@ curl -i localhost:3000/internal/ping    # 404: gateway không bao giờ chuyển
 curl -i localhost:8080/internal/ping    # 404: nginx của backoffice (và storefront :8081) cũng chặn /internal/*
 curl -m 2 localhost:3001/health/live    # lỗi kết nối: auth/inventory/sales/report không mở cổng
 
-# inventory_user KHÔNG đọc được schema sales:
-docker compose exec postgres sh -c \
-  'PGPASSWORD="$INVENTORY_DB_PASSWORD" psql -h 127.0.0.1 -U inventory_user -d "$POSTGRES_DB" -c "SELECT * FROM sales.bat_ky"'
-# ERROR:  permission denied for schema sales
+# inventory_user chỉ tồn tại trong inventory-postgres; không có sales schema ở đây:
+docker compose exec -T inventory-postgres sh -c \
+  'PGPASSWORD="$SERVICE_DB_PASSWORD" psql -h 127.0.0.1 -U "$SERVICE_DB_USER" -d "$POSTGRES_DB" -Atqc "SELECT current_database(), current_user"'
+# inventory_db|inventory_user
 ```
 
 ### RabbitMQ
@@ -237,8 +239,8 @@ Sửa tham số của một queue đã tồn tại thì RabbitMQ từ chối n�
 
 ## Biến môi trường
 
-- **`.env` ở gốc** — cho Docker Compose: mật khẩu Postgres/RabbitMQ, tên database, cổng mở ra máy chủ. Mỗi service chỉ nhận biến của chính nó (compose ghép `DATABASE_URL` riêng cho từng service). Thiếu biến bắt buộc → `docker compose` dừng ngay và báo đúng tên biến.
-- **`apps/<app>/.env`** — chỉ cho `pnpm dev` trên máy dev (URL dùng `localhost`). Docker không đọc.
+- **`.env` ở gốc** — cho Docker Compose: mật khẩu Postgres/RabbitMQ và cổng mở ra máy chủ; `POSTGRES_DB`/`POSTGRES_SHADOW_DB` chỉ dành cho profile legacy. Mỗi service chỉ nhận mật khẩu DB của chính nó (Compose ghép `DATABASE_URL` riêng). Thiếu biến bắt buộc → `docker compose` dừng ngay và báo đúng tên biến.
+- **`apps/<app>/.env`** — chỉ cho `pnpm dev` trên máy dev (URL loopback 15433–15436 tới DB riêng). Docker không đọc.
 - Mỗi app NestJS kiểm tra biến môi trường bằng zod lúc khởi động; sai/thiếu → log JSON mức `fatal` ghi rõ tên biến rồi thoát mã 1.
 - Mật khẩu chỉ nên gồm chữ và số (chúng nằm trong URL). Tạo: `openssl rand -hex 24`.
 
@@ -262,6 +264,10 @@ CI (`.github/workflows/ci.yml`): cài thư viện (cache pnpm), format, lint, ty
 apps/        gateway, auth, inventory, sales, report (NestJS) · backoffice, storefront (React)
 libs/        contracts, common
 tests/       integration (chạy bản build thật của nhiều app)
-infra/       postgres/init (user + schema + shadow DB) · rabbitmq (definitions.json, setup.mjs) · migrate (chờ Postgres cho *-migrate)
+infra/       postgres/service-init (user + schema + shadow DB riêng) · rabbitmq (definitions.json, setup.mjs) · migrate (chờ Postgres cho *-migrate)
 docs/        thiết kế và kế hoạch
 ```
+
+## Phạm vi đồ án
+
+Chức năng kiểm kê đã được gỡ khỏi Backoffice và API. Các bảng và dữ liệu lịch sử được giữ nguyên; xem [báo cáo gỡ chức năng](docs/stocktaking-removal.md). Chốt tồn kho đêm và báo cáo tồn kho tiếp tục hoạt động.

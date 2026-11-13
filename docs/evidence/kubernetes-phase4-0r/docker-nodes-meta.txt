@@ -1,0 +1,3 @@
+/jewelry-lab-control-plane started=2026-11-12T19:38:44.448958843Z finished=0001-01-01T00:00:00Z restarts=0 oom=false memory=0 nanoCPU=0 quota=0 period=0
+/jewelry-lab-worker started=2026-11-12T19:38:44.453274001Z finished=0001-01-01T00:00:00Z restarts=0 oom=false memory=0 nanoCPU=0 quota=0 period=0
+/jewelry-lab-worker2 started=2026-11-12T19:38:44.552488323Z finished=0001-01-01T00:00:00Z restarts=0 oom=false memory=0 nanoCPU=0 quota=0 period=0

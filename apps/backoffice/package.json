@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test:stock-summary": "node test/stock-summary-render.test.mjs",
     "test:reports": "node ../../scripts/run-tests.mjs src/api/report-download.test.ts src/api/report-branches.test.ts src/pages/report-view.test.ts && node test/report-render.test.mjs",
+    "test:buybacks": "node src/buybacks/api.test.ts && node src/buybacks/model.test.ts && node src/buybacks/settlement-model.test.ts && node test/buyback-render.test.mjs",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",

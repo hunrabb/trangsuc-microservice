@@ -8,6 +8,66 @@ info:
 security:
   - bearerAuth: []
 paths:
+  /api/admin/reports/buybacks:
+    get:
+      operationId: getBuybackSummary
+      summary: Thu mua, đổi trang sức và đối soát nhập kho
+      description: >-
+        purchaseValue là giá quote đã duyệt, không phải doanh thu; directPayout và
+        exchangeStorePays là tiền thực chi khác nhau. receivedAssetValue là giá vốn
+        món thu mua đã ghi kho ngày đó. currentPendingMeltValue tổng giá vốn nhận
+        đến ngày to từ sự kiện kho; dữ liệu chậm hoặc thiếu nằm trong reconciliation.
+      x-roles: [ADMIN, MANAGER]
+      parameters:
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - $ref: '#/components/parameters/BranchId'
+      responses:
+        '200':
+          description: Tổng hợp theo ngày/chi nhánh và settlement chưa khớp Inventory
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [timezone, from, to, coverage, currentPendingMeltValue, currentPendingMeltReceipts, rows, reconciliation]
+                properties:
+                  timezone: { type: string, const: Asia/Ho_Chi_Minh }
+                  from: { type: string, format: date }
+                  to: { type: string, format: date }
+                  coverage: { type: string, enum: [REQUESTED_BRANCH, OBSERVED_BRANCHES_ONLY] }
+                  currentPendingMeltValue: { type: string }
+                  currentPendingMeltReceipts: { type: integer }
+                  rows:
+                    type: array
+                    items:
+                      type: object
+                      required: [date, branchId, settlementCount, exchangeCount, expectedPieces, stockedReceipts, stockedPieces, purchaseValue, directPayout, exchangeCustomerPays, exchangeStorePays, receivedAssetValue]
+                      properties:
+                        date: { type: string, format: date }
+                        branchId: { type: string, format: uuid }
+                        settlementCount: { type: integer }
+                        exchangeCount: { type: integer }
+                        expectedPieces: { type: integer }
+                        stockedReceipts: { type: integer }
+                        stockedPieces: { type: integer }
+                        purchaseValue: { type: string }
+                        directPayout: { type: string }
+                        exchangeCustomerPays: { type: string }
+                        exchangeStorePays: { type: string }
+                        receivedAssetValue: { type: string }
+                  reconciliation:
+                    type: array
+                    items:
+                      type: object
+                      required: [settlementId, branchId, state]
+                      properties:
+                        settlementId: { type: string, format: uuid }
+                        branchId: { type: string, format: uuid }
+                        state: { type: string, enum: [PENDING_STOCK, MISMATCH, SETTLEMENT_EVENT_MISSING] }
+        '400': { description: Ngày hoặc chi nhánh không hợp lệ }
+        '401': { description: Chưa đăng nhập }
+        '403': { description: Không có quyền xem chi nhánh }
+        '413': { description: 'Quá 10000 bản ghi, thu hẹp bộ lọc' }
   /api/admin/reports/dlq:
     get:
       operationId: listDeadLetters
@@ -171,7 +231,7 @@ paths:
       summary: Báo cáo nhập, xuất và tồn theo kỳ
       description: >-
         Kỳ dùng các mốc chốt liên tiếp; nhập = RECEIPT + RELEASE, xuất = SALE.
-        COUNT_MISSING chỉ là chênh lệch kiểm kê và không đổi trạng thái tồn.
+        COUNT_MISSING là chênh lệch lịch sử của chức năng đã gỡ và không đổi trạng thái tồn.
         Thiếu mốc hoặc lệch đối soát thì complete=false và không trả số giả.
       x-roles: [ADMIN, MANAGER]
       parameters:

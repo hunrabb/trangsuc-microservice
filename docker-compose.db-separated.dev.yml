@@ -1,0 +1,19 @@
+# Chỉ dùng cùng docker-compose.db-separated.yml khi thử kiến trúc mới trên máy dev.
+# Các cổng khác 5432 để tránh nhầm PostgreSQL legacy đang chạy.
+services:
+  auth-postgres:
+    ports:
+      - '127.0.0.1:15433:5432'
+  inventory-postgres:
+    ports:
+      - '127.0.0.1:15434:5432'
+  sales-postgres:
+    ports:
+      - '127.0.0.1:15435:5432'
+  report-postgres:
+    ports:
+      - '127.0.0.1:15436:5432'
+  rabbitmq:
+    ports:
+      - '127.0.0.1:15674:5672'
+      - '127.0.0.1:15675:15672'

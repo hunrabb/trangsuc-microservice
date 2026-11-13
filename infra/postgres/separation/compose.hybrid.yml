@@ -1,0 +1,10 @@
+# Temporary low-memory acceptance overlay. Sales and Report run from local
+# compiled source while Docker hosts their isolated DBs, broker and gateway.
+services:
+  inventory:
+    ports:
+      - '127.0.0.1:13002:3000'
+  gateway:
+    environment:
+      SALES_URL: http://${ACCEPTANCE_HOST_IP:?Set to the current WSL eth0 IPv4 address}:13003
+      REPORT_URL: http://${ACCEPTANCE_HOST_IP:?Set to the current WSL eth0 IPv4 address}:13004

@@ -9,7 +9,7 @@ import {
   rabbitCheck,
   RabbitConnection,
 } from '@jewelry/common';
-import { QUEUES } from '@jewelry/contracts';
+import { QUEUES, ROUTING_KEYS } from '@jewelry/contracts';
 import { Module } from '@nestjs/common';
 import { BRANCH_HANDLERS } from './branch/branch-events';
 import { DB_SCHEMA, envSchema, SERVICE_NAME } from './config/env';
@@ -19,6 +19,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { PrismaService } from './prisma/prisma.service';
 import { ONLINE_INVENTORY_HANDLERS } from './online/order-events';
 import { POS_ORDER_HANDLERS } from './stock/pos-order-events';
+import { receiveSettledBuyback } from './receipts/buyback-receipts.handler';
 
 @Module({
   imports: [
@@ -35,7 +36,12 @@ import { POS_ORDER_HANDLERS } from './stock/pos-order-events';
       database: (prisma: PrismaService) => prisma,
       consumer: {
         queue: QUEUES.INVENTORY,
-        handlers: { ...BRANCH_HANDLERS, ...POS_ORDER_HANDLERS, ...ONLINE_INVENTORY_HANDLERS },
+        handlers: {
+          ...BRANCH_HANDLERS,
+          ...POS_ORDER_HANDLERS,
+          ...ONLINE_INVENTORY_HANDLERS,
+          [ROUTING_KEYS.BUYBACK_SETTLED]: receiveSettledBuyback,
+        },
       },
     }),
     HealthModule.forRoot({

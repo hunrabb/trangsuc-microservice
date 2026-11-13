@@ -8,7 +8,7 @@ Nov 4, 2026 · @khai
 
 Hệ thống chia thành 4 service NestJS, mỗi service sở hữu một schema PostgreSQL riêng và giao tiếp bất đồng bộ qua RabbitMQ; inventory là nguồn sự thật duy nhất cho số lượng hàng.
 
-**Phạm vi:** quản lý chi nhánh, nhân viên & phân quyền, sản phẩm, nhập kho, kiểm kê, tồn kho, bán hàng tại quầy (POS) thanh toán chuyển khoản, bán online qua website riêng (lấy hàng từ tất cả chi nhánh), báo cáo doanh thu. Không có điều chuyển hàng giữa các kho, không tích hợp sàn TMĐT ở phiên bản này.
+**Phạm vi:** quản lý chi nhánh, nhân viên & phân quyền, sản phẩm, nhập kho, tồn kho, bán hàng tại quầy (POS) thanh toán chuyển khoản, bán online qua website riêng (lấy hàng từ tất cả chi nhánh), báo cáo doanh thu. Không có điều chuyển hàng giữa các kho, không tích hợp sàn TMĐT ở phiên bản này.
 
 **Tech stack**
 
@@ -26,7 +26,7 @@ Hệ thống chia thành 4 service NestJS, mỗi service sở hữu một schema
 | Service | Trách nhiệm | Phát sự kiện | Nghe sự kiện |
 | --- | --- | --- | --- |
 | auth-service | Chi nhánh, nhân viên, vai trò, tài khoản khách, đăng nhập, cấp token | `branch.created`, `branch.updated` | — |
-| inventory-service | Sản phẩm, biến thể, giá, kho, tồn kho, nhập hàng, kiểm kê, giữ hàng cho đơn online, chọn chi nhánh xuất đơn online | `stock.reserved`, `stock.reserve_failed`, `stock.reservation_expired`, `stock.changed`, `order.processing_failed`, `product.snapshot`, `stock.availability_changed` | `branch.created`, `branch.updated`, `order.created`, `order.cancelled`, `order.paid`, `order.shipping` |
+| inventory-service | Sản phẩm, biến thể, giá, kho, tồn kho, nhập hàng, giữ hàng cho đơn online, chọn chi nhánh xuất đơn online | `stock.reserved`, `stock.reserve_failed`, `stock.reservation_expired`, `stock.changed`, `order.processing_failed`, `product.snapshot`, `stock.availability_changed` | `branch.created`, `branch.updated`, `order.created`, `order.cancelled`, `order.paid`, `order.shipping` |
 | sales-service | Hoá đơn POS, đơn online, khách hàng, bản sao danh mục cho website, thanh toán chuyển khoản, hoàn tiền, trả hàng | `order.created`, `order.cancelled`, `order.paid`, `order.shipping`, `order.completed`, `order.returned` | `stock.*`, `product.snapshot`, `order.processing_failed` |
 | report-service | Tổng hợp doanh thu, lợi nhuận gộp, top sản phẩm, giá trị tồn kho | — | `order.completed`, `order.returned`, `stock.changed` |
 
@@ -44,9 +44,9 @@ Chỉ có 3 vai trò cố định (enum), gán theo chi nhánh; không có bản
 
 | Vai trò | Phạm vi | Được làm gì |
 | --- | --- | --- |
-| ADMIN | Toàn hệ thống | Tất cả: chi nhánh, nhân viên, sản phẩm, giá, xem mọi báo cáo |
-| MANAGER | 1 chi nhánh | Duyệt phiếu nhập, duyệt kiểm kê, quản lý nhân viên chi nhánh, xem báo cáo chi nhánh |
-| STAFF | 1 chi nhánh | Lập hoá đơn POS, xác nhận đã nhận chuyển khoản, xử lý đơn online, tạo phiếu nhập (chờ duyệt) |
+| ADMIN | Toàn hệ thống | Tất cả: chi nhánh, nhân viên, sản phẩm, giá, nhập hàng cho chi nhánh được chọn, xem mọi báo cáo |
+| MANAGER | Chi nhánh được giao | Quản lý nhân viên và xem báo cáo chi nhánh; không nhập hoặc duyệt phiếu nhập |
+| STAFF | 1 chi nhánh | Lập hoá đơn POS, xác nhận đã nhận chuyển khoản, xử lý đơn online; không nhập hàng |
 
 **Quy tắc kiểm tra quyền**
 
@@ -166,7 +166,7 @@ Tổng cộng 8 module; mỗi module dưới đây liệt kê chức năng cho p
 
 ### 3.3 Sản phẩm (inventory-service)
 
-> **Quyết định 3A (thay phần quản lý theo số lượng bên dưới ở giai đoạn này):** chỉ vàng (nhiều tuổi) và bạc; mọi món theo tem, mỗi chiếc một `JewelryItem` (`IN_STOCK`, `RESERVED`, `SOLD`), tồn kho = số chiếc `IN_STOCK`. Giá = trọng lượng (chỉ) × giá bán ra hiện tại của kim loại + tiền công, làm tròn tới 1.000 đồng; giá hiện tại = dòng `MetalPrice` có `effectiveFrom` mới nhất `<= now()`, chưa có → `METAL_PRICE_NOT_SET`. Phiếu nhập: nháp → duyệt (MANAGER, ADMIN) trong một transaction tạo hàng, `StockMovement`, `AuditLog`; hai người duyệt cùng lúc chỉ một bên thắng nhờ UPDATE có điều kiện `version` + `status`. Kho tạo khi nhận `branch.created`. Chi tiết luồng: `apps/inventory/README.md`.
+> **Quyết định 3A (thay phần quản lý theo số lượng bên dưới ở giai đoạn này):** chỉ vàng (nhiều tuổi) và bạc; mọi món theo tem, mỗi chiếc một `JewelryItem` (`IN_STOCK`, `RESERVED`, `SOLD`), tồn kho = số chiếc `IN_STOCK`. Giá = trọng lượng (chỉ) × giá bán ra hiện tại của kim loại + tiền công, làm tròn tới 1.000 đồng; giá hiện tại = dòng `MetalPrice` có `effectiveFrom` mới nhất `<= now()`, chưa có → `METAL_PRICE_NOT_SET`. Phiếu nhập: nháp → duyệt (chỉ ADMIN, chọn chi nhánh nhận hàng) trong một transaction tạo hàng, `StockMovement`, `AuditLog`; hai người duyệt cùng lúc chỉ một bên thắng nhờ UPDATE có điều kiện `version` + `status`. Kho tạo khi nhận `branch.created`. Chi tiết luồng: `apps/inventory/README.md`.
 
 - Danh mục dạng cây, thương hiệu, đơn vị tính.
 - Sản phẩm có nhiều biến thể (màu, size…); mỗi biến thể là một SKU có mã vạch riêng.
@@ -184,7 +184,6 @@ Tổng cộng 8 module; mỗi module dưới đây liệt kê chức năng cho p
 
 - Xem tồn theo kho / chi nhánh / SKU: tồn thực (`onHand`), đang giữ (`reserved`), khả dụng = `onHand − reserved`.
 - Sổ kho (stock ledger): mọi biến động ghi một dòng, không sửa không xoá.
-- Kiểm kê: tạo phiếu kiểm, nhập số thực tế, duyệt để điều chỉnh chênh lệch.
 - Cảnh báo tồn dưới mức tối thiểu.
 
 ### 3.6 Bán hàng tại quầy – hoá đơn POS (sales-service)
@@ -215,10 +214,10 @@ Mọi luồng làm thay đổi tồn kho đều đi qua inventory-service và k�
 
 ### 4.1 Nhập kho
 
-1. Thủ kho tạo phiếu nhập (`DRAFT`), chọn nhà cung cấp, thêm SKU, số lượng, giá nhập.
-2. Gửi duyệt → `PENDING`.
-3. Quản lý duyệt (kèm `version` đang thấy) → trong **một transaction**: đổi phiếu sang `COMPLETED` có điều kiện `version`, khoá từng dòng tồn bằng `SELECT … FOR UPDATE` (sắp theo `variantId`), cộng `onHand`, tính lại giá vốn bình quân, ghi `StockMovement(IMPORT)`, ghi outbox `stock.changed`.
-4. Lệch `version` → `409 VERSION_CONFLICT`, không cộng kho. Report nhận `stock.changed` để cập nhật giá trị tồn.
+1. Chỉ ADMIN chọn chi nhánh nhận hàng và lập phiếu `DRAFT` cho kho đang hoạt động.
+2. ADMIN thêm từng chiếc: biến thể, mã tem riêng, trọng lượng, tiền công, giá vốn; có thể xoá dòng khi còn nháp.
+3. ADMIN duyệt kèm `version`: trong một transaction chuyển phiếu sang `APPROVED`, tạo từng `JewelryItem` `IN_STOCK`, ghi `StockMovement(RECEIPT)` và audit. Sau duyệt không sửa phiếu.
+4. Tem trùng hoặc dữ liệu không hợp lệ thì rollback; lệch version trả `409 VERSION_CONFLICT`. STAFF/MANAGER không truy cập phiếu nhập, vẫn xem tồn kho trong phạm vi chi nhánh được cấp quyền.
 
 ### 4.2 Bán hàng tại quầy – hoá đơn POS (gọi trực tiếp)
 
@@ -311,7 +310,6 @@ Category 1 ──< Product 1 ──< ProductVariant 1 ──< BranchPrice / Pric
 Warehouse (→ auth.Branch) 1 ──< InventoryItem >── 1 ProductVariant
 Warehouse 1 ──< StockMovement / StockReservation (→ sales.Order)
 Supplier 1 ──< GoodsReceipt 1 ──< GoodsReceiptItem
-StockCount 1 ──< StockCountItem
 ```
 
 | Bảng | Cột chính | Ghi chú |
@@ -330,8 +328,6 @@ StockCount 1 ──< StockCountItem
 | GoodsReceipt | code, warehouseId, supplierId, status, totalAmount, paidAmount, approvedBy, version | Phiếu nhập |
 | GoodsReceiptItem | receiptId, variantId, quantity, unitCost | CHECK quantity > 0 |
 | StockReservation | warehouseId, variantId, orderId, quantity, status (`ACTIVE`, `CONSUMED`, `RELEASED`, `EXPIRED`), expiresAt | Unique (orderId, variantId); `RELEASED` với quantity 0 = dấu "đơn đã huỷ" |
-| StockCount | code, warehouseId, status, version | Phiếu kiểm kê |
-| StockCountItem | countId, variantId, systemQty (chụp lúc bắt đầu đếm), actualQty | Điều chỉnh theo chênh lệch |
 
 **Số còn bán được:** tại quầy = `onHand − reserved`; trên website = `onHand − reserved − onlineBuffer` (tổng các kho `acceptsOnlineOrders`).
 
@@ -497,7 +493,6 @@ enum ProductStatus { ACTIVE INACTIVE }
 enum MovementType  { IMPORT SALE SALE_CANCEL RETURN ADJUSTMENT }
 enum ReceiptStatus { DRAFT PENDING COMPLETED CANCELLED }
 enum ReservationStatus { ACTIVE CONSUMED RELEASED EXPIRED }
-enum CountStatus { DRAFT COMPLETED }
 enum OutboxStatus { PENDING PROCESSING PUBLISHED FAILED }
 
 // ---------- Sản phẩm ----------
@@ -615,7 +610,7 @@ model StockMovement {
   quantity     Int          // dương = vào kho, âm = ra kho
   balanceAfter Int
   unitCost     Decimal      @db.Decimal(15, 2)
-  refType      String       // GOODS_RECEIPT | ORDER | STOCK_COUNT
+  refType      String       // GOODS_RECEIPT | ORDER
   refId        String       @db.Uuid
   createdBy    String?      @db.Uuid
   createdAt    DateTime     @default(now())
@@ -674,26 +669,6 @@ model StockReservation {
   updatedAt   DateTime          @updatedAt
   @@unique([orderId, variantId])
   @@index([status, expiresAt])
-}
-
-model StockCount {
-  id          String           @id @default(uuid()) @db.Uuid
-  code        String           @unique
-  warehouseId String           @db.Uuid
-  status      CountStatus      @default(DRAFT)
-  version     Int              @default(0)
-  items       StockCountItem[]
-  createdBy   String           @db.Uuid
-  createdAt   DateTime         @default(now())
-}
-
-model StockCountItem {
-  id        String     @id @default(uuid()) @db.Uuid
-  countId   String     @db.Uuid
-  variantId String     @db.Uuid
-  systemQty Int        // chụp lúc bắt đầu đếm món này
-  actualQty Int?
-  count     StockCount @relation(fields: [countId], references: [id], onDelete: Cascade)
 }
 
 // ---------- Nhất quán dữ liệu ----------
@@ -841,7 +816,7 @@ WHERE "warehouseId" = $wh AND "variantId" = $variant
 - Đơn nhiều dòng: sắp xếp các dòng theo `variantId` trước khi cập nhật để mọi transaction khoá cùng thứ tự, tránh deadlock.
 - Gói cập nhật tồn + ghi `StockMovement` + ghi `OutboxEvent` trong `prisma.$transaction` (isolation `ReadCommitted` là đủ vì điều kiện nằm ngay trong `WHERE`).
 - Ràng buộc `CHECK (onHand >= 0 AND reserved <= onHand)` ở DB là lưới an toàn cuối.
-- Phiếu nhập, phiếu kiểm kê, đơn hàng dùng khoá lạc quan: `UPDATE … WHERE id = ? AND version = ?`; lệch version → trả 409 để client tải lại (ví dụ hai quản lý cùng bấm duyệt).
+- Phiếu nhập, đơn hàng dùng khoá lạc quan: `UPDATE … WHERE id = ? AND version = ?`; lệch version → trả 409 để client tải lại (ví dụ hai quản lý cùng bấm duyệt).
 
 ### 7.2 Transactional Outbox
 
@@ -937,7 +912,7 @@ report-service upsert `OrderRevenue` / `OrderLineSales` theo `orderId` khi nhậ
 | Bán âm kho | Bán nhiều hơn số đang có, tồn thành số âm | Chặn bằng UPDATE có điều kiện + CHECK |
 | UPDATE có điều kiện (nguyên tử) | Kiểm tra "còn đủ hàng không" và trừ trong cùng một câu lệnh, không ai chen vào giữa được | Trừ kho |
 | Deadlock | Hai transaction chờ khoá của nhau mãi mãi | Tránh bằng cách luôn khoá theo thứ tự `variantId` |
-| Khoá lạc quan (optimistic lock) | Mỗi bản ghi có số `version`; lúc lưu nếu version đã đổi thì báo lỗi, bắt tải lại | 2 quản lý cùng bấm duyệt phiếu nhập |
+| Khoá lạc quan (optimistic lock) | Mỗi bản ghi có số `version`; lúc lưu nếu version đã đổi thì báo lỗi, bắt tải lại | 2 quản trị viên cùng bấm duyệt phiếu nhập |
 | onHand / reserved / khả dụng | Tồn thực / đang giữ cho đơn online / còn bán được = onHand − reserved | InventoryItem |
 | Giữ hàng (reservation) | Khoá tạm số lượng cho một đơn chưa giao, có hạn 30 phút | Đơn online |
 | Sổ kho (stock ledger) | Nhật ký mọi lần hàng vào/ra kho, chỉ thêm, không sửa | StockMovement |

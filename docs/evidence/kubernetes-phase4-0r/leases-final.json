@@ -1,0 +1,82 @@
+[
+  {
+    "namespace": "cnpg-system",
+    "name": "db9c8771.cnpg.io",
+    "spec": {
+      "acquireTime": "2026-11-13T05:56:06.609108Z",
+      "holderIdentity": "cnpg-controller-manager-7df6db7d87-hx7hk_8d70f98d-11de-43f2-b041-39a755175605",
+      "leaseDurationSeconds": 15,
+      "leaseTransitions": 2,
+      "renewTime": "2026-11-13T06:06:59.010189Z"
+    }
+  },
+  {
+    "namespace": "jewelry-demo",
+    "name": "jewelry-pg",
+    "spec": {
+      "acquireTime": "2026-11-13T04:27:20.424913Z",
+      "holderIdentity": "jewelry-pg-1",
+      "leaseDurationSeconds": 15,
+      "leaseTransitions": 2,
+      "renewTime": "2026-11-13T06:06:58.242221Z"
+    }
+  },
+  {
+    "namespace": "kube-node-lease",
+    "name": "jewelry-lab-control-plane",
+    "spec": {
+      "holderIdentity": "jewelry-lab-control-plane",
+      "leaseDurationSeconds": 40,
+      "renewTime": "2026-11-13T06:06:51.314003Z"
+    }
+  },
+  {
+    "namespace": "kube-node-lease",
+    "name": "jewelry-lab-worker",
+    "spec": {
+      "holderIdentity": "jewelry-lab-worker",
+      "leaseDurationSeconds": 40,
+      "renewTime": "2026-11-13T06:06:52.267276Z"
+    }
+  },
+  {
+    "namespace": "kube-node-lease",
+    "name": "jewelry-lab-worker2",
+    "spec": {
+      "holderIdentity": "jewelry-lab-worker2",
+      "leaseDurationSeconds": 40,
+      "renewTime": "2026-11-13T06:06:52.189091Z"
+    }
+  },
+  {
+    "namespace": "kube-system",
+    "name": "apiserver-fxtxoplthfiwhurfgpbwnlmhpi",
+    "spec": {
+      "holderIdentity": "apiserver-fxtxoplthfiwhurfgpbwnlmhpi_8148c71f-3698-460c-9335-3a320e4783fb",
+      "leaseDurationSeconds": 3600,
+      "renewTime": "2026-11-13T06:06:50.465611Z"
+    }
+  },
+  {
+    "namespace": "kube-system",
+    "name": "kube-controller-manager",
+    "spec": {
+      "acquireTime": "2026-11-13T05:56:03.993553Z",
+      "holderIdentity": "jewelry-lab-control-plane_a4162fe5-bb48-4280-a7d0-c82949c7f7bd",
+      "leaseDurationSeconds": 15,
+      "leaseTransitions": 4,
+      "renewTime": "2026-11-13T06:06:59.118741Z"
+    }
+  },
+  {
+    "namespace": "kube-system",
+    "name": "kube-scheduler",
+    "spec": {
+      "acquireTime": "2026-11-13T05:55:49.533291Z",
+      "holderIdentity": "jewelry-lab-control-plane_2ecd1670-c70c-4b34-bf02-444b90cb666b",
+      "leaseDurationSeconds": 15,
+      "leaseTransitions": 4,
+      "renewTime": "2026-11-13T06:06:58.470448Z"
+    }
+  }
+]

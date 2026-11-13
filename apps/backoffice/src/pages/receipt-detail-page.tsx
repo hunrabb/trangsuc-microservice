@@ -20,7 +20,7 @@ import { Link, useParams } from 'react-router';
 import { describeError } from '../api/messages.ts';
 import { inventoryApi } from '../api/inventory-endpoints.ts';
 import { inventoryKeys, useAllVariants } from '../api/inventory-queries.ts';
-import { hasRoleAtBranch } from '../auth/permissions.ts';
+import { canManageReceipts } from '../auth/permissions.ts';
 import { useSession } from '../auth/session-context.tsx';
 import { ConfirmDialog } from '../components/confirm-dialog.tsx';
 import { boundFieldErrors, ErrorAlert } from '../components/error-alert.tsx';
@@ -66,7 +66,7 @@ const validatePositiveMoney = (value: string): string | null => {
 };
 
 /**
- * Chi tiết một phiếu nhập. Phiếu nháp: thêm từng chiếc (mỗi chiếc một mã tem), xoá dòng; MANAGER bấm duyệt. Duyệt xong
+ * Chi tiết một phiếu nhập. Phiếu nháp: thêm từng chiếc (mỗi chiếc một mã tem), xoá dòng; ADMIN bấm duyệt. Duyệt xong
  * phiếu thành "Đã duyệt" và các chiếc vào kho. Mỗi lần thêm hoặc xoá dòng làm `version` của phiếu tăng, nên
  * người duyệt đã mở phiếu từ trước sẽ nhận "Dữ liệu đã bị người khác sửa" thay vì duyệt nhầm nội dung mới.
  */
@@ -101,10 +101,8 @@ export function ReceiptDetailPage() {
   }
   const current = receipt.data;
   const isDraft = current.status === 'DRAFT';
-  const canEdit =
-    me !== undefined && hasRoleAtBranch(me.branches, current.branchId, ['MANAGER', 'STAFF']);
-  const canApprove =
-    me !== undefined && hasRoleAtBranch(me.branches, current.branchId, ['MANAGER']);
+  const canEdit = me !== undefined && canManageReceipts(me.branches);
+  const canApprove = me !== undefined && canManageReceipts(me.branches);
 
   return (
     <Stack>
@@ -301,7 +299,7 @@ function RemoveLineButton({
 }
 
 /**
- * Nút duyệt phiếu (MANAGER). Duyệt tạo các chiếc vào kho trong một lần: tem trùng với hàng đã có thì cả phiếu không
+ * Nút duyệt phiếu (ADMIN). Duyệt tạo các chiếc vào kho trong một lần: tem trùng với hàng đã có thì cả phiếu không
  * được duyệt và danh sách mã tem trùng hiện ngay trên phiếu để sửa.
  */
 function ApproveSection({

@@ -1,0 +1,170 @@
+[
+  {
+    "utc": "2026-11-13T05:55:08.8299852Z",
+    "id": 1,
+    "provider": "Microsoft-Windows-Power-Troubleshooter",
+    "message": "The system has returned from a low power state.\r\n\r\nSleep Time: ?2026?-?11?-?13T05:52:44.844337400Z\r\nWake Time: ?2026?-?11?-?13T05:55:06.985459900Z\r\n\r\nWake Source: Device -ACPI Lid",
+    "data": {
+      "WakeTimerContextLength": "0",
+      "NoMultiStageResumeReason": "0",
+      "HiberPagesWritten": "0",
+      "EffectiveState": "4",
+      "HiberWriteDuration": "0",
+      "WakeTimerContext": null,
+      "WakeSourceType": "5",
+      "WakeTimerOwner": null,
+      "BiosInitDuration": "1",
+      "SleepDuration": "5874",
+      "WakeTimerOwnerLength": "0",
+      "CheckpointDuration": "119",
+      "WakeSourceTextLength": "8",
+      "Attributes": "1912624140",
+      "WakeDuration": "4483",
+      "HiberReadDuration": "0",
+      "SleepTime": "2026-11-13T05:52:44.8443374Z",
+      "TargetState": "4",
+      "WakeTime": "2026-11-13T05:55:06.9854599Z",
+      "DriverInitDuration": "301",
+      "WakeSourceText": "ACPI Lid"
+    }
+  },
+  {
+    "utc": "2026-11-13T05:55:03.3835720Z",
+    "id": 131,
+    "provider": "Microsoft-Windows-Kernel-Power",
+    "message": "Firmware S3 times. ResumeCount: 1, FullResume: 1, AverageResume: 1",
+    "data": {
+      "ResumeCount": "1",
+      "FullResume": "1",
+      "AverageResume": "1"
+    }
+  },
+  {
+    "utc": "2026-11-13T05:55:02.5005119Z",
+    "id": 1,
+    "provider": "Microsoft-Windows-Kernel-General",
+    "message": "The system time has changed to ?2026?-?11?-?13T05:55:02.500000000Z from ?2026?-?11?-?13T05:52:51.243434400Z.\r\n\r\nChange Reason: System time synchronized with the hardware clock.\r\nProcess: '' (PID 4).",
+    "data": {
+      "ProcessName": null,
+      "OldTime": "2026-11-13T05:52:51.2434344Z",
+      "ProcessID": "4",
+      "Reason": "2",
+      "NewTime": "2026-11-13T05:55:02.5000000Z"
+    }
+  },
+  {
+    "utc": "2026-11-13T05:52:51.2435076Z",
+    "id": 107,
+    "provider": "Microsoft-Windows-Kernel-Power",
+    "message": "The system has resumed from sleep.",
+    "data": {
+      "WakeRequesterTypeDc": "4",
+      "TargetState": "4",
+      "EffectiveState": "4",
+      "WakeRequesterTypeAc": "4",
+      "ProgrammedWakeTimeDc": "2026-11-13T08:52:50.7196041Z",
+      "WakeFromState": "4",
+      "ProgrammedWakeTimeAc": "2026-11-13T08:52:50.7196041Z"
+    }
+  },
+  {
+    "utc": "2026-11-13T05:52:50.7121131Z",
+    "id": 42,
+    "provider": "Microsoft-Windows-Kernel-Power",
+    "message": "The system is entering sleep.\r\n\r\nSleep Reason: System Idle",
+    "data": {
+      "TargetState": "4",
+      "Flags": "0",
+      "TransitionsToOn": "17",
+      "EffectiveState": "4",
+      "Reason": "7"
+    }
+  },
+  {
+    "utc": "2026-11-13T05:52:50.6886832Z",
+    "id": 40,
+    "provider": "Microsoft-Windows-Kernel-Power",
+    "message": "The driver \\Driver\\vpcivsp for device ROOT\\VPCIVSP\\0000 stopped the power transition.",
+    "data": {
+      "InstanceName": "ROOT\\VPCIVSP\\0000",
+      "DriverName": "\\Driver\\vpcivsp",
+      "InstanceNameLength": "17",
+      "DriverNameLength": "15"
+    }
+  },
+  {
+    "utc": "2026-11-13T05:21:03.0949449Z",
+    "id": 105,
+    "provider": "Microsoft-Windows-Kernel-Power",
+    "message": "Power source change.",
+    "data": {
+      "RemainingCapacity": "20816",
+      "AcOnline": "false",
+      "FullChargeCapacity": "26505"
+    }
+  },
+  {
+    "utc": "2026-11-13T04:14:27.4716375Z",
+    "id": 105,
+    "provider": "Microsoft-Windows-Kernel-Power",
+    "message": "Power source change.",
+    "data": {
+      "RemainingCapacity": "6156",
+      "AcOnline": "true",
+      "FullChargeCapacity": "26505"
+    }
+  },
+  {
+    "utc": "2026-11-13T03:08:43.0265853Z",
+    "id": 105,
+    "provider": "Microsoft-Windows-Kernel-Power",
+    "message": "Power source change.",
+    "data": {
+      "RemainingCapacity": "26505",
+      "AcOnline": "false",
+      "FullChargeCapacity": "26505"
+    }
+  },
+  {
+    "utc": "2026-11-13T03:08:39.3568597Z",
+    "id": 1,
+    "provider": "Microsoft-Windows-Power-Troubleshooter",
+    "message": "The system has returned from a low power state.\r\n\r\nSleep Time: ?2026?-?11?-?12T23:05:50.381935900Z\r\nWake Time: ?2026?-?11?-?13T03:08:38.008139800Z\r\n\r\nWake Source: Unknown",
+    "data": {
+      "WakeTimerContextLength": "0",
+      "NoMultiStageResumeReason": "0",
+      "HiberPagesWritten": "1464585",
+      "EffectiveState": "5",
+      "HiberWriteDuration": "17552",
+      "WakeTimerContext": null,
+      "WakeSourceType": "0",
+      "WakeTimerOwner": null,
+      "BiosInitDuration": "6855",
+      "SleepDuration": "8739",
+      "WakeTimerOwnerLength": "0",
+      "CheckpointDuration": "23",
+      "WakeSourceTextLength": "0",
+      "Attributes": "1912619533",
+      "WakeDuration": "3515",
+      "HiberReadDuration": "15502",
+      "SleepTime": "2026-11-12T23:05:50.3819359Z",
+      "TargetState": "5",
+      "WakeTime": "2026-11-13T03:08:38.0081398Z",
+      "DriverInitDuration": "838",
+      "WakeSourceText": null
+    }
+  },
+  {
+    "utc": "2026-11-13T03:08:34.5006424Z",
+    "id": 1,
+    "provider": "Microsoft-Windows-Kernel-General",
+    "message": "The system time has changed to ?2026?-?11?-?13T03:08:34.500000000Z from ?2026?-?11?-?12T23:06:01.051721000Z.\r\n\r\nChange Reason: System time synchronized with the hardware clock.\r\nProcess: '' (PID 4).",
+    "data": {
+      "ProcessName": null,
+      "OldTime": "2026-11-12T23:06:01.0517210Z",
+      "ProcessID": "4",
+      "Reason": "2",
+      "NewTime": "2026-11-13T03:08:34.5000000Z"
+    }
+  }
+]

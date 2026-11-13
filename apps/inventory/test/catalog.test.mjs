@@ -159,3 +159,23 @@ test('online configuration validates targets and changes only warehouse/buffer f
     /Không có kho hoặc biến thể/,
   );
 });
+
+// Imported photos are limited to immutable, content-addressed catalog assets.
+test('catalog image input accepts scoped local images and rejects arbitrary paths', async () => {
+  const { updateProductRequestSchema } = await import('@jewelry/contracts');
+  const parse = (imageUrl) =>
+    updateProductRequestSchema.safeParse({ version: 1, imageUrl }).success;
+  assert.equal(parse('/catalog-images/' + 'a'.repeat(64) + '.jpg'), true);
+  assert.equal(parse('https://example.com/photo.jpg'), true);
+  assert.equal(parse(null), true);
+  for (const value of [
+    '/catalog-images/../x.jpg',
+    '//example.com/x',
+    '/api/auth/login',
+    '/catalog-images/x.svg',
+    'javascript:alert(1)',
+    'http://example.com/x',
+  ]) {
+    assert.equal(parse(value), false, value);
+  }
+});

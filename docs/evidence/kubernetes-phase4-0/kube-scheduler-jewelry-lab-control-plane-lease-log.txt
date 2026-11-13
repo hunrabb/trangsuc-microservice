@@ -1,0 +1,7 @@
+I1113 03:14:23.147247       1 leaderelection.go:258] "Attempting to acquire leader lease..." lock="kube-system/kube-scheduler"
+I1113 03:14:39.731393       1 leaderelection.go:272] "Successfully acquired lease" lock="kube-system/kube-scheduler"
+E1113 05:21:22.870444       1 leaderelection.go:461] "Error retrieving lease lock" err="client rate limiter Wait returned an error: rate: Wait(n=1) would exceed context deadline" lock="kube-system/kube-scheduler"
+E1113 05:21:23.027019       1 leaderelection.go:461] "Error retrieving lease lock" err="client rate limiter Wait returned an error: rate: Wait(n=1) would exceed context deadline" lock="kube-system/kube-scheduler"
+I1113 05:21:23.895650       1 leaderelection.go:304] "Failed to renew lease" lock="kube-system/kube-scheduler" err="context deadline exceeded"
+E1113 05:21:31.287185       1 leaderelection.go:323] "error retrieving resource lock" err="Get \"https://172.19.0.2:6443/apis/coordination.k8s.io/v1/namespaces/kube-system/leases/kube-scheduler?timeout=5s\": context deadline exceeded" lock="kube-system/kube-scheduler"
+E1113 05:21:39.074121       1 server.go:328] "Leaderelection lost"

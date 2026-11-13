@@ -1,0 +1,16 @@
+# CHỈ DÙNG KHI DEV. Docker Compose tự gộp file này khi chạy `docker compose up`.
+# Chạy như production thì bỏ qua file này:  docker compose -f docker-compose.yml up
+#
+# Mở thêm ba cổng, chỉ nghe trên 127.0.0.1 (máy khác trong mạng không vào được):
+#   - Postgres 5432 → để `pnpm dev` và `prisma migrate dev` trên máy dev kết nối
+#   - RabbitMQ AMQP 5672 → để các service chạy bằng `pnpm dev` (trên máy) gửi/nhận thư
+#   - trang quản lý RabbitMQ 15672 → http://localhost:15672 (đăng nhập bằng RABBITMQ_ADMIN_USER)
+services:
+  postgres:
+    ports:
+      - '127.0.0.1:5432:5432'
+
+  rabbitmq:
+    ports:
+      - '127.0.0.1:5672:5672'
+      - '127.0.0.1:15672:15672'

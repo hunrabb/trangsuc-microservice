@@ -9,6 +9,142 @@ info:
     Snapshot sản phẩm quá 2 phút không được trả; tồn thiếu/cũ/lệch version không báo còn hàng.
 security: []
 paths:
+  /api/shop/my-orders:
+    get:
+      operationId: listMyOnlineOrders
+      summary: Đơn hàng của tài khoản đã xác thực, mới nhất trước
+      security: [{ customerBearer: [] }]
+      parameters:
+        - { in: query, name: page, schema: { type: integer, minimum: 1, maximum: 100000, default: 1 } }
+        - { in: query, name: pageSize, schema: { type: integer, minimum: 1, maximum: 50, default: 20 } }
+      responses:
+        '200':
+          description: Chỉ đơn thuộc JWT sub; không có đơn trả items rỗng; no-store
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AccountOrderPage' }
+        '400': { description: Phân trang không hợp lệ }
+        '401': { description: "Thiếu token, token hết hạn hoặc sai audience" }
+    post:
+      operationId: createMyOnlineOrder
+      summary: Đặt đơn gắn với JWT sub; không nhận accountId từ body
+      security: [{ customerBearer: [] }]
+      parameters:
+        - { in: header, name: X-Checkout-Authorization, required: true, schema: { type: string, pattern: '^Checkout [a-f0-9]{64}$' } }
+        - { in: header, name: Idempotency-Key, required: true, schema: { type: string, minLength: 1, maxLength: 200 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateOnlineOrder' }
+      responses:
+        '202':
+          description: Dùng lại saga, capability recovery và idempotency của checkout guest
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OnlineOrderView' }
+        '400': { description: Header hoặc body không hợp lệ }
+        '401': { description: Không xác thực được tài khoản }
+        '422': { description: Key đã dùng cho nội dung hoặc chủ sở hữu khác }
+  /api/shop/my-orders/{orderId}:
+    get:
+      operationId: getMyOnlineOrder
+      summary: Chi tiết đơn, kiểm tra cả id và JWT sub tại Sales
+      security: [{ customerBearer: [] }]
+      parameters:
+        - { in: path, name: orderId, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Chi tiết đơn thuộc tài khoản; no-store
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AccountOrder' }
+        '401': { description: Chưa đăng nhập }
+        '404': { description: Đơn không tồn tại hoặc thuộc tài khoản khác }
+  /api/shop/my-orders/{orderId}/cancel:
+    post:
+      operationId: cancelMyOnlineOrder
+      summary: Huỷ đơn chưa nhận tiền, kiểm tra chủ sở hữu và khoá hàng tại Sales
+      security: [{ customerBearer: [] }]
+      parameters:
+        - { in: path, name: orderId, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Trạng thái mới; no-store
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AccountOrder' }
+        '401': { description: Chưa đăng nhập }
+        '404': { description: Không có đơn thuộc tài khoản }
+        '409': { description: Đơn đã nhận tiền hoặc không còn huỷ được }
+  /api/shop/auth/register:
+    post:
+      operationId: customerRegister
+      summary: Đăng ký tài khoản khách rõ ràng, không tạo User nhân viên
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CustomerRegister' }
+      responses:
+        '201':
+          description: Access JWT 15 phút và HttpOnly Secure SameSite Strict cookie rt_shop; no-store
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CustomerSession' }
+        '400': { description: Thông tin không hợp lệ }
+        '409': { description: Không đăng ký hoặc đăng nhập được }
+        '429': { description: Quá giới hạn theo IP và email }
+  /api/shop/auth/login:
+    post:
+      operationId: customerLogin
+      summary: Đăng nhập tài khoản khách bằng email và mật khẩu
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CustomerLogin' }
+      responses:
+        '200':
+          description: Access JWT 15 phút và HttpOnly Secure SameSite Strict cookie rt_shop; no-store
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CustomerSession' }
+        '400': { description: Thông tin không hợp lệ }
+        '401': { description: Không đăng ký hoặc đăng nhập được }
+        '429': { description: Quá giới hạn theo IP và email }
+  /api/shop/auth/refresh:
+    post:
+      operationId: refreshCustomerSession
+      summary: Xoay cookie rt_shop riêng, hạn trượt 7 ngày và tối đa 30 ngày
+      security: []
+      responses:
+        '200':
+          description: Token mới, cookie mới; no-store
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CustomerSession' }
+        '401': { description: 'Cookie thiếu, hết hạn hoặc đã thu hồi' }
+        '409': { description: Refresh đang xoay ở tab khác; giữ cookie và thử lại }
+  /api/shop/auth/logout:
+    post:
+      operationId: logoutCustomerSession
+      security: []
+      responses:
+        '204': { description: Thu hồi refresh session và xoá cookie rt_shop }
+  /api/shop/auth/me:
+    get:
+      operationId: getCustomerAccount
+      security: [{ customerBearer: [] }]
+      responses:
+        '200':
+          description: Hồ sơ tài khoản, không trả hash mật khẩu; no-store
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CustomerAccount' }
+        '401': { description: Chưa đăng nhập }
   /api/shop/orders:
     post:
       operationId: createOnlineOrder
@@ -130,12 +266,185 @@ paths:
         '503': { description: Upstream không sẵn sàng }
 components:
   securitySchemes:
+    customerBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: RS256 access token, audience shop. Employee tokens are rejected.
     checkoutAccess:
       type: apiKey
       in: header
       name: Authorization
       description: 'Checkout theo sau bởi dấu cách và token hex 64 ký tự chữ thường; không đưa token vào URL hoặc log.'
   schemas:
+    CustomerLogin:
+      type: "object"
+      properties:
+        email:
+          type: "string"
+          maxLength: 254
+          format: "email"
+          pattern: "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+        password:
+          type: "string"
+          minLength: 1
+          maxLength: 256
+      required:
+        - "email"
+        - "password"
+      additionalProperties: false
+    CustomerRegister:
+      type: "object"
+      properties:
+        email:
+          type: "string"
+          maxLength: 254
+          format: "email"
+          pattern: "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+        password:
+          type: "string"
+        fullName:
+          type: "string"
+          minLength: 1
+          maxLength: 150
+      required:
+        - "email"
+        - "password"
+        - "fullName"
+      additionalProperties: false
+    CustomerAccount:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        email:
+          type: "string"
+          format: "email"
+          pattern: "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+        fullName:
+          type: "string"
+      required:
+        - "id"
+        - "email"
+        - "fullName"
+      additionalProperties: false
+    CustomerSession:
+      type: "object"
+      properties:
+        accessToken:
+          type: "string"
+        expiresIn:
+          type: "number"
+        user:
+          $ref: "#/components/schemas/CustomerAccount"
+      required:
+        - "accessToken"
+        - "expiresIn"
+        - "user"
+      additionalProperties: false
+    AccountOrder:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+          pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        code:
+          type: "string"
+        status:
+          type: "string"
+          enum:
+            - "PENDING"
+            - "AWAITING_PAYMENT"
+            - "CANCELLED"
+            - "PAYMENT_PROCESSING"
+            - "CONFIRMED"
+            - "PAYMENT_REVIEW"
+            - "REFUND_PENDING"
+        total:
+          anyOf:
+            - type: "string"
+              pattern: "^\\d{1,18}\\.\\d{2}$"
+            - type: "null"
+        expiresAt:
+          anyOf:
+            - type: "string"
+              format: "date-time"
+              pattern: "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+            - type: "null"
+        needsReview:
+          type: "boolean"
+        failureCode:
+          type:
+            - "string"
+            - "null"
+        items:
+          maxItems: 50
+          type: "array"
+          items:
+            type: "object"
+            properties:
+              variantId:
+                type: "string"
+                format: "uuid"
+                pattern: "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              sku:
+                type: "string"
+                maxLength: 200
+              productName:
+                type: "string"
+                maxLength: 500
+              price:
+                type: "string"
+                pattern: "^\\d{1,18}\\.\\d{2}$"
+            required:
+              - "variantId"
+              - "sku"
+              - "productName"
+              - "price"
+            additionalProperties: false
+        createdAt:
+          type: "string"
+          format: "date-time"
+          pattern: "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+      required:
+        - "id"
+        - "code"
+        - "status"
+        - "total"
+        - "expiresAt"
+        - "needsReview"
+        - "failureCode"
+        - "items"
+        - "createdAt"
+      additionalProperties: false
+    AccountOrderPage:
+      type: "object"
+      properties:
+        items:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/AccountOrder"
+        total:
+          type: "integer"
+          minimum: 0
+          maximum: 9007199254740991
+        page:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
+        pageSize:
+          type: "integer"
+          exclusiveMinimum: 0
+          maximum: 9007199254740991
+      required:
+        - "items"
+        - "total"
+        - "page"
+        - "pageSize"
+      additionalProperties: false
     CreateOnlineOrder:
       type: "object"
       properties:
@@ -378,6 +687,10 @@ components:
             - "METHOD_NOT_ALLOWED"
             - "VERSION_CONFLICT"
             - "INVALID_STATE"
+            - "BUYBACK_POLICY_REQUIRED"
+            - "BUYBACK_APPRAISAL_INCOMPLETE"
+            - "BUYBACK_PRICE_INVALID"
+            - "BUYBACK_SEPARATE_APPROVER_REQUIRED"
             - "LAST_ADMIN"
             - "METAL_PRICE_NOT_SET"
             - "ITEM_NOT_AVAILABLE"

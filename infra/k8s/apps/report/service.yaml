@@ -1,0 +1,19 @@
+# CHECKPOINT 4.0 DRAFT — NOT APPLIED; review checkpoint gates before use.
+apiVersion: v1
+kind: Service
+metadata:
+  name: report
+  namespace: jewelry-demo
+  labels:
+    app.kubernetes.io/name: report
+    app.kubernetes.io/part-of: jewelry-demo
+    app.kubernetes.io/managed-by: phase4-draft
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: report
+    app.kubernetes.io/part-of: jewelry-demo
+  ports:
+  - name: http
+    port: 3000
+    targetPort: http

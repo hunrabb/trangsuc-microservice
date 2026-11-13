@@ -54,7 +54,9 @@ function fixture() {
       if (sql.includes('clock_timestamp')) return [{ now: new Date() }];
       if (sql.includes('FOR UPDATE')) {
         const row = rows.get(values[0]);
-        return row && (values[1] === undefined || values[1] === row.accessHash)
+        return row &&
+          (values[1] === undefined ||
+            values[1] === (sql.includes('"accountId"') ? row.accountId : row.accessHash))
           ? [{ id: row.id }]
           : [];
       }
@@ -69,6 +71,7 @@ function fixture() {
         )
           throw unique();
         const row = {
+          createdAt: new Date(),
           status: 'PENDING',
           items: [],
           total: null,
@@ -88,6 +91,13 @@ function fixture() {
       },
       findUnique: async ({ where }) => find(where) ?? null,
       findFirst: async ({ where }) => find(where) ?? null,
+      findMany: async ({ where, skip, take }) =>
+        [...rows.values()]
+          .filter((r) => r.accountId === where.accountId)
+          .sort((a, b) => b.createdAt - a.createdAt || b.id.localeCompare(a.id))
+          .slice(skip, skip + take),
+      count: async ({ where }) =>
+        [...rows.values()].filter((r) => r.accountId === where.accountId).length,
       updateMany: async ({ where, data }) => {
         const row = rows.get(where.id);
         if (!row || !where.status.in.includes(row.status)) return { count: 0 };
@@ -118,7 +128,10 @@ function fixture() {
     tx,
     rows,
     events,
-    service: new OnlineOrdersService({ ...tx, $transaction: async (cb) => cb(tx) }),
+    service: new OnlineOrdersService({
+      ...tx,
+      $transaction: async (cb) => (typeof cb === 'function' ? cb(tx) : Promise.all(cb)),
+    }),
   };
 }
 function reserved(orderId) {
@@ -353,4 +366,54 @@ test('Phase 5 POS contracts are still accepted unchanged alongside WEBSITE creat
     }).success,
     true,
   );
+});
+
+test('account checkout binds verified owner, lists only their orders newest first with pagination, preserves guests', async () => {
+  const { service, rows } = fixture();
+  const a = randomUUID(),
+    b = randomUUID();
+  const first = await service.create(authorization, 'account-first', body(), a);
+  const second = await service.create(authorization, 'account-second', body(), a);
+  const other = await service.create(authorization, 'account-other', body(), b);
+  const guest = await service.create(authorization, 'guest', body());
+  rows.get(first.id).createdAt = new Date('2026-01-01');
+  rows.get(second.id).createdAt = new Date('2026-02-01');
+  const page = await service.forAccount(a, 1, 1);
+  assert.equal(page.total, 2);
+  assert.deepEqual(
+    page.items.map((o) => o.id),
+    [second.id],
+  );
+  assert.deepEqual(
+    (await service.forAccount(a, 2, 1)).items.map((o) => o.id),
+    [first.id],
+  );
+  assert.equal((await service.accountOrder(a, first.id)).id, first.id);
+  await assert.rejects(service.accountOrder(b, first.id), (e) => e.httpStatus === 404);
+  await assert.rejects(service.accountOrder(a, other.id), (e) => e.httpStatus === 404);
+  await assert.rejects(service.accountOrder(a, guest.id), (e) => e.httpStatus === 404);
+  assert.deepEqual((await service.forAccount(randomUUID(), 1, 20)).items, []);
+  assert.equal(rows.get(guest.id).accountId, null);
+  assert.equal((await service.get(authorization, guest.id)).id, guest.id);
+  await assert.rejects(
+    service.create(authorization, 'account-first', body(), b),
+    (e) => e.httpStatus === 422,
+  );
+  await assert.rejects(
+    service.create(authorization, 'guest', body(), a),
+    (e) => e.httpStatus === 422,
+  );
+});
+
+test('account cancellation checks ownership and preserves existing payment safeguards', async () => {
+  const { service, rows } = fixture();
+  const a = randomUUID(),
+    b = randomUUID();
+  const order = await service.create(authorization, 'account-cancel', body(), a);
+  await assert.rejects(service.cancelAccount(b, order.id), (e) => e.httpStatus === 404);
+  rows.get(order.id).activePaymentId = randomUUID();
+  await assert.rejects(service.cancelAccount(a, order.id), (e) => e.httpStatus === 409);
+  rows.get(order.id).activePaymentId = null;
+  assert.equal((await service.cancelAccount(a, order.id)).status, 'CANCELLED');
+  assert.equal((await service.cancelAccount(a, order.id)).status, 'CANCELLED');
 });

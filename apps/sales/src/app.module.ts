@@ -1,3 +1,4 @@
+import { MyOrdersController } from './online/my-orders.controller';
 import { BuybacksModule } from './buybacks/buybacks.module';
 import { OnlinePaymentsController } from './payments/online-payments.controller';
 import { OnlinePaymentsService } from './payments/online-payments.service';
@@ -29,7 +30,12 @@ import { PublicCatalogService } from './catalog/catalog.service';
 import { PosModule } from './pos/pos.module';
 
 @Module({
-  controllers: [PublicCatalogController, OnlineOrdersController, OnlinePaymentsController],
+  controllers: [
+    MyOrdersController,
+    PublicCatalogController,
+    OnlineOrdersController,
+    OnlinePaymentsController,
+  ],
   providers: [
     PublicCatalogService,
     OnlineOrdersService,

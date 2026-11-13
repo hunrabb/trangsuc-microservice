@@ -27,7 +27,8 @@ registerHooks({
     };
   },
 });
-const { createShopApi, ShopApiError, canRetryRead } = await import('../src/api/shop.ts');
+const { createShopApi: createApi, ShopApiError, canRetryRead } = await import('../src/api/shop.ts');
+const createShopApi = (fetcher) => createApi(fetcher, async () => undefined);
 const { catalogQuery, catalogParams, cents, money, safeImageUrl, productPrice } =
   await import('../src/state/catalog.ts');
 const {
@@ -382,9 +383,10 @@ test('double submission shares one request; identity is stored before POST; know
   finish(order);
   await first;
   assert.equal(coordinator.busy, false);
-  assert.equal(vault.active().orderId, orderId);
+  assert.equal(vault.forOrder(orderId).orderId, orderId);
+  assert.equal(vault.active(), undefined);
   assert.ok(!session.getItem(CHECKOUT_KEY).includes(body.recipientPhone));
-  assert.equal(vault.active().body, null);
+  assert.equal(vault.forOrder(orderId).body, null);
 });
 test('timeout retains uncertain checkout; explicit retry reuses exact token/key/body even after reload', async () => {
   const session = storage(),
@@ -433,7 +435,8 @@ test('uncertain checkout recovers by key; 404 never clears request or permits a 
     return order;
   };
   await coordinator.recover();
-  assert.equal(vault.active().orderId, orderId);
+  assert.equal(vault.forOrder(orderId).orderId, orderId);
+  assert.equal(vault.active(), undefined);
 });
 test('checkout never sends POST when session storage is unavailable or full', async () => {
   for (const session of [
@@ -477,8 +480,8 @@ test('known credentials keep original expiry on polling; invalid stored row cann
     vault = new CheckoutVault(session),
     attempt = vault.prepare(body);
   vault.known(attempt, order);
-  vault.known(vault.active(), { ...order, status: 'CONFIRMED' });
-  assert.equal(vault.active().expiresAt, attempt.createdAt + ACCESS_TTL_MS);
+  vault.known(vault.forOrder(orderId), { ...order, status: 'CONFIRMED' });
+  assert.equal(vault.forOrder(orderId).expiresAt, attempt.createdAt + ACCESS_TTL_MS);
   const saved = JSON.parse(session.getItem(CHECKOUT_KEY));
   saved.attempts.push({ id: 'invalid' });
   session.setItem(CHECKOUT_KEY, JSON.stringify(saved));
@@ -602,25 +605,41 @@ test('checkout reload shows recovery actions rather than a new checkout form', (
   assert.ok(!html.includes('name="recipientPhone"'));
   assert.ok(!html.includes(token));
 });
-test('manual payment shows authoritative order total/reference and safe missing-bank guidance', () => {
+test('demo payment shows authoritative amount, explicit non-payment QR and local action', () => {
   const html = renderToStaticMarkup(React.createElement(PaymentGuidance, { order }));
   for (const text of [
     '1.000.000,25',
     'WEB-TEST',
-    'chưa được cung cấp',
-    'Nhân viên sẽ xác minh',
-    'chưa có tính năng gửi chứng từ',
+    'DEMO — KHÔNG CHUYỂN TIỀN THẬT',
+    'Tôi đã chuyển khoản (Demo)',
+    'không gửi thông báo đến cửa hàng',
+    'không chứa ngân hàng',
   ])
     assert.ok(html.includes(text), text);
-  assert.ok(!html.includes('<button'));
+  assert.ok(html.includes('role="img"'));
   assert.ok(!html.includes('<img'));
-  assert.ok(!html.includes('Tôi đã trả tiền'));
-  assert.equal(
-    renderToStaticMarkup(
-      React.createElement(PaymentGuidance, { order: { ...order, status: 'PENDING' } }),
-    ),
-    '',
-  );
+  assert.ok(!html.includes('vietqr'));
+  assert.equal(order.status, 'AWAITING_PAYMENT');
+});
+test('demo payment is hidden for every non-payable lifecycle and missing authoritative total', () => {
+  for (const status of [
+    'PENDING',
+    'CANCELLED',
+    'PAYMENT_PROCESSING',
+    'CONFIRMED',
+    'PAYMENT_REVIEW',
+    'REFUND_PENDING',
+  ]) {
+    assert.equal(
+      renderToStaticMarkup(React.createElement(PaymentGuidance, { order: { ...order, status } })),
+      '',
+    );
+  }
+  for (const patch of [{ total: null }, { needsReview: true }])
+    assert.equal(
+      renderToStaticMarkup(React.createElement(PaymentGuidance, { order: { ...order, ...patch } })),
+      '',
+    );
 });
 test('payment and refund status components never claim completion before backend confirmation', () => {
   for (const status of ['PAYMENT_PROCESSING', 'PAYMENT_REVIEW', 'REFUND_PENDING', 'CONFIRMED']) {
@@ -743,4 +762,188 @@ test('6.5A filtered catalog card cannot advertise another variant price or stock
   assert.ok(!html.includes('500.000'));
   assert.ok(html.includes('Tạm hết hàng'));
   assert.ok(!html.includes('>Còn hàng<'));
+});
+
+test('signed-in checkout uses customer endpoint and bearer without accepting frontend accountId', async () => {
+  let request;
+  const api = createApi(
+    async (url, options) => {
+      request = { url, options };
+      return new Response(JSON.stringify(order), { status: 202 });
+    },
+    async () => 'verified-access-token',
+  );
+  await api.create(
+    {
+      items: [{ variantId, quantity: 1 }],
+      recipientName: 'Khách',
+      recipientPhone: '+84901234567',
+      shippingAddress: '123 Đường A, TP HCM',
+    },
+    token,
+    'account-checkout',
+  );
+  assert.equal(request.url, '/api/shop/my-orders');
+  assert.equal(request.options.headers.Authorization, 'Bearer verified-access-token');
+  assert.equal(request.options.headers['X-Checkout-Authorization'], `Checkout ${token}`);
+  assert.ok(!request.options.body.includes('accountId'));
+});
+
+test('account pages request login, render owned orders and preserve guest access separately', async () => {
+  const accountApi = await import('../src/api/account.ts');
+  const original = globalThis.fetch;
+  try {
+    globalThis.fetch = async () => new Response('{}', { status: 401 });
+    await accountApi.restoreAccount();
+    let html = renderRoute('/tai-khoan/don-hang');
+    assert.ok(html.includes('Đăng nhập'));
+    assert.ok(!html.includes('ID tra cứu đơn'));
+    assert.ok(!html.includes('WEB-TEST'));
+    globalThis.fetch = async () =>
+      new Response(
+        JSON.stringify({
+          accessToken: 'access',
+          expiresIn: 900,
+          user: { id, fullName: 'Khách A', email: 'a@example.com' },
+        }),
+      );
+    await accountApi.loginAccount('login', { email: 'a@example.com', password: 'long-password' });
+    const owned = { ...order, createdAt: '2026-11-10T01:00:00.000Z' };
+    html = renderRoute('/tai-khoan/don-hang', {
+      data: [[['account-orders', id, 1], { items: [owned], total: 1, page: 1, pageSize: 20 }]],
+    });
+    for (const text of ['WEB-TEST', 'Khách A', 'Xem chi tiết', '1.000.000,25'])
+      assert.ok(html.includes(text), text);
+    assert.ok(!html.includes('ID tra cứu đơn'));
+    assert.ok(renderRoute('/tai-khoan/don-hang').includes('Đang tải đơn hàng'));
+    html = renderRoute('/tai-khoan/don-hang', {
+      errors: [{ key: ['account-orders', id, 1], error: new Error('Chưa tải được đơn hàng') }],
+    });
+    assert.ok(html.includes('Chưa tải được đơn hàng'));
+    assert.ok(html.includes('Thử lại'));
+    html = renderRoute(`/tai-khoan/don-hang/${orderId}`, {
+      data: [[['account-orders', id, orderId], owned]],
+    });
+    assert.ok(html.includes('Sản phẩm trong đơn'));
+    assert.ok(html.includes('Số lượng: 1'));
+    html = renderRoute('/tai-khoan/don-hang', {
+      data: [[['account-orders', id, 1], { items: [], total: 0, page: 1, pageSize: 20 }]],
+    });
+    assert.ok(html.includes('Bạn chưa có đơn hàng nào'));
+    await accountApi.logoutAccount();
+    html = renderRoute('/tai-khoan/don-hang', {
+      data: [[['account-orders', id, 1], { items: [owned], total: 1, page: 1, pageSize: 20 }]],
+    });
+    assert.ok(!html.includes('WEB-TEST'));
+    assert.ok(renderRoute('/don-hang/khach').includes('Mã truy cập riêng'));
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+test('catalog metal navigation shows the selected collection heading and one active menu link', () => {
+  for (const [kind, label] of [
+    ['GOLD', 'Trang sức vàng'],
+    ['SILVER', 'Trang sức bạc'],
+  ]) {
+    const html = renderRoute(`/bo-suu-tap?metalKind=${kind}`);
+    assert.match(html, new RegExp(`<h1>${label}`));
+    assert.match(
+      html,
+      new RegExp(
+        `href="/bo-suu-tap\\?metalKind=${kind}"[^>]*aria-current="page"|aria-current="page"[^>]*href="/bo-suu-tap\\?metalKind=${kind}"`,
+      ),
+    );
+    assert.ok(!html.includes('class="active" aria-current="page" href="/bo-suu-tap"'));
+  }
+});
+
+test('known orders are history, never checkout recovery, including legacy stored activeId', () => {
+  for (const status of [
+    'CANCELLED',
+    'CONFIRMED',
+    'AWAITING_PAYMENT',
+    'PENDING',
+    'PAYMENT_PROCESSING',
+    'PAYMENT_REVIEW',
+    'REFUND_PENDING',
+  ]) {
+    const session = storage(),
+      local = storage();
+    persistCart(local, addCartItem([], product, variantId, 1));
+    const vault = new CheckoutVault(session),
+      attempt = vault.prepare(body);
+    vault.known(attempt, { ...order, status });
+    assert.equal(vault.active(), undefined);
+    const saved = JSON.parse(session.getItem(CHECKOUT_KEY));
+    saved.activeId = attempt.id; // Sessions created before this fix.
+    session.setItem(CHECKOUT_KEY, JSON.stringify(saved));
+    const restored = new CheckoutVault(session);
+    assert.equal(restored.active(), undefined);
+    assert.equal(restored.forOrder(orderId).lastStatus, status);
+    const html = renderRoute('/dat-hang', { session, local, data: [[['product', id], product]] });
+    assert.ok(html.includes('name="recipientName"'), status);
+    assert.ok(!html.includes('Yêu cầu trước đã kết thúc'), status);
+    assert.ok(!html.includes('Đặt đơn mới từ giỏ hàng'), status);
+    const fresh = restored.prepare(body);
+    assert.notEqual(fresh.key, attempt.key);
+    assert.notEqual(fresh.token, attempt.token);
+  }
+});
+test('empty cart with known order history shows empty cart instead of old order status', () => {
+  const session = storage(),
+    vault = new CheckoutVault(session),
+    attempt = vault.prepare(body);
+  vault.known(attempt, { ...order, status: 'CANCELLED' });
+  const html = renderRoute('/dat-hang', { session });
+  assert.ok(html.includes('Bạn chưa có sản phẩm để đặt'));
+  assert.ok(!html.includes('Yêu cầu trước đã kết thúc'));
+});
+test('expired tracking explains the actual previous reservation deadline in Vietnam time', () => {
+  const html = renderToStaticMarkup(
+    React.createElement(OrderStatus, {
+      order: {
+        ...order,
+        status: 'CANCELLED',
+        failureCode: 'RESERVATION_EXPIRED',
+        expiresAt: '2026-11-10T10:41:45.320Z',
+      },
+    }),
+  );
+  assert.ok(html.includes('17:41:45'));
+  assert.ok(html.includes('Mở lại liên kết không bắt đầu lượt giữ hàng mới'));
+});
+
+test('late tracking updates cannot reactivate a completed intent after starting another purchase', async () => {
+  const session = storage();
+  const vault = new CheckoutVault(session);
+  const first = vault.prepare(body);
+  vault.known(first, { ...order, status: 'CANCELLED' });
+  const trackingSnapshot = vault.forOrder(orderId);
+  vault.startNew();
+  // React tracking effect can still run while the navigation to cart commits.
+  vault.known(trackingSnapshot, { ...order, status: 'CANCELLED' });
+  assert.equal(vault.active(), undefined);
+  const restored = new CheckoutVault(session);
+  assert.equal(restored.active(), undefined);
+  const next = restored.prepare(body);
+  assert.notEqual(next.key, first.key);
+  assert.notEqual(next.token, first.token);
+  // Revisiting history must not replace the active pending request or its key/body.
+  restored.known(restored.forOrder(orderId), { ...order, status: 'CANCELLED' });
+  assert.equal(restored.active().id, next.id);
+  assert.equal(restored.active().key, next.key);
+  assert.deepEqual(restored.active().body, body);
+  const reloaded = new CheckoutVault(session);
+  assert.equal(reloaded.active().key, next.key);
+  assert.throws(() => reloaded.startNew(), UncertainCheckoutError);
+});
+test('late tracking callbacks cannot restore forgotten credentials', () => {
+  const vault = new CheckoutVault(storage());
+  const attempt = vault.prepare(body);
+  vault.known(attempt, order);
+  vault.forget(attempt.id);
+  vault.known(attempt, order);
+  assert.equal(vault.active(), undefined);
+  assert.equal(vault.forOrder(orderId), undefined);
 });

@@ -1,0 +1,159 @@
+# CHECKPOINT 4.0 DRAFT — NOT APPLIED; review checkpoint gates before use.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kong
+  namespace: jewelry-demo
+  labels:
+    app.kubernetes.io/name: kong
+    app.kubernetes.io/part-of: jewelry-demo
+    app.kubernetes.io/managed-by: phase4-draft
+  annotations:
+    jewelry.demo/checkpoint: '4.5'
+    jewelry.demo/gates: DB-less parse; verified JWT contracts; per-Pod rate policy
+      and client-IP trust approval
+spec:
+  replicas: 2
+  revisionHistoryLimit: 2
+  progressDeadlineSeconds: 240
+  minReadySeconds: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: kong
+      app.kubernetes.io/part-of: jewelry-demo
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: kong
+        app.kubernetes.io/part-of: jewelry-demo
+        app.kubernetes.io/managed-by: phase4-draft
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 45
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: jewelry-lab-worker
+                operator: In
+                values:
+                - 'true'
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app.kubernetes.io/name: kong
+                app.kubernetes.io/part-of: jewelry-demo
+            topologyKey: kubernetes.io/hostname
+      containers:
+      - name: kong
+        image: jewelry/kong-candidate:phase4-af47135d1052
+        imagePullPolicy: Never
+        ports:
+        - name: proxy
+          containerPort: 8000
+        - name: status
+          containerPort: 8100
+        env:
+        - name: KONG_DATABASE
+          value: 'off'
+        - name: KONG_DECLARATIVE_CONFIG
+          value: /kong/kong.yml
+        - name: KONG_PREFIX
+          value: /var/run/kong
+        - name: KONG_PROXY_LISTEN
+          value: 0.0.0.0:8000
+        - name: KONG_ADMIN_LISTEN
+          value: 'off'
+        - name: KONG_STATUS_LISTEN
+          value: 0.0.0.0:8100
+        - name: KONG_PLUGINS
+          value: bundled,jewelry-request-boundary,jewelry-route-guard,jewelry-jwt-policy,jewelry-rate-policy
+        - name: KONG_NGINX_HTTP_LUA_SHARED_DICT
+          value: jewelry_limits 8m
+        - name: KONG_NGINX_WORKER_PROCESSES
+          value: '1'
+        - name: KONG_MEM_CACHE_SIZE
+          value: 32m
+        - name: KONG_LMDB_MAP_SIZE
+          value: 32m
+        - name: KONG_TRUSTED_IPS
+          value: 127.0.0.1,::1
+        - name: KONG_REAL_IP_HEADER
+          value: X-Forwarded-For
+        - name: KONG_REAL_IP_RECURSIVE
+          value: 'off'
+        - name: KONG_PROXY_ACCESS_LOG
+          value: /dev/stdout
+        - name: KONG_PROXY_ERROR_LOG
+          value: /dev/stderr
+        - name: KONG_STATUS_ERROR_LOG
+          value: /dev/stderr
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+            ephemeral-storage: 32Mi
+          limits:
+            cpu: 750m
+            memory: 512Mi
+            ephemeral-storage: 256Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        startupProbe:
+          httpGet:
+            path: /status
+            port: status
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 36
+        livenessProbe:
+          httpGet:
+            path: /status
+            port: status
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /status/ready
+            port: status
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        volumeMounts:
+        - name: config
+          mountPath: /kong
+          readOnly: true
+        - name: prefix
+          mountPath: /var/run/kong
+        - name: tmp
+          mountPath: /tmp
+      volumes:
+      - name: config
+        configMap:
+          name: kong-phase4-config
+      - name: prefix
+        emptyDir:
+          sizeLimit: 128Mi
+      - name: tmp
+        emptyDir:
+          sizeLimit: 64Mi

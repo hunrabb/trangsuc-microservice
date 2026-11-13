@@ -108,6 +108,30 @@ export class MetalsService {
     return toMetalPrice(price);
   }
 
+  /** A coherent read from the owning service; current buy rate, never sellPrice. */
+  async buybackPrice(metalId: string) {
+    return this.prisma.$transaction(
+      async (tx) => {
+        const metal = await this.requireMetal(tx, metalId);
+        if (!metal.isActive) throw priceNotSet();
+        const price = await findCurrentPrice(tx, metalId);
+        if (!price || price.buyPrice.lte(0)) throw priceNotSet();
+        const [clock] = await tx.$queryRaw<{ now: Date }[]>`SELECT clock_timestamp() AS now`;
+        return {
+          metalId,
+          metalCode: metal.code,
+          metalKind: metal.kind,
+          priceId: price.id,
+          buyPricePerChi: price.buyPrice.toFixed(2),
+          unit: 'VND_PER_CHI_ALLOY' as const,
+          effectiveFrom: price.effectiveFrom.toISOString(),
+          capturedAt: clock!.now.toISOString(),
+        };
+      },
+      { isolationLevel: 'RepeatableRead' },
+    );
+  }
+
   async history(
     metalId: string,
     paging: { page: number; pageSize: number },

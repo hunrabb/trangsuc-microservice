@@ -1,0 +1,25 @@
+# CHECKPOINT 4.0 DRAFT — NOT APPLIED; review checkpoint gates before use.
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-web
+  namespace: jewelry-demo
+  labels:
+    app.kubernetes.io/name: nginx-web
+    app.kubernetes.io/part-of: jewelry-demo
+    app.kubernetes.io/managed-by: phase4-draft
+spec:
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: nginx
+    app.kubernetes.io/part-of: jewelry-demo
+  ports:
+  - name: backoffice
+    port: 8080
+    targetPort: backoffice
+    nodePort: 30080
+  - name: storefront
+    port: 8081
+    targetPort: storefront
+    nodePort: 30081
+  externalTrafficPolicy: Cluster

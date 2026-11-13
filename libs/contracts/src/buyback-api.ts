@@ -3,8 +3,15 @@ import { positiveWeightSchema } from './inventory-api';
 import { pageOf } from './auth-api';
 import { customerPhoneSchema } from './sales-api';
 
-/** Task 7.1: chỉ tiếp nhận; không có trạng thái kiểm định/giá/chi tiền/nhập kho. */
-export const buybackStatusSchema = z.enum(['DRAFT', 'PENDING_APPRAISAL', 'CANCELLED']);
+/** Task 7.1–7.2: tiếp nhận, kiểm định và duyệt giá; chưa chi tiền/nhập kho. */
+export const buybackStatusSchema = z.enum([
+  'DRAFT',
+  'PENDING_APPRAISAL',
+  'CANCELLED',
+  'APPRAISED',
+  'APPROVED',
+  'REJECTED',
+]);
 export const buybackAssetKindSchema = z.enum(['GOLD', 'SILVER', 'JEWELRY']);
 const queryInteger = (maximum: number) =>
   z
@@ -99,7 +106,16 @@ export const buybackAuditSchema = z.strictObject({
   id: z.uuid(),
   actorId: z.uuid(),
   branchId: z.uuid(),
-  action: z.enum(['CREATED', 'UPDATED', 'SUBMITTED', 'CANCELLED']),
+  action: z.enum([
+    'CREATED',
+    'UPDATED',
+    'SUBMITTED',
+    'CANCELLED',
+    'APPRAISED',
+    'QUOTED',
+    'APPROVED',
+    'REJECTED',
+  ]),
   fromStatus: buybackStatusSchema.nullable(),
   toStatus: buybackStatusSchema,
   fromVersion: z.number().int().positive().nullable(),

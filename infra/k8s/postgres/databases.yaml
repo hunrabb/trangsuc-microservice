@@ -1,0 +1,71 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: auth-db
+  namespace: jewelry-demo
+  labels:
+    app.kubernetes.io/part-of: jewelry-demo
+spec:
+  cluster:
+    name: jewelry-pg
+  name: auth_db
+  owner: auth_migrator
+  databaseReclaimPolicy: retain
+  schemas:
+  - name: auth
+    owner: auth_migrator
+    ensure: present
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: inventory-db
+  namespace: jewelry-demo
+  labels:
+    app.kubernetes.io/part-of: jewelry-demo
+spec:
+  cluster:
+    name: jewelry-pg
+  name: inventory_db
+  owner: inventory_migrator
+  databaseReclaimPolicy: retain
+  schemas:
+  - name: inventory
+    owner: inventory_migrator
+    ensure: present
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: sales-db
+  namespace: jewelry-demo
+  labels:
+    app.kubernetes.io/part-of: jewelry-demo
+spec:
+  cluster:
+    name: jewelry-pg
+  name: sales_db
+  owner: sales_migrator
+  databaseReclaimPolicy: retain
+  schemas:
+  - name: sales
+    owner: sales_migrator
+    ensure: present
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: report-db
+  namespace: jewelry-demo
+  labels:
+    app.kubernetes.io/part-of: jewelry-demo
+spec:
+  cluster:
+    name: jewelry-pg
+  name: report_db
+  owner: report_migrator
+  databaseReclaimPolicy: retain
+  schemas:
+  - name: report
+    owner: report_migrator
+    ensure: present

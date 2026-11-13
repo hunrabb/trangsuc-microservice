@@ -1,0 +1,58 @@
+[
+  {
+    "pod": "cnpg-controller-manager-7df6db7d87-hx7hk",
+    "wallSeconds": 3.616,
+    "cpuCoreAverageApprox": 0.008994537529862866,
+    "throttleEventsDelta": 0,
+    "throttledMicrosecondsDelta": 0,
+    "memoryMiB": 106.21875
+  },
+  {
+    "pod": "jewelry-pg-1",
+    "wallSeconds": 3.616,
+    "cpuCoreAverageApprox": 0.057221045179141415,
+    "throttleEventsDelta": 0,
+    "throttledMicrosecondsDelta": 0,
+    "memoryMiB": 188.90234375
+  },
+  {
+    "pod": "jewelry-pg-2",
+    "wallSeconds": 3.616,
+    "cpuCoreAverageApprox": 0.008424807891110097,
+    "throttleEventsDelta": 0,
+    "throttledMicrosecondsDelta": 0,
+    "memoryMiB": 190.0078125
+  },
+  {
+    "pod": "etcd-jewelry-lab-control-plane",
+    "wallSeconds": 3.616,
+    "cpuCoreAverageApprox": 0.06801797496907795,
+    "throttleEventsDelta": 0,
+    "throttledMicrosecondsDelta": 0,
+    "memoryMiB": 90.80078125
+  },
+  {
+    "pod": "kube-apiserver-jewelry-lab-control-plane",
+    "wallSeconds": 3.616,
+    "cpuCoreAverageApprox": 0.12661079636579886,
+    "throttleEventsDelta": 0,
+    "throttledMicrosecondsDelta": 0,
+    "memoryMiB": 371.43359375
+  },
+  {
+    "pod": "kube-controller-manager-jewelry-lab-control-plane",
+    "wallSeconds": 3.616,
+    "cpuCoreAverageApprox": 0.03972619675264442,
+    "throttleEventsDelta": 0,
+    "throttledMicrosecondsDelta": 0,
+    "memoryMiB": 79.44921875
+  },
+  {
+    "pod": "kube-scheduler-jewelry-lab-control-plane",
+    "wallSeconds": 3.616,
+    "cpuCoreAverageApprox": 0.03221046717346653,
+    "throttleEventsDelta": 0,
+    "throttledMicrosecondsDelta": 0,
+    "memoryMiB": 46.5078125
+  }
+]

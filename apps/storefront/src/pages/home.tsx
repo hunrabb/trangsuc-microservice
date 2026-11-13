@@ -2,18 +2,28 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { shopApi, canRetryRead } from '../api/shop.ts';
 import { shopQuerySchema } from '@jewelry/contracts';
-import { Icon, LoadingProducts, ProductCard, StatePanel } from '../components/ui.tsx';
+import { Icon, LoadingProducts, ProductCard, ProductImage, StatePanel } from '../components/ui.tsx';
 
 export function HomePage() {
   const products = useQuery({
     queryKey: ['catalog', 'home'],
-    queryFn: ({ signal }) => shopApi.list(shopQuerySchema.parse({ pageSize: 4 }), signal),
+    queryFn: ({ signal }) => shopApi.list(shopQuerySchema.parse({ pageSize: 50 }), signal),
     staleTime: 60_000,
     retry: canRetryRead,
   });
+  const available = products.data?.items ?? [];
+  const photographed = available.filter((product) => product.imageUrl);
+  const featured = (photographed.length ? photographed : available).slice(0, 4);
+  const heroProduct = photographed[0];
+  const goldProduct = photographed.find((product) =>
+    product.variants.some((v) => v.metalKind === 'GOLD'),
+  );
+  const silverProduct = photographed.find((product) =>
+    product.variants.some((v) => v.metalKind === 'SILVER'),
+  );
   const categories = [
     ...new Map(
-      products.data?.items.map((product) => [
+      available.map((product) => [
         product.categoryId,
         { id: product.categoryId, name: product.categoryName },
       ]) ?? [],
@@ -41,18 +51,29 @@ export function HomePage() {
           </Link>
           <span className="hero-caption">VÀNG & BẠC · BỘ SƯU TẬP TRỰC TUYẾN</span>
         </div>
-        <div className="hero-art" aria-hidden="true">
-          <div className="hero-art-label">
-            THE BEAUTY
-            <br />
-            OF SIMPLICITY
-          </div>
-          <div className="sculpture sculpture-back" />
-          <div className="sculpture sculpture-front" />
-          <div className="sculpture-shadow" />
+        <div className="hero-art">
+          <div className="hero-art-label">THE JEWELRY EDIT / 01</div>
+          {heroProduct ? (
+            <Link
+              className="hero-product"
+              to={`/san-pham/${heroProduct.id}`}
+              aria-label={`Khám phá ${heroProduct.name}`}
+            >
+              <ProductImage product={heroProduct} />
+              <span className="hero-product-caption">
+                <span>{heroProduct.name}</span>
+                <Icon name="arrow" size={24} />
+              </span>
+            </Link>
+          ) : (
+            <div className="hero-empty">
+              <Icon name="diamond" size={100} />
+              <span>Một nét riêng. Một dấu ấn.</span>
+            </div>
+          )}
           <div className="hero-art-bottom">
-            <span>Hình khối & ánh sáng</span>
-            <span>01 / TINH GIẢN</span>
+            <span>ĐƯỜNG NÉT & ÁNH SÁNG</span>
+            <span>VÀNG · BẠC</span>
           </div>
         </div>
       </section>
@@ -77,7 +98,7 @@ export function HomePage() {
       </section>
       <section className="container material-grid" aria-label="Khám phá theo chất liệu">
         <Link to="/bo-suu-tap?metalKind=GOLD" className="material-tile gold-tile">
-          <span className="material-art" aria-hidden="true" />
+          {goldProduct && <ProductImage product={goldProduct} />}
           <div>
             <span className="eyebrow">SẮC ẤM TINH TẾ</span>
             <h3>Trang sức vàng</h3>
@@ -87,7 +108,7 @@ export function HomePage() {
           </div>
         </Link>
         <Link to="/bo-suu-tap?metalKind=SILVER" className="material-tile silver-tile">
-          <span className="material-art" aria-hidden="true" />
+          {silverProduct && <ProductImage product={silverProduct} />}
           <div>
             <span className="eyebrow">ÁNH SÁNG THANH NHÃ</span>
             <h3>Trang sức bạc</h3>
@@ -124,7 +145,7 @@ export function HomePage() {
         ) : products.data?.items.length ? (
           <>
             <div className="product-grid home-products">
-              {products.data.items.map((product) => (
+              {featured.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
             </div>
@@ -147,12 +168,17 @@ export function HomePage() {
       </section>
       <section className="editorial-band">
         <div className="container">
-          <p className="eyebrow">MỘT TRẢI NGHIỆM RÕ RÀNG</p>
+          <p className="eyebrow">VẺ ĐẸP TRONG NHỮNG ĐIỀU GẦN GŨI</p>
           <h2>
-            Chọn điều bạn yêu.
+            Không chỉ dành cho
             <br />
-            <em>An tâm ở từng bước.</em>
+            <em>những dịp đặc biệt.</em>
           </h2>
+          <p className="brand-story">
+            Một chiếc nhẫn quen thuộc. Sợi dây chuyền bạn luôn chọn. Trang sức trở thành một phần
+            câu chuyện khi được mang theo mỗi ngày. Khám phá những đường nét đồng điệu với bạn, theo
+            cách riêng của bạn.
+          </p>
           <div className="value-grid">
             <div>
               <Icon name="search" size={26} />

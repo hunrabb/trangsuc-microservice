@@ -3,6 +3,7 @@ import { Controller, Get, Query, Res, StreamableFile } from '@nestjs/common';
 import { ReportsService, reportFilter } from './reports.service';
 import { StockReportsService } from '../stock/stock-reports.service';
 import { ReportExportService } from './report-export.service';
+import { BuybackReportsService } from '../buybacks/buyback-reports.service';
 
 type DownloadResponse = { setHeader(name: string, value: string): unknown };
 
@@ -13,6 +14,7 @@ export class ReportsController {
     private readonly reports: ReportsService,
     private readonly stock: StockReportsService,
     private readonly exports: ReportExportService,
+    private readonly buybacks: BuybackReportsService,
   ) {}
 
   /** Trả Excel với header tải về; tên file chỉ chứa loại báo cáo và ngày đã validate. */
@@ -97,6 +99,17 @@ export class ReportsController {
     @Query('branchId') branchId?: string,
   ) {
     return this.reports.daily(reportFilter(user, from, to, branchId));
+  }
+
+  @Get('buybacks')
+  @Roles('MANAGER')
+  buybackSummary(
+    @CurrentUser() user: AuthUser,
+    @Query('from') from: string,
+    @Query('to') to: string,
+    @Query('branchId') branchId?: string,
+  ) {
+    return this.buybacks.summary(reportFilter(user, from, to, branchId));
   }
 
   @Get('top-products')

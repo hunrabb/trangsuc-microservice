@@ -91,7 +91,9 @@ export class CheckoutVault {
             return [];
           }
         });
-        this.activeId = this.attempts.some((a) => a.id === saved.activeId) ? saved.activeId : null;
+        this.activeId = this.attempts.some((a) => a.id === saved.activeId && a.orderId === null)
+          ? saved.activeId
+          : null;
       }
     } catch {
       this.attempts = [];
@@ -120,7 +122,9 @@ export class CheckoutVault {
   }
   active(): CheckoutAttempt | undefined {
     const live = this.list();
-    return live.find((a) => a.orderId === null) ?? live.find((a) => a.id === this.activeId);
+    // A known order belongs to tracking/history. Only an unresolved submission
+    // owns checkout recovery and can block a new purchase from the cart.
+    return live.find((a) => a.orderId === null);
   }
   forOrder(id: string): CheckoutAttempt | undefined {
     // A customer may correct a mistyped token for the same order after a 403.
@@ -137,7 +141,7 @@ export class CheckoutVault {
       throw new CheckoutStorageError();
     }
   }
-  save(attempt: CheckoutAttempt): void {
+  save(attempt: CheckoutAttempt, activate = true): void {
     const others = this.list().filter((a) => a.id !== attempt.id);
     if (others.length >= 5) {
       const index = others.findIndex((a) => a.orderId !== null);
@@ -145,7 +149,7 @@ export class CheckoutVault {
       others.splice(index, 1);
     }
     this.attempts = [...others, attempt];
-    this.activeId = attempt.id;
+    if (activate && attempt.orderId === null) this.activeId = attempt.id;
     this.persist();
   }
   prepare(body: CreateOnlineOrder, cryptoPort: Crypto = globalThis.crypto): CheckoutAttempt {
@@ -170,7 +174,12 @@ export class CheckoutVault {
     return attempt;
   }
   known(attempt: CheckoutAttempt, order: ShopOrder): void {
-    this.save({ ...attempt, orderId: order.id, lastStatus: order.status, body: null }); // Xoá PII ngay khi có ID đơn.
+    // Polling/history updates must not select an old intent after startNew() or
+    // override a newer pending checkout. Ignore late callbacks for removed credentials.
+    const current = this.list().find((saved) => saved.id === attempt.id);
+    if (!current) return;
+    if (this.activeId === current.id) this.activeId = null;
+    this.save({ ...current, orderId: order.id, lastStatus: order.status, body: null }, false);
   }
   startNew(): void {
     if (this.list().some((a) => a.orderId === null)) throw new UncertainCheckoutError();

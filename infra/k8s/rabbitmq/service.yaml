@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq
+  namespace: jewelry-demo
+  labels:
+    app.kubernetes.io/part-of: jewelry-demo
+spec:
+  type: ClusterIP
+  ports:
+  - name: amqp
+    port: 5672
+    targetPort: 5672
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: rabbitmq-demo-external
+  namespace: jewelry-demo
+  labels:
+    kubernetes.io/service-name: rabbitmq
+    endpointslice.kubernetes.io/managed-by: jewelry-phase3
+    app.kubernetes.io/part-of: jewelry-demo
+addressType: IPv4
+ports:
+- name: amqp
+  protocol: TCP
+  port: 5672
+endpoints:
+- addresses:
+  - 172.19.0.5
+  conditions:
+    ready: true

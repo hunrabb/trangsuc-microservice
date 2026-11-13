@@ -1,0 +1,51 @@
+{
+  "auth": {
+    "standbyMigrationCount": 4,
+    "database": "auth_db",
+    "schema": "auth",
+    "runtimeOwnConnect": true,
+    "runtimeUsage": true,
+    "runtimeCreate": false,
+    "runtimeModifyHistory": false
+  },
+  "inventory": {
+    "standbyMigrationCount": 13,
+    "database": "inventory_db",
+    "schema": "inventory",
+    "runtimeOwnConnect": true,
+    "runtimeUsage": true,
+    "runtimeCreate": false,
+    "runtimeModifyHistory": false
+  },
+  "sales": {
+    "standbyMigrationCount": 15,
+    "database": "sales_db",
+    "schema": "sales",
+    "runtimeOwnConnect": true,
+    "runtimeUsage": true,
+    "runtimeCreate": false,
+    "runtimeModifyHistory": false
+  },
+  "report": {
+    "standbyMigrationCount": 7,
+    "database": "report_db",
+    "schema": "report",
+    "runtimeOwnConnect": true,
+    "runtimeUsage": true,
+    "runtimeCreate": false,
+    "runtimeModifyHistory": false
+  },
+  "overall": "PASS",
+  "primary": "jewelry-pg-1",
+  "standby": "jewelry-pg-2",
+  "runningReadyPods": 16,
+  "completedMigrationPods": 4,
+  "oldDockerMetadataUnchanged": true,
+  "oldTrackedDiffUnchanged": true,
+  "runtimeProbe": "PASS",
+  "testQueueAbsent": true,
+  "runtimeCrossDBConnectionAttemptsDenied": 24,
+  "systemDBPrivilegeChecksDenied": 24,
+  "finalResourceStage": "FINAL-AFTER-CLEANUP",
+  "phase4Deployed": false
+}

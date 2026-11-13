@@ -1,0 +1,23 @@
+[
+  {
+    "node": "jewelry-lab-control-plane",
+    "pod": "cnpg-controller-manager-7df6db7d87-hx7hk",
+    "container": "manager",
+    "workingSetMiB": 29.890625,
+    "cpuMillicores": 6.254631
+  },
+  {
+    "node": "jewelry-lab-worker",
+    "pod": "jewelry-pg-1",
+    "container": "postgres",
+    "workingSetMiB": 121.140625,
+    "cpuMillicores": 6.653508
+  },
+  {
+    "node": "jewelry-lab-worker2",
+    "pod": "jewelry-pg-2",
+    "container": "postgres",
+    "workingSetMiB": 117.609375,
+    "cpuMillicores": 4.105332
+  }
+]

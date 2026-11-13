@@ -5,6 +5,8 @@ import { Icon } from './ui.tsx';
 export const STORE_NAME = import.meta.env?.VITE_STORE_NAME?.trim() || 'Trang sức';
 export function Layout() {
   const location = useLocation();
+  const metalKind = new URLSearchParams(location.search).get('metalKind');
+  const inCatalog = location.pathname === '/bo-suu-tap';
   const [menu, setMenu] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
   const { cart, notice, storageAvailable, announce } = useStore();
@@ -14,7 +16,12 @@ export function Layout() {
       ? 'Chi tiết sản phẩm'
       : ({
           '/': 'Bộ sưu tập trực tuyến',
-          '/bo-suu-tap': 'Bộ sưu tập',
+          '/bo-suu-tap':
+            metalKind === 'GOLD'
+              ? 'Trang sức vàng'
+              : metalKind === 'SILVER'
+                ? 'Trang sức bạc'
+                : 'Bộ sưu tập',
           '/gio-hang': 'Giỏ hàng',
           '/dat-hang': 'Đặt hàng',
           '/huong-dan': 'Hướng dẫn đặt hàng',
@@ -25,7 +32,7 @@ export function Layout() {
     const anchor = location.hash ? document.getElementById(location.hash.slice(1)) : null;
     if (anchor) anchor.scrollIntoView();
     else window.scrollTo({ top: 0, behavior: 'instant' });
-  }, [location.pathname, location.hash]);
+  }, [location.pathname, location.search, location.hash, metalKind]);
   useEffect(() => {
     if (!notice) return;
     const timer = setTimeout(() => announce(''), 12_000);
@@ -37,7 +44,7 @@ export function Layout() {
       <a href="#main-content" className="skip-link">
         Đến nội dung chính
       </a>
-      <div className="announcement-bar">Những lựa chọn mang dấu ấn riêng</div>
+      <div className="announcement-bar">THE JEWELRY EDIT — Vẻ đẹp mang dấu ấn riêng</div>
       <header
         className="site-header"
         onKeyDown={(event) => {
@@ -73,14 +80,29 @@ export function Layout() {
             <NavLink to="/" end onClick={closeMenu}>
               Khám phá
             </NavLink>
-            <NavLink to="/bo-suu-tap" onClick={closeMenu}>
+            <Link
+              to="/bo-suu-tap"
+              aria-current={inCatalog && !metalKind ? 'page' : undefined}
+              onClick={closeMenu}
+            >
               Bộ sưu tập
-            </NavLink>
-            <NavLink to="/huong-dan" onClick={closeMenu}>
-              Hướng dẫn đặt hàng
-            </NavLink>
-            <NavLink to="/don-hang" className="mobile-order-link" onClick={closeMenu}>
-              Đơn của tôi
+            </Link>
+            <Link
+              to="/bo-suu-tap?metalKind=GOLD"
+              aria-current={inCatalog && metalKind === 'GOLD' ? 'page' : undefined}
+              onClick={closeMenu}
+            >
+              Trang sức vàng
+            </Link>
+            <Link
+              to="/bo-suu-tap?metalKind=SILVER"
+              aria-current={inCatalog && metalKind === 'SILVER' ? 'page' : undefined}
+              onClick={closeMenu}
+            >
+              Trang sức bạc
+            </Link>
+            <NavLink to="/tai-khoan/don-hang" className="mobile-order-link" onClick={closeMenu}>
+              Tài khoản của tôi
             </NavLink>
           </nav>
           <div className="header-actions">
@@ -92,8 +114,8 @@ export function Layout() {
             >
               <Icon name="search" />
             </Link>
-            <NavLink to="/don-hang" className="desktop-order-link" onClick={closeMenu}>
-              Đơn của tôi
+            <NavLink to="/tai-khoan/don-hang" className="desktop-order-link" onClick={closeMenu}>
+              Tài khoản của tôi
             </NavLink>
             <Link
               to="/gio-hang"
@@ -154,7 +176,7 @@ export function Layout() {
           <div>
             <h2>Đồng hành cùng bạn</h2>
             <Link to="/huong-dan">Mua hàng & thanh toán</Link>
-            <Link to="/don-hang">Theo dõi đơn hàng</Link>
+            <Link to="/tai-khoan/don-hang">Theo dõi đơn hàng</Link>
             <Link to="/gio-hang">Giỏ hàng của bạn</Link>
           </div>
           <div className="footer-note">

@@ -1,4 +1,4 @@
-import { type AuthUser, CurrentUser, ZodValidationPipe } from '@jewelry/common';
+import { type AuthUser, CurrentUser, Roles, ZodValidationPipe } from '@jewelry/common';
 import {
   type AddReceiptLineRequest,
   addReceiptLineRequestSchema,
@@ -15,10 +15,8 @@ import { Body, Controller, Delete, Get, HttpCode, Param, Post, Query } from '@ne
 import { UUID_PARAM } from '../common/uuid-param';
 import { ReceiptsService } from './receipts.service';
 
-/**
- * Cửa vào HTTP của phiếu nhập. Không dùng `@Roles`: `/receipts/{id}` không nêu chi nhánh, chi nhánh chỉ biết sau
- * khi đọc phiếu, nên quyền theo chi nhánh kiểm trong service (`common/branch-access.ts`).
- */
+/** Chỉ ADMIN được chỉ định chi nhánh nhận hàng và quản lý phiếu nhập. */
+@Roles('ADMIN')
 @Controller('admin/receipts')
 export class ReceiptsController {
   constructor(private readonly receipts: ReceiptsService) {}

@@ -1,3 +1,39 @@
+import { stockSummaryQuerySchema, stockSummaryPageSchema } from './inventory-api';
+import {
+  customerLoginSchema,
+  customerRegisterSchema,
+  customerAccountSchema,
+  customerSessionSchema,
+  accountOrderSchema,
+  accountOrderPageSchema,
+} from './customer-account';
+import {
+  appraisalInputSchema,
+  buybackAppraisalSchema,
+  buybackAppraisalsSchema,
+  createBuybackPolicySchema,
+  updateBuybackPolicySchema,
+  buybackPolicySchema,
+  buybackQuoteInputSchema,
+  buybackDecisionSchema,
+  rejectBuybackQuoteSchema,
+  buybackQuoteSchema,
+  buybackQuotesSchema,
+  inventoryBuybackPriceSchema,
+} from './buyback-appraisal-api';
+import {
+  createSettlementSchema,
+  createExchangeSchema,
+  recordSettlementPaymentSchema,
+  confirmSettlementPaymentSchema,
+  cancelSettlementSchema,
+  settlementViewSchema,
+} from './buyback-settlement-api';
+import {
+  reserveExchangeSchema,
+  exchangeHoldSchema,
+  exchangeReleaseSchema,
+} from './exchange-internal-api';
 import {
   buybackStatusSchema,
   createBuybackSchema,
@@ -73,11 +109,7 @@ import {
 } from './inventory-internal-api';
 import {
   addReceiptLineRequestSchema,
-  createStockCountRequestSchema,
   itemLabelSchema,
-  scanResultSchema,
-  scanStockCountRequestSchema,
-  stockCountSummarySchema,
   approveReceiptRequestSchema,
   categorySchema,
   createCategoryRequestSchema,
@@ -149,6 +181,12 @@ export const authOpenApiSchemas = (): Record<string, unknown> =>
 
 /** Tên trong `components/schemas` của docs/api/inventory.openapi.yaml → schema zod. */
 const INVENTORY_OPENAPI_SCHEMAS = {
+  StockSummaryQuery: stockSummaryQuerySchema,
+  StockSummaryPage: stockSummaryPageSchema,
+  ReserveExchange: reserveExchangeSchema,
+  ExchangeHold: exchangeHoldSchema,
+  ExchangeRelease: exchangeReleaseSchema,
+  InventoryBuybackPrice: inventoryBuybackPriceSchema,
   OnlineOrderPaid: onlineOrderPaidSchema,
   PaymentInventoryResult: paymentInventoryResultSchema,
   OnlineOrderCreated: onlineOrderCreatedSchema,
@@ -182,10 +220,6 @@ const INVENTORY_OPENAPI_SCHEMAS = {
   Item: itemSchema,
   ItemPage: itemPageSchema,
   ItemWithPrice: itemWithPriceSchema,
-  CreateStockCountRequest: createStockCountRequestSchema,
-  ScanStockCountRequest: scanStockCountRequestSchema,
-  ScanResult: scanResultSchema,
-  StockCountSummary: stockCountSummarySchema,
   ItemLabel: itemLabelSchema,
   QuoteStockRequest: quoteStockRequestSchema,
   QuoteStockResponse: quoteStockResponseSchema,
@@ -202,6 +236,23 @@ export const inventoryOpenApiSchemas = (): Record<string, unknown> =>
 /** Hợp đồng POS cùng một nguồn zod cho sales, client và OpenAPI. */
 export const salesOpenApiSchemas = (): Record<string, unknown> =>
   toOpenApiSchemas({
+    CreateSettlement: createSettlementSchema,
+    CreateExchange: createExchangeSchema,
+    RecordSettlementPayment: recordSettlementPaymentSchema,
+    ConfirmSettlementPayment: confirmSettlementPaymentSchema,
+    CancelSettlement: cancelSettlementSchema,
+    BuybackSettlement: settlementViewSchema,
+    AppraisalInput: appraisalInputSchema,
+    BuybackAppraisal: buybackAppraisalSchema,
+    BuybackAppraisals: buybackAppraisalsSchema,
+    CreateBuybackPolicy: createBuybackPolicySchema,
+    UpdateBuybackPolicy: updateBuybackPolicySchema,
+    BuybackPolicy: buybackPolicySchema,
+    BuybackQuoteInput: buybackQuoteInputSchema,
+    BuybackDecision: buybackDecisionSchema,
+    RejectBuybackQuote: rejectBuybackQuoteSchema,
+    BuybackQuote: buybackQuoteSchema,
+    BuybackQuotes: buybackQuotesSchema,
     BuybackStatus: buybackStatusSchema,
     CreateBuyback: createBuybackSchema,
     UpdateBuyback: updateBuybackSchema,
@@ -226,6 +277,12 @@ export const salesOpenApiSchemas = (): Record<string, unknown> =>
 
 export const shopOpenApiSchemas = (): Record<string, unknown> =>
   toOpenApiSchemas({
+    CustomerLogin: customerLoginSchema,
+    CustomerRegister: customerRegisterSchema,
+    CustomerAccount: customerAccountSchema,
+    CustomerSession: customerSessionSchema,
+    AccountOrder: accountOrderSchema,
+    AccountOrderPage: accountOrderPageSchema,
     CreateOnlineOrder: createOnlineOrderSchema,
     OnlineOrderView: onlineOrderViewSchema,
     OnlineCart: onlineCartSchema,
