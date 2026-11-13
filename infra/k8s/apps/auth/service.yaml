@@ -1,4 +1,4 @@
-# CHECKPOINT 4.0 DRAFT — NOT APPLIED; review checkpoint gates before use.
+# Phase 4.1 — Auth ClusterIP.
 apiVersion: v1
 kind: Service
 metadata:
@@ -7,13 +7,13 @@ metadata:
   labels:
     app.kubernetes.io/name: auth
     app.kubernetes.io/part-of: jewelry-demo
-    app.kubernetes.io/managed-by: phase4-draft
+    app.kubernetes.io/managed-by: phase4
 spec:
   type: ClusterIP
   selector:
     app.kubernetes.io/name: auth
     app.kubernetes.io/part-of: jewelry-demo
   ports:
-  - name: http
-    port: 3000
-    targetPort: http
+    - name: http
+      port: 3000
+      targetPort: http

@@ -1,4 +1,4 @@
-# CHECKPOINT 4.0 DRAFT — NOT APPLIED; review checkpoint gates before use.
+# Phase 4.1 — verified private remote Auth runtime.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -7,10 +7,12 @@ metadata:
   labels:
     app.kubernetes.io/name: auth
     app.kubernetes.io/part-of: jewelry-demo
-    app.kubernetes.io/managed-by: phase4-draft
+    app.kubernetes.io/managed-by: phase4
   annotations:
     jewelry.demo/checkpoint: '4.1'
-    jewelry.demo/image-status: REBUILD_REQUIRED_do_not_apply_placeholder
+    jewelry.demo/image-status: verified-private-remote-runtime
+    jewelry.demo/registry-digest: sha256:c3caa0f5f924ac7282064e6bc588b27a3c1961a783ee6d8ec95821307af9db90
+    jewelry.demo/source-commit: fcc003d9fd8d3ed87901cf22adc88b23e37ab077
 spec:
   replicas: 2
   revisionHistoryLimit: 2
@@ -30,7 +32,7 @@ spec:
       labels:
         app.kubernetes.io/name: auth
         app.kubernetes.io/part-of: jewelry-demo
-        app.kubernetes.io/managed-by: phase4-draft
+        app.kubernetes.io/managed-by: phase4
     spec:
       automountServiceAccountToken: false
       terminationGracePeriodSeconds: 45
@@ -46,118 +48,118 @@ spec:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
-            - matchExpressions:
-              - key: jewelry-lab-worker
-                operator: In
-                values:
-                - 'true'
+              - matchExpressions:
+                  - key: jewelry-lab-worker
+                    operator: In
+                    values:
+                      - 'true'
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
-          - labelSelector:
-              matchLabels:
-                app.kubernetes.io/name: auth
-                app.kubernetes.io/part-of: jewelry-demo
-            topologyKey: kubernetes.io/hostname
+            - labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: auth
+                  app.kubernetes.io/part-of: jewelry-demo
+              topologyKey: kubernetes.io/hostname
       containers:
-      - name: auth
-        image: jewelry/auth:phase4-build-required
-        imagePullPolicy: Never
-        ports:
-        - name: http
-          containerPort: 3000
-        envFrom:
-        - configMapRef:
-            name: jewelry-common
-        - configMapRef:
-            name: auth-config
-        env:
-        - name: DATABASE_URL
-          valueFrom:
-            secretKeyRef:
-              name: auth-runtime-creds
-              key: DATABASE_URL
-        - name: RABBITMQ_URL
-          valueFrom:
-            secretKeyRef:
-              name: rabbitmq-demo-app
-              key: RABBITMQ_URL
-        resources:
-          requests:
-            cpu: 100m
-            memory: 192Mi
-            ephemeral-storage: 32Mi
-          limits:
-            cpu: 500m
-            memory: 384Mi
-            ephemeral-storage: 256Mi
-        securityContext:
-          allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: true
-          capabilities:
-            drop:
-            - ALL
-        startupProbe:
-          httpGet:
-            path: /health/live
-            port: http
-          periodSeconds: 5
-          timeoutSeconds: 3
-          failureThreshold: 36
-        livenessProbe:
-          httpGet:
-            path: /health/live
-            port: http
-          periodSeconds: 10
-          timeoutSeconds: 3
-          failureThreshold: 3
-        readinessProbe:
-          httpGet:
-            path: /health/ready
-            port: http
-          periodSeconds: 5
-          timeoutSeconds: 3
-          failureThreshold: 3
-        lifecycle:
-          preStop:
-            exec:
-              command:
-              - node
-              - -e
-              - setTimeout(() => {}, 3000)
-        volumeMounts:
-        - name: jwt-public
-          mountPath: /run/secrets/jwt-public
-          readOnly: true
-        - name: postgres-ca
-          mountPath: /run/secrets/postgres
-          readOnly: true
-        - name: tmp
-          mountPath: /tmp
-        - name: jwt-private
-          mountPath: /run/secrets/jwt-private
-          readOnly: true
+        - name: auth
+          image: ghcr.io/hunrabb/trangsuc-microservice-auth-private:sha-fcc003d9fd8d3ed87901cf22adc88b23e37ab077
+          imagePullPolicy: Never
+          ports:
+            - name: http
+              containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: jewelry-common
+            - configMapRef:
+                name: auth-config
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: auth-runtime-creds
+                  key: DATABASE_URL
+            - name: RABBITMQ_URL
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-demo-app
+                  key: RABBITMQ_URL
+          resources:
+            requests:
+              cpu: 100m
+              memory: 192Mi
+              ephemeral-storage: 32Mi
+            limits:
+              cpu: 500m
+              memory: 384Mi
+              ephemeral-storage: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          startupProbe:
+            httpGet:
+              path: /health/live
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 36
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  - node
+                  - -e
+                  - setTimeout(() => {}, 3000)
+          volumeMounts:
+            - name: jwt-public
+              mountPath: /run/secrets/jwt-public
+              readOnly: true
+            - name: postgres-ca
+              mountPath: /run/secrets/postgres
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+            - name: jwt-private
+              mountPath: /run/secrets/jwt-private
+              readOnly: true
       volumes:
-      - name: jwt-public
-        secret:
-          secretName: jwt-verification
-          defaultMode: 288
-          items:
-          - key: public.pem
-            path: public.pem
-      - name: postgres-ca
-        secret:
-          secretName: jewelry-pg-ca
-          defaultMode: 288
-          items:
-          - key: ca.crt
-            path: ca.crt
-      - name: tmp
-        emptyDir:
-          sizeLimit: 32Mi
-      - name: jwt-private
-        secret:
-          secretName: auth-jwt-signing
-          defaultMode: 288
-          items:
-          - key: private.pem
-            path: private.pem
+        - name: jwt-public
+          secret:
+            secretName: jwt-verification
+            defaultMode: 288
+            items:
+              - key: public.pem
+                path: public.pem
+        - name: postgres-ca
+          secret:
+            secretName: jewelry-pg-ca
+            defaultMode: 288
+            items:
+              - key: ca.crt
+                path: ca.crt
+        - name: tmp
+          emptyDir:
+            sizeLimit: 32Mi
+        - name: jwt-private
+          secret:
+            secretName: auth-jwt-signing
+            defaultMode: 288
+            items:
+              - key: private.pem
+                path: private.pem

@@ -20,6 +20,7 @@ concurrency:
 
 jobs:
   auth:
+    if: github.repository == 'hunrabb/trangsuc-auth-build'
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     permissions:
