@@ -15,6 +15,9 @@ permissions:
 jobs:
   verify:
     name: Lint, typecheck, test, build
+    # Dedicated Auth image commits use the remote-only auth-image workflow.
+    if: >-
+      ${{ !(github.event_name == 'push' && github.ref == 'refs/heads/feat/k8s-phase4' && startsWith(github.event.head_commit.message, '[auth-image-only]')) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
