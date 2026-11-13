@@ -1,0 +1,123 @@
+name: Private Auth image
+
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/auth-image.yml]
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Full commit SHA from hunrabb/trangsuc-microservice (empty uses feat/k8s-phase4)
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: private-auth-image
+  cancel-in-progress: false
+
+jobs:
+  auth:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    permissions:
+      contents: read
+      packages: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      DOCKER_BUILD_RECORD_UPLOAD: 'false'
+      AUTH_IMAGE: ghcr.io/hunrabb/trangsuc-microservice-auth-private
+      PACKAGE_API: /users/hunrabb/packages/container/trangsuc-microservice-auth-private
+    steps:
+      - name: Require private workflow repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REPOSITORY" == hunrabb/trangsuc-auth-build ]]
+          gh api "repos/${GITHUB_REPOSITORY}" --jq .private | grep -x true
+          status=$(curl --silent --show-error --output "$RUNNER_TEMP/package.json" --write-out '%{http_code}' \
+            -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' \
+            "https://api.github.com${PACKAGE_API}")
+          case "$status" in
+            200) jq -e '.visibility == "private"' "$RUNNER_TEMP/package.json" ;;
+            404) echo 'Creating package from verified PRIVATE workflow repository.' ;;
+            *) echo "::error::Package preflight HTTP ${status}"; exit 1 ;;
+          esac
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: hunrabb/trangsuc-microservice
+          ref: ${{ inputs.source_sha || 'feat/k8s-phase4' }}
+          persist-credentials: false
+
+      - name: Pin checked-out source commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_sha=$(git rev-parse HEAD)
+          [[ "$source_sha" =~ ^[0-9a-f]{40}$ ]]
+          echo "SOURCE_SHA=${source_sha}" >> "$GITHUB_ENV"
+          echo "AUTH_TAG=sha-${source_sha}" >> "$GITHUB_ENV"
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
+
+      - name: Build only Auth runtime
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
+        with:
+          context: .
+          file: apps/auth/Dockerfile
+          target: runtime
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: ${{ env.AUTH_IMAGE }}:${{ env.AUTH_TAG }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/hunrabb/trangsuc-auth-build
+            org.opencontainers.image.revision=${{ env.SOURCE_SHA }}
+          cache-from: type=gha,scope=auth-runtime-amd64
+          cache-to: type=gha,mode=max,scope=auth-runtime-amd64
+          provenance: false
+
+      - name: Audit runtime before publishing
+        shell: bash
+        run: |
+          set -euo pipefail
+          ref="${AUTH_IMAGE}:${AUTH_TAG}"
+          docker image inspect "$ref" | jq -e \
+            '.[0] | .Architecture == "amd64" and .Os == "linux" and .Config.User == "node"'
+          docker run --rm --network none --read-only --memory 256m \
+            --entrypoint node -i "$ref" < scripts/ci/audit-auth-image.mjs
+
+      - name: Publish private image and export identical private artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          trap 'docker logout ghcr.io >/dev/null 2>&1 || true' EXIT
+          ref="${AUTH_IMAGE}:${AUTH_TAG}"
+          docker push "$ref"
+          gh api "$PACKAGE_API" > "$RUNNER_TEMP/published-package.json"
+          jq '{name,visibility,repository:.repository.full_name}' "$RUNNER_TEMP/published-package.json"
+          jq -e '.visibility == "private"' "$RUNNER_TEMP/published-package.json"
+          digest=$(docker buildx imagetools inspect "$ref" --format '{{json .Manifest}}' | jq -er '.digest')
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+          image_id=$(docker image inspect "$ref" --format '{{.Id}}')
+          mkdir -p auth-image-artifact
+          docker image save --output auth-image-artifact/auth-image.tar "$ref"
+          archive_sha=$(sha256sum auth-image-artifact/auth-image.tar | cut -d' ' -f1)
+          jq -n --arg image "$AUTH_IMAGE" --arg tag "$AUTH_TAG" --arg digest "$digest" \
+            --arg imageId "$image_id" --arg archiveSHA256 "$archive_sha" --arg commit "$SOURCE_SHA" \
+            --arg workflowRepository "$GITHUB_REPOSITORY" --arg workflowCommit "$GITHUB_SHA" --arg run "$GITHUB_RUN_ID" \
+            '{image:$image,tag:$tag,digest:$digest,reference:($image+"@"+$digest),imageId:$imageId,archiveSHA256:$archiveSHA256,commit:$commit,workflowRepository:$workflowRepository,workflowCommit:$workflowCommit,runId:$run,platform:"linux/amd64",visibility:"private",target:"runtime"}' \
+            > auth-image-artifact/auth-image.json
+          cat auth-image-artifact/auth-image.json >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: private-auth-image
+          path: auth-image-artifact/
+          compression-level: 1
+          if-no-files-found: error
+          retention-days: 3
