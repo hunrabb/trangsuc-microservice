@@ -24,8 +24,34 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  contain-public-image:
+    if: >-
+      ${{ github.ref == 'refs/heads/feat/k8s-phase4' && startsWith(github.event.head_commit.message, '[auth-image-only] contain') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      packages: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Remove the new package only if it contains exactly our failed publish
+        shell: bash
+        run: |
+          set -euo pipefail
+          api=/users/hunrabb/packages/container/trangsuc-microservice-auth
+          gh api "$api" > "$RUNNER_TEMP/package.json"
+          jq '{name,visibility,repository:.repository.full_name}' "$RUNNER_TEMP/package.json"
+          jq -e '.name == "trangsuc-microservice-auth" and .repository.full_name == "hunrabb/trangsuc-microservice"' "$RUNNER_TEMP/package.json"
+          gh api "${api}/versions" > "$RUNNER_TEMP/versions.json"
+          jq -e 'length == 1' "$RUNNER_TEMP/versions.json"
+          id=$(jq -er '[.[] | select(.name == "sha256:1ea3e7864999515e39d1fffbea48bb405141edb625c810981aa932ea45ebb28b" and (.metadata.container.tags | index("sha-3d37a779b6875cb1f722ae8b40f48f9da08c25ac")))] | if length == 1 then .[0].id else error("Expected exactly the new Auth image version") end' "$RUNNER_TEMP/versions.json")
+          test -n "$id"
+          gh api --method DELETE "$api"
+          echo 'Removed the new package containing only the image from run 43399005581.' >> "$GITHUB_STEP_SUMMARY"
+
   auth:
-    if: github.ref == 'refs/heads/feat/k8s-phase4'
+    if: >-
+      ${{ github.ref == 'refs/heads/feat/k8s-phase4' && !startsWith(github.event.head_commit.message, '[auth-image-only] contain') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     permissions:
@@ -53,7 +79,7 @@ jobs:
             "https://api.github.com/users/${owner}/packages/container/${package}")
           case "$status" in
             200) jq -e '.visibility == "private"' "$RUNNER_TEMP/package.json" ;;
-            404) echo 'New GHCR container packages default to private; verify again after publishing.' ;;
+            404) echo '::error::Pre-create and verify a private GHCR package before publishing; refusing implicit visibility defaults.'; exit 1 ;;
             *) echo "::error::Package visibility check failed (HTTP ${status})"; exit 1 ;;
           esac
 
