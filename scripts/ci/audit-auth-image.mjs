@@ -19,7 +19,14 @@ function walk(directory) {
         fs.statSync(filename).size < 2_000_000
       ) {
         const content = fs.readFileSync(filename, 'utf8');
-        if (/-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/.test(content)) {
+        // Libraries also contain the header string as a parser constant. Match
+        // complete PEM material, including keys encoded as JS string literals.
+        const normalized = content.replace(/(?:\\r)?\\n/g, '\n');
+        if (
+          /-----BEGIN ((?:RSA |EC |OPENSSH |ENCRYPTED )?PRIVATE KEY)-----\s+[A-Za-z0-9+/=\s]{32,}-----END \1-----/.test(
+            normalized,
+          )
+        ) {
           suspicious.push(filename);
         }
       }
